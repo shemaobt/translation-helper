@@ -72,6 +72,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { chatId } = req.params;
+      const chat = await storage.getChat(chatId, userId);
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      res.json(chat);
+    } catch (error) {
+      console.error("Error fetching chat:", error);
+      res.status(500).json({ message: "Failed to fetch chat" });
+    }
+  });
+
   app.get('/api/chats/:chatId/messages', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -146,6 +161,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting chat:", error);
       res.status(500).json({ message: "Failed to delete chat" });
+    }
+  });
+
+  app.patch('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { chatId } = req.params;
+      
+      // Create update schema for validating partial chat updates
+      const updateChatSchema = insertChatSchema.pick({ assistantId: true, title: true }).partial();
+      const updates = updateChatSchema.parse(req.body);
+      
+      // Verify chat belongs to user
+      const existingChat = await storage.getChat(chatId, userId);
+      if (!existingChat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      
+      // Update the chat
+      const updatedChat = await storage.updateChat(chatId, updates, userId);
+      res.json(updatedChat);
+    } catch (error) {
+      console.error("Error updating chat:", error);
+      res.status(500).json({ message: "Failed to update chat" });
     }
   });
 

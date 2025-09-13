@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Sidebar from "@/components/sidebar";
 import ChatInterface from "@/components/chat-interface";
+import type { AssistantId } from "@shared/schema";
 
 export default function Home() {
   const { chatId } = useParams<{ chatId?: string }>();
@@ -12,6 +13,7 @@ export default function Home() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [defaultAssistant, setDefaultAssistant] = useState<AssistantId>('storyteller');
 
   // Ensure sidebar is closed when switching to mobile
   useEffect(() => {
@@ -71,6 +73,8 @@ export default function Home() {
           isMobile={isMobile}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          selectedAssistant={defaultAssistant}
+          onAssistantChange={setDefaultAssistant}
         />
       </div>
       
@@ -79,6 +83,8 @@ export default function Home() {
         chatId={chatId} 
         isMobile={isMobile}
         onOpenSidebar={() => setSidebarOpen(true)}
+        defaultAssistant={defaultAssistant}
+        onDefaultAssistantChange={setDefaultAssistant}
       />
     </div>
   );
