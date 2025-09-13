@@ -37,6 +37,13 @@ export default function Dashboard() {
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Ensure sidebar is closed when switching to mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
