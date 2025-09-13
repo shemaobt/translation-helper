@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 import type { Message } from "@shared/schema";
-
-// StoryTeller Assistant Configuration
-const STORYTELLER_ASSISTANT_ID = "asst_eSD18ksRBzC5usjNxbZkmad6";
+import { ASSISTANTS, type AssistantId } from "@shared/schema";
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "your_openai_api_key"
@@ -11,6 +9,7 @@ const openai = new OpenAI({
 export interface AssistantRequest {
   chatId: string;
   userMessage: string;
+  assistantId: AssistantId;
   threadId?: string;
 }
 
@@ -22,6 +21,7 @@ export interface ChatMessage {
 export interface ChatCompletionRequest {
   chatId: string;
   messages: ChatMessage[];
+  assistantId: AssistantId;
   threadId?: string;
 }
 
@@ -55,7 +55,7 @@ export async function generateAssistantResponse(
 
     // Run the assistant
     const run = await openai.beta.threads.runs.create(threadId, {
-      assistant_id: STORYTELLER_ASSISTANT_ID,
+      assistant_id: ASSISTANTS[request.assistantId].openaiId,
     });
 
     // Wait for the run to complete
@@ -125,7 +125,7 @@ export async function generateChatCompletion(
 
     // Create run with system messages as additional instructions
     const runConfig: any = {
-      assistant_id: STORYTELLER_ASSISTANT_ID,
+      assistant_id: ASSISTANTS[request.assistantId].openaiId,
     };
 
     if (systemMessages.length > 0) {
