@@ -14,8 +14,8 @@ export default function Landing() {
           <div className="mx-auto h-12 w-12 bg-primary rounded-lg flex items-center justify-center">
             <Bot className="h-6 w-6 text-primary-foreground" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-foreground">AI Agent Platform</h2>
-          <p className="mt-2 text-muted-foreground">Connect with intelligent AI assistance</p>
+          <h2 className="mt-6 text-3xl font-bold text-foreground">Translation Helper</h2>
+          <p className="mt-2 text-muted-foreground">Your intelligent translation assistant powered by StoryTeller AI</p>
         </div>
 
         <Card className="shadow-lg">
