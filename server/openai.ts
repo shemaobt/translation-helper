@@ -53,9 +53,10 @@ export async function generateAssistantResponse(
       content: request.userMessage,
     });
 
-    // Run the assistant
+    // Run the assistant with additional instructions for translation context
     const run = await openai.beta.threads.runs.create(threadId, {
       assistant_id: STORYTELLER_ASSISTANT_ID,
+      additional_instructions: `You are now operating as a Translation Helper assistant. Your primary role is to help users with language translations, but you can also tell stories when asked. When users ask for translations, provide accurate translations. When they ask for stories, you can share your storytelling expertise. Always be helpful and respond appropriately to the user's request.`,
     });
 
     // Wait for the run to complete
@@ -128,9 +129,14 @@ export async function generateChatCompletion(
       assistant_id: STORYTELLER_ASSISTANT_ID,
     };
 
+    // Always include translation context, plus any system messages
+    const translationContext = "You are operating as a Translation Helper assistant. Your primary role is to help users with language translations, but you can also tell stories when asked. When users ask for translations, provide accurate translations. When they ask for stories, you can share your storytelling expertise. Always be helpful and respond appropriately to the user's request.";
+    
     if (systemMessages.length > 0) {
       const systemInstructions = systemMessages.map(msg => msg.content).join("\n\n");
-      runConfig.additional_instructions = systemInstructions;
+      runConfig.additional_instructions = `${translationContext}\n\n${systemInstructions}`;
+    } else {
+      runConfig.additional_instructions = translationContext;
     }
 
     const run = await openai.beta.threads.runs.create(threadId, runConfig);
