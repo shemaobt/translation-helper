@@ -17,11 +17,18 @@ import {
   Key, 
   Settings, 
   LogOut,
-  MessageSquare 
+  MessageSquare,
+  X 
 } from "lucide-react";
 import type { Chat } from "@shared/schema";
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isMobile = false, isOpen = true, onClose }: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user } = useAuth();
@@ -77,14 +84,27 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-card border-r border-border flex flex-col">
+    <div className={`${isMobile ? 'w-80' : 'w-64'} bg-card border-r border-border flex flex-col h-full`}>
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center space-x-3">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-            <Bot className="h-4 w-4 text-primary-foreground" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
+              <Bot className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-foreground">Translation Helper</span>
           </div>
-          <span className="font-semibold text-foreground">Translation Helper</span>
+          {isMobile && onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0"
+              data-testid="button-close-sidebar"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
