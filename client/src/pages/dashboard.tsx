@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,10 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [newKeyName, setNewKeyName] = useState("");
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -145,33 +148,70 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex" data-testid="page-dashboard">
-      <Sidebar />
+    <div className="min-h-screen bg-background flex relative" data-testid="page-dashboard">
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          data-testid="sidebar-overlay"
+        />
+      )}
       
-      <div className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto">
+      {/* Sidebar */}
+      <div className={`
+        ${isMobile 
+          ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`
+          : 'relative'
+        }
+      `}>
+        <Sidebar 
+          isMobile={isMobile}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
+      
+      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+        <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-2">Monitor your Translation Helper usage and performance</p>
+          <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>Dashboard</h1>
+                <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>Monitor your Translation Helper usage</p>
+              </div>
+              {isMobile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSidebarOpen(true)}
+                  data-testid="button-open-sidebar"
+                >
+                  Menu
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className={`grid grid-cols-1 ${isMobile ? 'gap-4 mb-6' : 'md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'}`}>
             <Card>
-              <CardContent className="p-6">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Messages</p>
-                    <p className="text-2xl font-bold text-foreground" data-testid="stat-total-messages">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Total Messages</p>
+                    <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-foreground`} data-testid="stat-total-messages">
                       {(stats as any)?.totalMessages || 0}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="h-6 w-6 text-primary" />
+                  <div className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} bg-primary/10 rounded-lg flex items-center justify-center`}>
+                    <MessageSquare className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-primary`} />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center text-sm">
+                <div className={`${isMobile ? 'mt-3' : 'mt-4'} flex items-center ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                   <span className="text-green-500">Active</span>
                   <span className="text-muted-foreground ml-1">conversations</span>
@@ -180,19 +220,19 @@ export default function Dashboard() {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">API Calls</p>
-                    <p className="text-2xl font-bold text-foreground" data-testid="stat-api-calls">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>API Calls</p>
+                    <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-foreground`} data-testid="stat-api-calls">
                       {(stats as any)?.totalApiCalls || 0}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                    <Code className="h-6 w-6 text-accent-foreground" />
+                  <div className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} bg-accent/10 rounded-lg flex items-center justify-center`}>
+                    <Code className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-accent-foreground`} />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center text-sm">
+                <div className={`${isMobile ? 'mt-3' : 'mt-4'} flex items-center ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                   <span className="text-green-500">Requests</span>
                   <span className="text-muted-foreground ml-1">processed</span>
@@ -201,19 +241,19 @@ export default function Dashboard() {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Active Keys</p>
-                    <p className="text-2xl font-bold text-foreground" data-testid="stat-active-keys">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Active Keys</p>
+                    <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-foreground`} data-testid="stat-active-keys">
                       {(stats as any)?.activeApiKeys || 0}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                    <Users className="h-6 w-6 text-secondary-foreground" />
+                  <div className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} bg-secondary/10 rounded-lg flex items-center justify-center`}>
+                    <Users className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-secondary-foreground`} />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center text-sm">
+                <div className={`${isMobile ? 'mt-3' : 'mt-4'} flex items-center ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                   <span className="text-green-500">Keys</span>
                   <span className="text-muted-foreground ml-1">in use</span>
@@ -222,19 +262,19 @@ export default function Dashboard() {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Response Time</p>
-                    <p className="text-2xl font-bold text-foreground" data-testid="stat-response-time">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Response Time</p>
+                    <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-foreground`} data-testid="stat-response-time">
                       ~1.2s
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-muted/10 rounded-lg flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-muted-foreground" />
+                  <div className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} bg-muted/10 rounded-lg flex items-center justify-center`}>
+                    <Clock className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-muted-foreground`} />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center text-sm">
+                <div className={`${isMobile ? 'mt-3' : 'mt-4'} flex items-center ${isMobile ? 'text-xs' : 'text-sm'}`}>
                   <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
                   <span className="text-green-500">Optimized</span>
                   <span className="text-muted-foreground ml-1">performance</span>
@@ -325,66 +365,125 @@ export default function Dashboard() {
                 </Alert>
               )}
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Key</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Created</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Last Used</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {apiKeys.map((key) => (
-                      <tr key={key.id} data-testid={`row-api-key-${key.id}`}>
-                        <td className="py-3 px-4 text-sm text-foreground" data-testid={`text-key-name-${key.id}`}>
-                          {key.name}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-mono text-muted-foreground" data-testid={`text-key-masked-${key.id}`}>
-                          {key.maskedKey}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground" data-testid={`text-key-created-${key.id}`}>
-                          {new Date(key.createdAt || "").toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground" data-testid={`text-key-last-used-${key.id}`}>
-                          {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(key.maskedKey)}
-                              data-testid={`button-copy-key-${key.id}`}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deleteApiKeyMutation.mutate(key.id)}
-                              className="text-destructive hover:text-destructive"
-                              data-testid={`button-delete-key-${key.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+              {isMobile ? (
+                // Mobile card layout
+                <div className="space-y-4">
+                  {apiKeys.map((key) => (
+                    <Card key={key.id} data-testid={`card-api-key-${key.id}`}>
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-medium text-foreground" data-testid={`text-key-name-${key.id}`}>
+                              {key.name}
+                            </h3>
+                            <div className="flex space-x-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => copyToClipboard(key.maskedKey)}
+                                className="h-8 w-8 p-0"
+                                data-testid={`button-copy-key-${key.id}`}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteApiKeyMutation.mutate(key.id)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                data-testid={`button-delete-key-${key.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </td>
+                          <div className="text-xs font-mono text-muted-foreground bg-muted/50 p-2 rounded" data-testid={`text-key-masked-${key.id}`}>
+                            {key.maskedKey}
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <div>
+                              <span className="font-medium">Created:</span>
+                              <br />
+                              <span data-testid={`text-key-created-${key.id}`}>
+                                {new Date(key.createdAt || "").toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Last Used:</span>
+                              <br />
+                              <span data-testid={`text-key-last-used-${key.id}`}>
+                                {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                // Desktop table layout
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Key</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Created</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Last Used</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {apiKeys.map((key) => (
+                        <tr key={key.id} data-testid={`row-api-key-${key.id}`}>
+                          <td className="py-3 px-4 text-sm text-foreground" data-testid={`text-key-name-${key.id}`}>
+                            {key.name}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-mono text-muted-foreground" data-testid={`text-key-masked-${key.id}`}>
+                            {key.maskedKey}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground" data-testid={`text-key-created-${key.id}`}>
+                            {new Date(key.createdAt || "").toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground" data-testid={`text-key-last-used-${key.id}`}>
+                            {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => copyToClipboard(key.maskedKey)}
+                                data-testid={`button-copy-key-${key.id}`}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteApiKeyMutation.mutate(key.id)}
+                                className="text-destructive hover:text-destructive"
+                                data-testid={`button-delete-key-${key.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-                {apiKeys.length === 0 && (
-                  <div className="text-center py-8">
-                    <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No API keys yet</p>
-                    <p className="text-xs text-muted-foreground">Create your first API key to get started</p>
-                  </div>
-                )}
-              </div>
+              {apiKeys.length === 0 && (
+                <div className="text-center py-8">
+                  <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No API keys yet</p>
+                  <p className="text-xs text-muted-foreground">Create your first API key to get started</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
