@@ -13,6 +13,30 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Assistant configurations
+export const ASSISTANTS = {
+  storyteller: {
+    id: 'storyteller',
+    name: 'StoryTeller Assistant',
+    description: 'Biblical storytelling assistant',
+    openaiId: 'asst_eSD18ksRBzC5usjNxbZkmad6'
+  },
+  conversation: {
+    id: 'conversation',
+    name: 'Conversation Partner',
+    description: 'Conversation practice assistant',
+    openaiId: 'asst_Mxzqh1dfl3ggH83YzhZO6V9z'
+  },
+  performer: {
+    id: 'performer', 
+    name: 'Oral Performer',
+    description: 'Oral performance assistant',
+    openaiId: 'asst_Y6WiCXUTObAb3TNUFG0Yh1Hn'
+  }
+} as const;
+
+export type AssistantId = keyof typeof ASSISTANTS;
+
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const sessions = pgTable(
@@ -40,6 +64,7 @@ export const users = pgTable("users", {
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assistantId: varchar("assistant_id").notNull().default('storyteller'),
   title: varchar("title").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

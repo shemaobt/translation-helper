@@ -110,10 +110,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateChatTitle(chatId, title, userId);
       }
 
-      // Generate AI response using StoryTeller Assistant
+      // Generate AI response using the selected assistant
       const aiResponse = await generateAssistantResponse({
         chatId,
         userMessage: content,
+        assistantId: chat.assistantId as any,
         threadId: getChatThreadId(chatId),
       });
 
@@ -266,6 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await generateChatCompletion({
         chatId: tempChatId,
         messages: messages,
+        assistantId: 'storyteller', // Default to storyteller for external API
       });
 
       // Record usage
