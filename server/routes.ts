@@ -7,24 +7,49 @@ import { insertChatSchema, insertMessageSchema, insertApiKeySchema } from "@shar
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+// Simple anonymous user middleware that ensures users exist in database
+async function useAnonymousUser(req: any, res: any, next: any) {
+  try {
+    // Extract anonymous user ID from headers or create one
+    const userHeader = req.headers['x-anonymous-user'] || 'anon_' + Math.random().toString(36).substr(2, 9) + Date.now();
+    
+    // Ensure user exists in database with unique email
+    await storage.upsertUser({
+      id: userHeader,
+      email: `${userHeader}@anonymous.user`,
+      firstName: 'Anonymous',
+      lastName: 'User',
+    });
+    
+    req.user = {
+      claims: {
+        sub: userHeader
+      }
+    };
+    next();
+  } catch (error) {
+    console.error("Error creating anonymous user:", error);
+    res.status(500).json({ message: "Failed to create anonymous user" });
+  }
+}
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Skip Replit Auth setup - use anonymous users instead
+  // await setupAuth(app);
+
+  // Auth routes - return anonymous user data
+  app.get('/api/auth/user', async (req: any, res) => {
+    // Always return a successful anonymous user
+    res.json({
+      id: 'anonymous',
+      email: 'anonymous@user.com',
+      firstName: 'Anonymous',
+      lastName: 'User',
+    });
   });
 
   // Chat routes
-  app.get('/api/chats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/chats', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const chats = await storage.getUserChats(userId);
@@ -35,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/chats', isAuthenticated, async (req: any, res) => {
+  app.post('/api/chats', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const chatData = insertChatSchema.parse({ ...req.body, userId });
@@ -47,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/chats/:chatId/messages', isAuthenticated, async (req: any, res) => {
+  app.get('/api/chats/:chatId/messages', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { chatId } = req.params;
@@ -59,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/chats/:chatId/messages', isAuthenticated, async (req: any, res) => {
+  app.post('/api/chats/:chatId/messages', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { chatId } = req.params;
@@ -109,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/chats/:chatId', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { chatId } = req.params;
@@ -124,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Key routes
-  app.get('/api/api-keys', isAuthenticated, async (req: any, res) => {
+  app.get('/api/api-keys', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const apiKeys = await storage.getUserApiKeys(userId);
@@ -143,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/api-keys', isAuthenticated, async (req: any, res) => {
+  app.post('/api/api-keys', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name } = insertApiKeySchema.parse({ ...req.body, userId });
@@ -170,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/api-keys/:keyId', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/api-keys/:keyId', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { keyId } = req.params;
@@ -183,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stats', useAnonymousUser, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const stats = await storage.getUserStats(userId);

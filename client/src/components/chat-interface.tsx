@@ -114,8 +114,8 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-card border-b border-border p-4 flex items-center justify-between">
+      {/* Chat Header - Fixed at top */}
+      <div className="bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center space-x-3">
           {isMobile && onOpenSidebar && (
             <Button
@@ -194,8 +194,8 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className={`border-t border-border ${isMobile ? 'p-3' : 'p-4'}`}>
+      {/* Message Input - Fixed at bottom */}
+      <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3' : 'p-4'}`}>
         <form onSubmit={handleSubmit} className={`flex ${isMobile ? 'space-x-2' : 'space-x-3'}`} data-testid="form-message">
           <div className="flex-1">
             <Textarea
