@@ -20,15 +20,23 @@ import {
   MessageSquare,
   X 
 } from "lucide-react";
-import type { Chat } from "@shared/schema";
+import type { Chat, AssistantId } from "@shared/schema";
 
 interface SidebarProps {
   isMobile?: boolean;
   isOpen?: boolean;
   onClose?: () => void;
+  selectedAssistant?: AssistantId;
+  onAssistantChange?: (assistantId: AssistantId) => void;
 }
 
-export default function Sidebar({ isMobile = false, isOpen = true, onClose }: SidebarProps = {}) {
+export default function Sidebar({ 
+  isMobile = false, 
+  isOpen = true, 
+  onClose, 
+  selectedAssistant = 'storyteller',
+  onAssistantChange 
+}: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user } = useAuth();
@@ -44,6 +52,7 @@ export default function Sidebar({ isMobile = false, isOpen = true, onClose }: Si
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chats", {
         title: "New Chat",
+        assistantId: selectedAssistant,
       });
       return response.json();
     },

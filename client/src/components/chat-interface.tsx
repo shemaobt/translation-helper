@@ -6,16 +6,33 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Share, Send, Menu } from "lucide-react";
-import type { Message } from "@shared/schema";
+import { Bot, Trash2, Share, Send, Menu, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { Message, Chat, AssistantId } from "@shared/schema";
+import { ASSISTANTS } from "@shared/schema";
 
 interface ChatInterfaceProps {
   chatId?: string;
   isMobile?: boolean;
   onOpenSidebar?: () => void;
+  defaultAssistant?: AssistantId;
+  onDefaultAssistantChange?: (assistantId: AssistantId) => void;
 }
 
-export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar }: ChatInterfaceProps) {
+const ASSISTANT_CONFIG = ASSISTANTS;
+
+export default function ChatInterface({ 
+  chatId, 
+  isMobile = false, 
+  onOpenSidebar,
+  defaultAssistant = 'storyteller',
+  onDefaultAssistantChange
+}: ChatInterfaceProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -28,6 +45,53 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
     enabled: !!chatId,
     retry: false,
   });
+
+  // Get current chat details to know which assistant is being used
+  const { data: chat } = useQuery<Chat>({
+    queryKey: ["/api/chats", chatId],
+    enabled: !!chatId,
+    retry: false,
+  });
+
+  // Derive current assistant: use chat's assistant if available, otherwise default
+  const currentAssistant: AssistantId = (chatId ? (chat?.assistantId as AssistantId | undefined) : defaultAssistant) ?? defaultAssistant;
+
+  const switchAssistantMutation = useMutation({
+    mutationFn: async (assistantId: AssistantId) => {
+      const response = await apiRequest("PATCH", `/api/chats/${chatId}`, { assistantId });
+      return { data: await response.json(), assistantId };
+    },
+    onSuccess: ({ assistantId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      toast({
+        title: "Assistant switched",
+        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId].name}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to switch assistant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAssistantSwitch = (assistantId: AssistantId) => {
+    if (!chatId) {
+      // For new chats, update the default assistant
+      onDefaultAssistantChange?.(assistantId);
+      toast({
+        title: "Assistant switched",
+        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId].name}`,
+      });
+      return;
+    }
+    
+    // For existing chats, update on the server
+    switchAssistantMutation.mutate(assistantId);
+  };
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -105,7 +169,39 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
               <Bot className="h-8 w-8 text-primary-foreground" />
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">Welcome to Translation Helper</h2>
-            <p className="text-muted-foreground">Start a conversation and I'll help you with translations and storytelling.</p>
+            <p className="text-muted-foreground mb-6">Start a conversation and I'll help you with translations and storytelling.</p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-foreground mb-2">Choose your assistant:</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full max-w-sm" data-testid="button-select-assistant">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="text-left">
+                        <div className="font-medium">{ASSISTANT_CONFIG[currentAssistant].name}</div>
+                        <div className="text-sm text-muted-foreground">{ASSISTANT_CONFIG[currentAssistant].description}</div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-80">
+                  {Object.values(ASSISTANT_CONFIG).map((assistant) => (
+                    <DropdownMenuItem 
+                      key={assistant.id}
+                      onClick={() => handleAssistantSwitch(assistant.id as AssistantId)}
+                      className="p-3"
+                      data-testid={`assistant-option-${assistant.id}-welcome`}
+                    >
+                      <div>
+                        <div className="font-medium">{assistant.name}</div>
+                        <div className="text-sm text-muted-foreground">{assistant.description}</div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>
@@ -129,8 +225,43 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
             </Button>
           )}
           <div>
-            <h1 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-foreground`}>StoryTeller Assistant</h1>
-            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Biblical storytelling assistant</p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="h-auto p-0 hover:bg-transparent justify-start"
+                  disabled={switchAssistantMutation.isPending}
+                  data-testid="button-assistant-switcher"
+                >
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <h1 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-foreground`}>
+                        {ASSISTANT_CONFIG[currentAssistant].name}
+                      </h1>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
+                      {ASSISTANT_CONFIG[currentAssistant].description}
+                    </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {Object.values(ASSISTANT_CONFIG).map((assistant) => (
+                  <DropdownMenuItem 
+                    key={assistant.id}
+                    onClick={() => handleAssistantSwitch(assistant.id as AssistantId)}
+                    className="p-3"
+                    data-testid={`assistant-option-${assistant.id}`}
+                  >
+                    <div>
+                      <div className="font-medium">{assistant.name}</div>
+                      <div className="text-sm text-muted-foreground">{assistant.description}</div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -162,7 +293,7 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
                 <Bot className="h-8 w-8 text-primary-foreground" />
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Start a conversation</h2>
-              <p className="text-muted-foreground">Send a message to begin chatting with your StoryTeller assistant.</p>
+              <p className="text-muted-foreground">Send a message to begin chatting with your {ASSISTANT_CONFIG[currentAssistant].name}.</p>
             </div>
           </div>
         )}
@@ -219,7 +350,7 @@ export default function ChatInterface({ chatId, isMobile = false, onOpenSidebar 
           </Button>
         </form>
         <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-muted-foreground mt-2 text-center`}>
-          Biblical storytelling powered by StoryTeller AI
+          {ASSISTANT_CONFIG[currentAssistant].description} powered by {ASSISTANT_CONFIG[currentAssistant].name}
         </p>
       </div>
     </div>
