@@ -1,51 +1,186 @@
 import OpenAI from "openai";
 import type { Message } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// StoryTeller Assistant Configuration
+const STORYTELLER_ASSISTANT_ID = "asst_eSD18ksRBzC5usjNxbZkmad6";
+
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "your_openai_api_key"
 });
 
-export interface ChatCompletionRequest {
-  messages: { role: "user" | "assistant" | "system"; content: string }[];
-  temperature?: number;
-  maxTokens?: number;
+export interface AssistantRequest {
+  chatId: string;
+  userMessage: string;
+  threadId?: string;
 }
 
-export interface ChatCompletionResponse {
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
   content: string;
+}
+
+export interface ChatCompletionRequest {
+  chatId: string;
+  messages: ChatMessage[];
+  threadId?: string;
+}
+
+export interface AssistantResponse {
+  content: string;
+  threadId: string;
   tokens: number;
+}
+
+// Store thread IDs for chat sessions
+const chatThreadMap = new Map<string, string>();
+
+export async function generateAssistantResponse(
+  request: AssistantRequest
+): Promise<AssistantResponse> {
+  try {
+    let threadId = request.threadId || chatThreadMap.get(request.chatId);
+    
+    // Create a new thread if none exists
+    if (!threadId) {
+      const thread = await openai.beta.threads.create();
+      threadId = thread.id;
+      chatThreadMap.set(request.chatId, threadId);
+    }
+
+    // Add the user message to the thread
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: request.userMessage,
+    });
+
+    // Run the assistant
+    const run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: STORYTELLER_ASSISTANT_ID,
+    });
+
+    // Wait for the run to complete
+    let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
+      thread_id: threadId,
+    });
+    
+    while (runStatus.status === "in_progress" || runStatus.status === "queued") {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(run.id, {
+        thread_id: threadId,
+      });
+    }
+
+    if (runStatus.status === "failed") {
+      throw new Error("Assistant run failed");
+    }
+
+    // Get the assistant's response
+    const messages = await openai.beta.threads.messages.list(threadId);
+    const lastMessage = messages.data[0];
+    
+    if (!lastMessage || lastMessage.role !== "assistant") {
+      throw new Error("No assistant response found");
+    }
+
+    const content = lastMessage.content
+      .filter(block => block.type === "text")
+      .map(block => (block as any).text.value)
+      .join("\n");
+
+    return {
+      content,
+      threadId,
+      tokens: runStatus.usage?.total_tokens || 0,
+    };
+  } catch (error) {
+    console.error("OpenAI Assistant API error:", error);
+    throw new Error("Failed to generate response from StoryTeller assistant. Please try again.");
+  }
 }
 
 export async function generateChatCompletion(
   request: ChatCompletionRequest
-): Promise<ChatCompletionResponse> {
+): Promise<AssistantResponse> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025
-      messages: request.messages,
-      temperature: request.temperature || 0.7,
-      max_tokens: request.maxTokens || 1000,
-    });
+    let threadId = request.threadId || chatThreadMap.get(request.chatId);
+    
+    // Create a new thread if none exists
+    if (!threadId) {
+      const thread = await openai.beta.threads.create();
+      threadId = thread.id;
+      chatThreadMap.set(request.chatId, threadId);
+    }
 
-    const content = response.choices[0]?.message?.content || "";
-    const tokens = response.usage?.total_tokens || 0;
+    // Extract system messages for run instructions
+    const systemMessages = request.messages.filter(msg => msg.role === "system");
+    const conversationMessages = request.messages.filter(msg => msg.role !== "system");
+
+    // Add all conversation messages to the thread in order
+    for (const message of conversationMessages) {
+      await openai.beta.threads.messages.create(threadId, {
+        role: message.role as "user" | "assistant",
+        content: message.content,
+      });
+    }
+
+    // Create run with system messages as additional instructions
+    const runConfig: any = {
+      assistant_id: STORYTELLER_ASSISTANT_ID,
+    };
+
+    if (systemMessages.length > 0) {
+      const systemInstructions = systemMessages.map(msg => msg.content).join("\n\n");
+      runConfig.additional_instructions = systemInstructions;
+    }
+
+    const run = await openai.beta.threads.runs.create(threadId, runConfig);
+
+    // Wait for the run to complete
+    let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
+      thread_id: threadId,
+    });
+    
+    while (runStatus.status === "in_progress" || runStatus.status === "queued") {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(run.id, {
+        thread_id: threadId,
+      });
+    }
+
+    if (runStatus.status === "failed") {
+      throw new Error("Assistant run failed");
+    }
+
+    // Get the assistant's response
+    const messages = await openai.beta.threads.messages.list(threadId);
+    const lastMessage = messages.data[0];
+    
+    if (!lastMessage || lastMessage.role !== "assistant") {
+      throw new Error("No assistant response found");
+    }
+
+    const content = lastMessage.content
+      .filter(block => block.type === "text")
+      .map(block => (block as any).text.value)
+      .join("\n");
 
     return {
       content,
-      tokens,
+      threadId,
+      tokens: runStatus.usage?.total_tokens || 0,
     };
   } catch (error) {
-    console.error("OpenAI API error:", error);
-    throw new Error("Failed to generate AI response. Please try again.");
+    console.error("OpenAI Assistant API error:", error);
+    throw new Error("Failed to generate response from StoryTeller assistant. Please try again.");
   }
 }
 
-export function formatMessagesForOpenAI(messages: Message[]): ChatCompletionRequest["messages"] {
-  return messages.map(msg => ({
-    role: msg.role as "user" | "assistant",
-    content: msg.content,
-  }));
+export function clearChatThread(chatId: string): void {
+  chatThreadMap.delete(chatId);
+}
+
+export function getChatThreadId(chatId: string): string | undefined {
+  return chatThreadMap.get(chatId);
 }
 
 export function generateChatTitle(firstMessage: string): string {

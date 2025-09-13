@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { generateChatCompletion, formatMessagesForOpenAI, generateChatTitle } from "./openai";
+import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId } from "./openai";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema } from "@shared/schema";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
@@ -78,13 +78,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
       });
 
-      // Get chat history for context
-      const messages = await storage.getChatMessages(chatId, userId);
-      const openaiMessages = formatMessagesForOpenAI(messages);
+      // Check if this is the first user message and update title immediately
+      const existingMessages = await storage.getChatMessages(chatId, userId);
+      if (existingMessages.length === 1) {
+        const title = generateChatTitle(content);
+        await storage.updateChatTitle(chatId, title, userId);
+      }
 
-      // Generate AI response
-      const aiResponse = await generateChatCompletion({
-        messages: openaiMessages,
+      // Generate AI response using StoryTeller Assistant
+      const aiResponse = await generateAssistantResponse({
+        chatId,
+        userMessage: content,
+        threadId: getChatThreadId(chatId),
       });
 
       // Create assistant message
@@ -94,13 +99,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: aiResponse.content,
       });
 
-      // Update chat title if this is the first message
-      if (messages.length === 1) {
-        const title = generateChatTitle(content);
-        await storage.updateChatTitle(chatId, title, userId);
-      }
-
-      res.json({ userMessage, assistantMessage });
+      res.json({ 
+        userMessage, 
+        assistantMessage
+      });
     } catch (error) {
       console.error("Error creating message:", error);
       res.status(500).json({ message: "Failed to create message" });
@@ -112,6 +114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { chatId } = req.params;
       await storage.deleteChat(chatId, userId);
+      // Clean up thread to prevent memory leaks
+      clearChatThread(chatId);
       res.json({ message: "Chat deleted successfully" });
     } catch (error) {
       console.error("Error deleting chat:", error);
@@ -225,10 +229,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Messages array is required" });
       }
 
+      // For external API, we'll use the assistant with a temporary chat ID
+      const tempChatId = `api_${randomBytes(8).toString('hex')}`;
+      const lastUserMessage = messages[messages.length - 1];
+      
+      if (!lastUserMessage || lastUserMessage.role !== 'user') {
+        return res.status(400).json({ message: "Last message must be from user" });
+      }
+
+      // Use the new generateChatCompletion function to handle the entire conversation
       const response = await generateChatCompletion({
-        messages,
-        temperature,
-        maxTokens: max_tokens,
+        chatId: tempChatId,
+        messages: messages,
       });
 
       // Record usage
