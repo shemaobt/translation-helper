@@ -153,7 +153,7 @@ export default function Dashboard() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-2">Monitor your AI agent usage and performance</p>
+            <p className="text-muted-foreground mt-2">Monitor your Translation Helper usage and performance</p>
           </div>
 
           {/* Stats Cards */}
@@ -262,7 +262,7 @@ export default function Dashboard() {
                     <DialogHeader>
                       <DialogTitle>Create API Key</DialogTitle>
                       <DialogDescription>
-                        Generate a new API key to access your AI agent programmatically.
+                        Generate a new API key to access your Translation Helper programmatically.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">

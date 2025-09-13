@@ -84,7 +84,7 @@ export default function Sidebar() {
           <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
             <Bot className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground">AI Agent</span>
+          <span className="font-semibold text-foreground">Translation Helper</span>
         </div>
       </div>
 
