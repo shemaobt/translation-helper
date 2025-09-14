@@ -190,9 +190,10 @@ export default function ChatInterface({
     autoResizeTextarea();
   }, [message]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  // Auto-scroll disabled per user request
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages, isTyping]);
 
   if (!chatId) {
     return (
@@ -351,7 +352,7 @@ export default function ChatInterface({
       </div>
 
       {/* Chat Messages */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 space-y-4' : 'p-4 space-y-6'}`} data-testid="chat-messages">
+      <div className={`flex-1 overflow-hidden ${isMobile ? 'p-3 space-y-4' : 'p-4 space-y-6'}`} data-testid="chat-messages">
         {messages.length === 0 && (
           <div className="flex justify-center">
             <div className="max-w-2xl text-center">
