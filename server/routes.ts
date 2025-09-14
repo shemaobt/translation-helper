@@ -461,6 +461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Catch-all for unmatched API routes - return 404 instead of HTML
+  app.use('/api/*', (req, res) => {
+    res.status(404).json({ message: "API endpoint not found" });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
