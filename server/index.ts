@@ -10,9 +10,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Trust proxy for proper secure cookie and IP handling
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Replit runs applications behind a proxy in all environments
+app.set('trust proxy', 1);
 
 // Session configuration
 const PostgreSQLStore = connectPgSimple(session);
@@ -22,27 +21,70 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET environment variable is required in production');
 }
 
-// Configure session store to use existing Drizzle sessions table
-const sessionStore = new PostgreSQLStore({
-  conObject: {
-    connectionString: process.env.DATABASE_URL!,
-  },
-  tableName: 'sessions', // Use existing Drizzle table name
-  createTableIfMissing: false, // Don't auto-create, use existing schema
-});
+// Configure session store to use existing Drizzle sessions table with error handling
+let sessionStore: any;
 
-app.use(session({
-  store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-  },
-}));
+// Validate DATABASE_URL exists
+if (!process.env.DATABASE_URL) {
+  const errorMsg = 'DATABASE_URL environment variable is required';
+  log(`Session store error: ${errorMsg}`);
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(errorMsg);
+  }
+  // Use memory store in development if DATABASE_URL missing
+  const MemoryStore = session.MemoryStore;
+  sessionStore = new MemoryStore();
+  log('Using memory-based session store (degraded mode)');
+} else {
+  try {
+    sessionStore = new PostgreSQLStore({
+      conObject: {
+        connectionString: process.env.DATABASE_URL,
+      },
+      tableName: 'sessions', // Use existing Drizzle table name
+      createTableIfMissing: false, // Don't auto-create, use existing schema
+    });
+    
+    // Test database connection with error handling
+    sessionStore.on('error', (error: any) => {
+      log(`Session store database error: ${error.message}`);
+      // In production, this is critical but we'll let it continue
+      if (process.env.NODE_ENV === 'production') {
+        log('Session store error in production - sessions may not persist');
+      }
+    });
+    
+    sessionStore.on('connect', () => {
+      log('Session store connected to database successfully');
+    });
+    
+  } catch (error) {
+    log(`Failed to initialize PostgreSQL session store: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Fallback to memory store
+    const MemoryStore = session.MemoryStore;
+    sessionStore = new MemoryStore();
+    log('Falling back to memory-based session store (degraded mode)');
+  }
+}
+
+// Add session middleware with error handling
+try {
+  app.use(session({
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    },
+  }));
+} catch (error) {
+  log(`Failed to configure session middleware: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  // Continue without session middleware as fallback
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -77,36 +119,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add health check endpoint for deployment readiness
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+      res.status(status).json({ message });
+      log(`Request error: ${err.message || err}`);
+      // Don't rethrow - log and continue to prevent crashes
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '5000', 10);
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (error) {
+    log(`Server initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
