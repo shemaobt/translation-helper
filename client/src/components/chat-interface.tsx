@@ -211,14 +211,14 @@ export default function ChatInterface({
   return (
     <div className="flex-1 flex flex-col">
       {/* Chat Header - Fixed at top */}
-      <div className="bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+      <div className={`bg-card border-b border-border ${isMobile ? 'p-3' : 'p-4'} flex items-center justify-between sticky top-0 z-40 shadow-sm`}>
         <div className="flex items-center space-x-3">
           {isMobile && onOpenSidebar && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onOpenSidebar}
-              className="h-8 w-8 p-0"
+              className={`${isMobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-open-sidebar"
             >
               <Menu className="h-4 w-4" />
@@ -264,10 +264,11 @@ export default function ChatInterface({
             </DropdownMenu>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
           <Button 
             variant="ghost" 
             size="sm"
+            className={`${isMobile ? 'h-10 w-10 p-0 touch-manipulation' : ''}`}
             data-testid="button-clear-chat"
           >
             <Trash2 className="h-4 w-4" />
@@ -343,7 +344,7 @@ export default function ChatInterface({
           <Button
             type="submit"
             disabled={!message.trim() || sendMessageMutation.isPending}
-            className={isMobile ? 'h-10 w-10 p-0' : 'h-11'}
+            className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11'}`}
             data-testid="button-send"
           >
             <Send className="h-4 w-4" />
