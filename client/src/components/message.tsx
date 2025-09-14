@@ -6,9 +6,10 @@ import { useState, useEffect } from "react";
 interface MessageProps {
   message: Message;
   speechSynthesis?: any;
+  selectedLanguage?: string;
 }
 
-export default function MessageComponent({ message, speechSynthesis }: MessageProps) {
+export default function MessageComponent({ message, speechSynthesis, selectedLanguage }: MessageProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   // Sync with speech synthesis state
@@ -25,7 +26,7 @@ export default function MessageComponent({ message, speechSynthesis }: MessagePr
       speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      speechSynthesis.speak(message.content);
+      speechSynthesis.speak(message.content, selectedLanguage);
       setIsSpeaking(true);
     }
   };

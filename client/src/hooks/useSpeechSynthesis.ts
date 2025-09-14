@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 
+interface SpeechSynthesisOptions {
+  lang?: string;
+}
+
 interface SpeechSynthesisHook {
-  speak: (text: string) => void;
+  speak: (text: string, lang?: string) => void;
   pause: () => void;
   resume: () => void;
   cancel: () => void;
@@ -13,7 +17,7 @@ interface SpeechSynthesisHook {
   setSelectedVoice: (voice: SpeechSynthesisVoice | null) => void;
 }
 
-export function useSpeechSynthesis(): SpeechSynthesisHook {
+export function useSpeechSynthesis(options: SpeechSynthesisOptions = {}): SpeechSynthesisHook {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -57,7 +61,7 @@ export function useSpeechSynthesis(): SpeechSynthesisHook {
     };
   }, [isSupported, selectedVoice]);
 
-  const speak = (text: string) => {
+  const speak = (text: string, targetLang?: string) => {
     if (!isSupported) {
       console.warn('Speech synthesis is not supported in this browser');
       return;
@@ -68,9 +72,25 @@ export function useSpeechSynthesis(): SpeechSynthesisHook {
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Set voice if selected
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    // Choose voice based on target language or default to selected voice
+    let voiceToUse = selectedVoice;
+    
+    if (targetLang && voices.length > 0) {
+      // Try to find a voice that matches the target language
+      const languageMatchVoice = voices.find(voice => 
+        voice.lang.startsWith(targetLang.split('-')[0]) && voice.localService
+      ) || voices.find(voice => 
+        voice.lang.startsWith(targetLang.split('-')[0])
+      );
+      
+      if (languageMatchVoice) {
+        voiceToUse = languageMatchVoice;
+      }
+    }
+    
+    // Set voice if available
+    if (voiceToUse) {
+      utterance.voice = voiceToUse;
     }
 
     // Configure speech parameters
