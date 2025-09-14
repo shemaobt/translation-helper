@@ -6,6 +6,7 @@ import {
   apiUsage,
   type User,
   type UpsertUser,
+  type InsertUser,
   type Chat,
   type InsertChat,
   type Message,
@@ -23,8 +24,10 @@ import bcrypt from "bcryptjs";
 // Interface for storage operations
 export interface IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Chat operations
@@ -42,6 +45,7 @@ export interface IStorage {
   // API Key operations
   getUserApiKeys(userId: string): Promise<ApiKey[]>;
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  getApiKeysByPrefix(prefix: string): Promise<ApiKey[]>;
   createApiKey(apiKey: InsertApiKey & { key: string }): Promise<ApiKey>;
   deleteApiKey(keyId: string, userId: string): Promise<void>;
   updateApiKeyLastUsed(keyId: string): Promise<void>;
@@ -57,10 +61,24 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
 
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
 
@@ -156,6 +174,13 @@ export class DatabaseStorage implements IStorage {
       .from(apiKeys)
       .where(and(eq(apiKeys.keyHash, keyHash), eq(apiKeys.isActive, true)));
     return apiKey;
+  }
+
+  async getApiKeysByPrefix(prefix: string): Promise<ApiKey[]> {
+    return await db
+      .select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.prefix, prefix), eq(apiKeys.isActive, true)));
   }
 
   async createApiKey(data: InsertApiKey & { key: string }): Promise<ApiKey> {
