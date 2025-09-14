@@ -30,7 +30,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/" component={Login} />
-          <Route component={Login} />
+          <Route path="*" component={Login} />
         </>
       ) : (
         <>
@@ -39,7 +39,7 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/api-keys" component={Dashboard} />
           <Route path="/settings" component={Dashboard} />
-          <Route component={NotFound} />
+          <Route path="*" component={NotFound} />
         </>
       )}
     </Switch>
