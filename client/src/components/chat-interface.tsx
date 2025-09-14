@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,7 @@ export default function ChatInterface({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/chats", chatId, "messages"],
@@ -73,6 +75,38 @@ export default function ChatInterface({
       toast({
         title: "Error",
         description: "Failed to switch assistant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createChatMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/chats", {
+        title: "New Chat",
+        assistantId: currentAssistant,
+      });
+      return response.json();
+    },
+    onSuccess: (newChat) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      setLocation(`/chat/${newChat.id}`);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create new chat",
         variant: "destructive",
       });
     },
@@ -163,6 +197,22 @@ export default function ChatInterface({
   if (!chatId) {
     return (
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        {/* Welcome Header with Menu Button */}
+        {isMobile && onOpenSidebar && (
+          <div className="p-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenSidebar}
+              className="h-12 w-12 p-0 touch-manipulation"
+              data-testid="button-open-sidebar-welcome"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
         <div className="flex-1 flex justify-center items-center">
           <div className="max-w-2xl text-center">
             <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -201,6 +251,18 @@ export default function ChatInterface({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+            </div>
+
+            {/* Start a New Chat Button */}
+            <div className="mt-4">
+              <Button 
+                onClick={() => createChatMutation.mutate()}
+                disabled={createChatMutation.isPending}
+                className={`w-full max-w-sm ${isMobile ? 'h-12' : ''} bg-primary hover:bg-primary/90 text-primary-foreground`}
+                data-testid="button-start-new-chat"
+              >
+                {createChatMutation.isPending ? "Starting..." : "Start a New Chat"}
+              </Button>
             </div>
           </div>
         </div>
