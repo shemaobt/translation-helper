@@ -162,7 +162,7 @@ export default function ChatInterface({
 
   if (!chatId) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         <div className="flex-1 flex justify-center items-center">
           <div className="max-w-2xl text-center">
             <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
