@@ -175,7 +175,7 @@ export default function ChatInterface({
               <label className="block text-sm font-medium text-foreground mb-2">Choose your assistant:</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full max-w-sm" data-testid="button-select-assistant">
+                  <Button variant="outline" className={`w-full max-w-sm ${isMobile ? 'h-12' : ''}`} data-testid="button-select-assistant">
                     <div className="flex items-center justify-between w-full">
                       <div className="text-left">
                         <div className="font-medium">{ASSISTANT_CONFIG[currentAssistant].name}</div>
@@ -211,15 +211,16 @@ export default function ChatInterface({
   return (
     <div className="flex-1 flex flex-col">
       {/* Chat Header - Fixed at top */}
-      <div className={`bg-card border-b border-border ${isMobile ? 'p-3' : 'p-4'} flex items-center justify-between sticky top-0 z-40 shadow-sm`}>
+      <div className={`bg-card border-b border-border ${isMobile ? 'p-3 pt-[max(0.75rem,env(safe-area-inset-top))]' : 'p-4'} flex items-center justify-between sticky top-0 z-40 shadow-sm`}>
         <div className="flex items-center space-x-3">
           {isMobile && onOpenSidebar && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onOpenSidebar}
-              className={`${isMobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 touch-manipulation`}
+              className={`${isMobile ? 'h-12 w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-open-sidebar"
+              aria-label="Open sidebar"
             >
               <Menu className="h-4 w-4" />
             </Button>
@@ -229,7 +230,7 @@ export default function ChatInterface({
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  className="h-auto p-0 hover:bg-transparent justify-start"
+                  className={`${isMobile ? 'h-12 px-3' : 'h-auto p-0'} hover:bg-transparent justify-start touch-manipulation`}
                   disabled={switchAssistantMutation.isPending}
                   data-testid="button-assistant-switcher"
                 >
@@ -268,8 +269,9 @@ export default function ChatInterface({
           <Button 
             variant="ghost" 
             size="sm"
-            className={`${isMobile ? 'h-10 w-10 p-0 touch-manipulation' : ''}`}
+            className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation' : ''}`}
             data-testid="button-clear-chat"
+            aria-label="Clear chat"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -278,6 +280,7 @@ export default function ChatInterface({
               variant="ghost" 
               size="sm"
               data-testid="button-share-chat"
+              aria-label="Share chat"
             >
               <Share className="h-4 w-4" />
             </Button>
@@ -327,7 +330,7 @@ export default function ChatInterface({
       </div>
 
       {/* Message Input - Fixed at bottom */}
-      <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3' : 'p-4'}`}>
+      <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'p-4'}`}>
         <form onSubmit={handleSubmit} className={`flex ${isMobile ? 'space-x-2' : 'space-x-3'}`} data-testid="form-message">
           <div className="flex-1">
             <Textarea
@@ -336,7 +339,7 @@ export default function ChatInterface({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              className={`resize-none ${isMobile ? 'min-h-[40px] max-h-[100px] text-base' : 'min-h-[44px] max-h-[120px]'}`}
+              className={`resize-none ${isMobile ? 'min-h-[44px] max-h-[100px] text-base' : 'min-h-[44px] max-h-[120px]'}`}
               placeholder={isMobile ? "Ask about stories..." : "Type your message..."}
               data-testid="textarea-message"
             />
@@ -346,6 +349,7 @@ export default function ChatInterface({
             disabled={!message.trim() || sendMessageMutation.isPending}
             className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11'}`}
             data-testid="button-send"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </Button>
