@@ -95,7 +95,7 @@ export default function Sidebar({
   return (
     <div className={`${isMobile ? 'w-full max-w-sm' : 'w-64'} bg-card border-r border-border flex flex-col h-full`}>
       {/* Header */}
-      <div className="p-4 border-b border-border">
+      <div className={`${isMobile ? 'p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
@@ -108,8 +108,9 @@ export default function Sidebar({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className={`${isMobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 touch-manipulation`}
+              className={`${isMobile ? 'h-12 w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-close-sidebar"
+              aria-label="Close sidebar"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -154,8 +155,9 @@ export default function Sidebar({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="opacity-0 group-hover:opacity-100 h-auto p-1"
+                  className={isMobile ? 'opacity-100 h-12 w-12 p-0 touch-manipulation' : 'opacity-0 group-hover:opacity-100 h-auto p-1'}
                   data-testid={`button-chat-menu-${chat.id}`}
+                  aria-label="Chat options"
                 >
                   <MoreHorizontal className="h-3 w-3" />
                 </Button>
@@ -175,9 +177,12 @@ export default function Sidebar({
 
       {/* User Menu */}
       <div className="p-4 border-t border-border">
-        <div 
-          className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent cursor-pointer transition-colors"
+        <Button
+          variant="ghost" 
+          className={`flex items-center space-x-3 p-2 rounded-md hover:bg-accent w-full justify-start ${isMobile ? 'h-12' : ''}`}
           onClick={() => setUserMenuOpen(!userMenuOpen)}
+          aria-expanded={userMenuOpen}
+          aria-label="User menu"
           data-testid="button-user-menu"
         >
           <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
@@ -204,7 +209,7 @@ export default function Sidebar({
             </p>
           </div>
           <ChevronUp className={`h-3 w-3 text-muted-foreground transition-transform ${userMenuOpen ? "" : "rotate-180"}`} />
-        </div>
+        </Button>
         
         {/* Dropdown Menu */}
         {userMenuOpen && (
@@ -212,7 +217,7 @@ export default function Sidebar({
             <Link href="/dashboard" className="block">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-sm px-4 py-2 h-auto"
+                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
                 data-testid="link-dashboard"
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
@@ -222,7 +227,7 @@ export default function Sidebar({
             <Link href="/api-keys" className="block">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-sm px-4 py-2 h-auto"
+                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
                 data-testid="link-api-keys"
               >
                 <Key className="mr-2 h-4 w-4" />
@@ -232,7 +237,7 @@ export default function Sidebar({
             <Link href="/settings" className="block">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-sm px-4 py-2 h-auto"
+                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
                 data-testid="link-settings"
               >
                 <Settings className="mr-2 h-4 w-4" />
@@ -242,7 +247,7 @@ export default function Sidebar({
             <Separator className="my-1" />
             <Button
               variant="ghost"
-              className="w-full justify-start text-sm px-4 py-2 h-auto"
+              className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
               onClick={() => {
                 logout();
                 setUserMenuOpen(false);
