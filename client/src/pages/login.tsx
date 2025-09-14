@@ -63,15 +63,7 @@ function Login() {
   return (
     <div className="min-h-screen max-h-screen overflow-hidden flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
-            <Bot className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your Translation Helper account
-          </CardDescription>
-        </CardHeader>
+        
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
