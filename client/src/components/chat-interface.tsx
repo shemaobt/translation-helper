@@ -176,12 +176,12 @@ export default function ChatInterface({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className={`w-full max-w-sm ${isMobile ? 'h-12' : ''}`} data-testid="button-select-assistant">
-                    <div className="flex items-center justify-between w-full">
-                      <div className="text-left">
+                    <div className="flex items-center justify-center w-full relative">
+                      <div className="text-center">
                         <div className="font-medium">{ASSISTANT_CONFIG[currentAssistant].name}</div>
                         <div className="text-sm text-muted-foreground">{ASSISTANT_CONFIG[currentAssistant].description}</div>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-0 flex-shrink-0" />
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
