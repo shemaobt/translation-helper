@@ -50,6 +50,9 @@ export default function Sidebar({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check if user is manager (only manager can see dashboard, settings, etc.)
+  const isManager = (user as any)?.email === 'lucashandreus@gmail.com';
+
   const { data: chats = [] } = useQuery<Chat[]>({
     queryKey: ["/api/chats"],
     retry: false,
@@ -278,37 +281,43 @@ export default function Sidebar({
         {/* Dropdown Menu */}
         {userMenuOpen && (
           <div className="mt-2 bg-popover border border-border rounded-md shadow-lg py-2">
-            <Link href="/dashboard" className="block">
-              <Button
-                variant="ghost"
-                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
-                data-testid="link-dashboard"
-              >
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </Button>
-            </Link>
-            <Link href="/api-keys" className="block">
-              <Button
-                variant="ghost"
-                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
-                data-testid="link-api-keys"
-              >
-                <Key className="mr-2 h-4 w-4" />
-                API Keys
-              </Button>
-            </Link>
-            <Link href="/settings" className="block">
-              <Button
-                variant="ghost"
-                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
-                data-testid="link-settings"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
-            <Separator className="my-1" />
+            {/* Manager-only options */}
+            {isManager && (
+              <>
+                <Link href="/dashboard" className="block">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    data-testid="link-dashboard"
+                  >
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Link href="/api-keys" className="block">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    data-testid="link-api-keys"
+                  >
+                    <Key className="mr-2 h-4 w-4" />
+                    API Keys
+                  </Button>
+                </Link>
+                <Link href="/settings" className="block">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    data-testid="link-settings"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Button>
+                </Link>
+                <Separator className="my-1" />
+              </>
+            )}
+            {/* Logout option (visible to all users) */}
             <Button
               variant="ghost"
               className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
