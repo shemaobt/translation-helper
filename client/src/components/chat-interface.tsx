@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Share, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages } from "lucide-react";
+import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import {
@@ -186,6 +186,45 @@ export default function ChatInterface({
       toast({
         title: "Error",
         description: "Failed to create new chat",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChatMutation = useMutation({
+    mutationFn: async () => {
+      if (!chatId) {
+        throw new Error("No chat ID provided");
+      }
+      const response = await apiRequest("DELETE", `/api/chats/${chatId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+      toast({
+        title: "Success",
+        description: "Chat deleted successfully",
+      });
+      // Navigate to home after deleting current chat
+      setLocation('/');
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete chat",
         variant: "destructive",
       });
     },
@@ -459,23 +498,17 @@ export default function ChatInterface({
         </div>
 
         <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation' : ''}`}
-            data-testid="button-clear-chat"
-            aria-label="Clear chat"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          {!isMobile && (
+          {chatId && (
             <Button 
               variant="ghost" 
               size="sm"
-              data-testid="button-share-chat"
-              aria-label="Share chat"
+              className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation' : ''}`}
+              onClick={() => deleteChatMutation.mutate()}
+              disabled={deleteChatMutation.isPending}
+              data-testid="button-delete-chat"
+              aria-label="Delete chat"
             >
-              <Share className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>

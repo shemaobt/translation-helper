@@ -3,6 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,7 +24,8 @@ import {
   Settings, 
   LogOut,
   MessageSquare,
-  X 
+  X,
+  Trash 
 } from "lucide-react";
 import type { Chat, AssistantId } from "@shared/schema";
 
@@ -80,6 +87,44 @@ export default function Sidebar({
     },
   });
 
+  const deleteChatMutation = useMutation({
+    mutationFn: async (chatId: string) => {
+      const response = await apiRequest("DELETE", `/api/chats/${chatId}`);
+      return response.json();
+    },
+    onSuccess: (_, deletedChatId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chats", deletedChatId] });
+      toast({
+        title: "Success",
+        description: "Chat deleted successfully",
+      });
+      // Only navigate away if we're currently viewing the deleted chat
+      const currentPath = window.location.pathname;
+      if (currentPath === `/chat/${deletedChatId}`) {
+        setLocation('/');
+      }
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete chat",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatTimestamp = (timestamp: string | Date | null | undefined) => {
     if (!timestamp) return "Unknown";
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
@@ -136,15 +181,14 @@ export default function Sidebar({
         <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Chats</h3>
         
         {chats.map((chat) => (
-          <Link
-            key={chat.id}
-            href={`/chat/${chat.id}`}
-            className="block"
-            data-testid={`link-chat-${chat.id}`}
-          >
-            <div className="p-3 rounded-md hover:bg-accent cursor-pointer transition-colors group">
+          <div key={chat.id} className="relative group">
+            <Link
+              href={`/chat/${chat.id}`}
+              className="block p-3 rounded-md hover:bg-accent cursor-pointer transition-colors"
+              data-testid={`link-chat-${chat.id}`}
+            >
               <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pr-2">
                   <p className="text-sm text-foreground truncate" data-testid={`text-chat-title-${chat.id}`}>
                     {chat.title}
                   </p>
@@ -152,18 +196,38 @@ export default function Sidebar({
                     {formatTimestamp(chat.updatedAt || chat.createdAt || "")}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={isMobile ? 'opacity-100 h-12 w-12 p-0 touch-manipulation' : 'opacity-0 group-hover:opacity-100 h-auto p-1'}
-                  data-testid={`button-chat-menu-${chat.id}`}
-                  aria-label="Chat options"
-                >
-                  <MoreHorizontal className="h-3 w-3" />
-                </Button>
               </div>
+            </Link>
+            <div className="absolute top-3 right-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={isMobile ? 'opacity-100 h-8 w-8 p-0 touch-manipulation' : 'opacity-0 group-hover:opacity-100 h-auto p-1'}
+                    data-testid={`button-chat-menu-${chat.id}`}
+                    aria-label="Chat options"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      deleteChatMutation.mutate(chat.id);
+                    }}
+                    data-testid={`button-delete-chat-${chat.id}`}
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete chat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          </Link>
+          </div>
         ))}
 
         {chats.length === 0 && (
