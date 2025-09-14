@@ -469,7 +469,8 @@ export default function ChatInterface({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+
+        <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
           {/* Language Selector */}
           {(isSpeechRecognitionSupported || speechSynthesis.isSupported) && (
             <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
@@ -495,9 +496,6 @@ export default function ChatInterface({
               </SelectContent>
             </Select>
           )}
-        </div>
-
-        <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
           {chatId && (
             <Button 
               variant="ghost" 
