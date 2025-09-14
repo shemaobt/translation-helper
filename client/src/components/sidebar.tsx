@@ -93,7 +93,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className={`${isMobile ? 'w-80' : 'w-64'} bg-card border-r border-border flex flex-col h-full`}>
+    <div className={`${isMobile ? 'w-full max-w-sm' : 'w-64'} bg-card border-r border-border flex flex-col h-full`}>
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
@@ -101,14 +101,14 @@ export default function Sidebar({
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
               <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-foreground">Translation Helper</span>
+            <span className={`font-semibold text-foreground ${isMobile ? 'text-lg' : ''}`}>Translation Helper</span>
           </div>
           {isMobile && onClose && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-8 w-8 p-0"
+              className={`${isMobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-close-sidebar"
             >
               <X className="h-4 w-4" />
@@ -120,7 +120,7 @@ export default function Sidebar({
       {/* New Chat Button */}
       <div className="p-4">
         <Button
-          className="w-full justify-center space-x-2"
+          className={`w-full justify-center space-x-2 ${isMobile ? 'h-12 text-base touch-manipulation' : ''}`}
           onClick={() => createChatMutation.mutate()}
           disabled={createChatMutation.isPending}
           data-testid="button-new-chat"
