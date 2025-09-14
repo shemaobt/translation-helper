@@ -50,7 +50,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen bg-background flex relative ${!chatId ? 'overflow-hidden' : ''}`} data-testid="page-home">
+    <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-home">
       {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
         <div 
@@ -66,7 +66,7 @@ export default function Home() {
           ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`
-          : 'relative'
+          : 'relative h-full'
         }
       `}>
         <Sidebar 

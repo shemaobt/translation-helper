@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Share, Send, Menu, ChevronDown, Mic, MicOff, Square } from "lucide-react";
+import { Bot, Trash2, Share, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import {
@@ -16,6 +16,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Message, Chat, AssistantId } from "@shared/schema";
 import { ASSISTANTS } from "@shared/schema";
 
@@ -29,6 +36,25 @@ interface ChatInterfaceProps {
 
 const ASSISTANT_CONFIG = ASSISTANTS;
 
+// Language options for speech recognition and synthesis
+const LANGUAGE_OPTIONS = [
+  { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+  { code: 'es-ES', name: 'Spanish (Spain)', flag: '🇪🇸' },
+  { code: 'fr-FR', name: 'French (France)', flag: '🇫🇷' },
+  { code: 'de-DE', name: 'German (Germany)', flag: '🇩🇪' },
+  { code: 'it-IT', name: 'Italian (Italy)', flag: '🇮🇹' },
+  { code: 'pt-BR', name: 'Portuguese (Brazil)', flag: '🇧🇷' },
+  { code: 'ja-JP', name: 'Japanese (Japan)', flag: '🇯🇵' },
+  { code: 'ko-KR', name: 'Korean (Korea)', flag: '🇰🇷' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+  { code: 'hi-IN', name: 'Hindi (India)', flag: '🇮🇳' },
+  { code: 'ar-SA', name: 'Arabic (Saudi Arabia)', flag: '🇸🇦' },
+  { code: 'ru-RU', name: 'Russian (Russia)', flag: '🇷🇺' },
+  { code: 'nl-NL', name: 'Dutch (Netherlands)', flag: '🇳🇱' },
+  { code: 'sv-SE', name: 'Swedish (Sweden)', flag: '🇸🇪' },
+  { code: 'da-DK', name: 'Danish (Denmark)', flag: '🇩🇰' },
+];
+
 export default function ChatInterface({ 
   chatId, 
   isMobile = false, 
@@ -38,13 +64,14 @@ export default function ChatInterface({
 }: ChatInterfaceProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en-US');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   
-  // Speech recognition hook
+  // Speech recognition hook with language support
   const {
     transcript,
     interimTranscript,
@@ -52,11 +79,47 @@ export default function ChatInterface({
     startListening,
     stopListening,
     resetTranscript,
-    isSupported: isSpeechRecognitionSupported
-  } = useSpeechRecognition();
+    isSupported: isSpeechRecognitionSupported,
+    lastError,
+    permissionDenied
+  } = useSpeechRecognition({ lang: selectedLanguage });
   
   // Speech synthesis hook - expose for message components to use
-  const speechSynthesis = useSpeechSynthesis();
+  const speechSynthesis = useSpeechSynthesis({ lang: selectedLanguage });
+
+  // Show toast for speech recognition errors
+  useEffect(() => {
+    if (lastError) {
+      let errorMessage = 'Speech recognition error occurred';
+      
+      if (lastError === 'not-allowed') {
+        errorMessage = 'Microphone access denied. Please allow microphone permissions.';
+      } else if (lastError === 'no-speech') {
+        errorMessage = 'No speech detected. Please try speaking again.';
+      } else if (lastError === 'audio-capture') {
+        errorMessage = 'Microphone not available. Please check your microphone.';
+      } else if (lastError === 'network') {
+        errorMessage = 'Network error occurred during speech recognition.';
+      }
+      
+      toast({
+        title: "Voice Input Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [lastError, toast]);
+
+  // Show toast for permission denied
+  useEffect(() => {
+    if (permissionDenied) {
+      toast({
+        title: "Microphone Permission Required",
+        description: "Please allow microphone access to use voice input.",
+        variant: "destructive",
+      });
+    }
+  }, [permissionDenied, toast]);
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/chats", chatId, "messages"],
@@ -366,6 +429,35 @@ export default function ChatInterface({
             </DropdownMenu>
           </div>
         </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Language Selector */}
+          {(isSpeechRecognitionSupported || speechSynthesis.isSupported) && (
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <SelectTrigger className={`${isMobile ? 'w-16 h-12' : 'w-20 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-language">
+                <SelectValue>
+                  <div className="flex items-center gap-1">
+                    <Languages className="h-3 w-3" />
+                    <span className="text-xs">
+                      {LANGUAGE_OPTIONS.find(lang => lang.code === selectedLanguage)?.flag || '🌐'}
+                    </span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code} data-testid={`language-option-${lang.code}`}>
+                    <div className="flex items-center gap-2">
+                      <span>{lang.flag}</span>
+                      <span>{lang.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
         <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
           <Button 
             variant="ghost" 
@@ -408,6 +500,7 @@ export default function ChatInterface({
             key={msg.id} 
             message={msg} 
             speechSynthesis={speechSynthesis}
+            selectedLanguage={selectedLanguage}
           />
         ))}
 
