@@ -1,11 +1,34 @@
-import { Bot, User } from "lucide-react";
+import { Bot, User, Volume2, VolumeX, Pause } from "lucide-react";
 import type { Message } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
 interface MessageProps {
   message: Message;
+  speechSynthesis?: any;
 }
 
-export default function MessageComponent({ message }: MessageProps) {
+export default function MessageComponent({ message, speechSynthesis }: MessageProps) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Sync with speech synthesis state
+  useEffect(() => {
+    if (speechSynthesis) {
+      setIsSpeaking(speechSynthesis.isSpeaking);
+    }
+  }, [speechSynthesis?.isSpeaking]);
+
+  const handleSpeak = () => {
+    if (!speechSynthesis || !speechSynthesis.isSupported) return;
+    
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      speechSynthesis.speak(message.content);
+      setIsSpeaking(true);
+    }
+  };
   const formatTimestamp = (timestamp: string | Date | null | undefined) => {
     if (!timestamp) return "Unknown";
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
@@ -47,6 +70,28 @@ export default function MessageComponent({ message }: MessageProps) {
             <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid={`text-message-content-${message.id}`}>
               {message.content}
             </div>
+            {speechSynthesis && speechSynthesis.isSupported && (
+              <Button
+                onClick={handleSpeak}
+                variant="ghost"
+                size="sm"
+                className="mt-2 h-8 px-2"
+                data-testid={`button-speak-${message.id}`}
+                aria-label={isSpeaking ? "Stop speaking" : "Play message"}
+              >
+                {isSpeaking ? (
+                  <>
+                    <Pause className="h-3 w-3 mr-1" />
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="h-3 w-3 mr-1" />
+                    Play
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-1 ml-11" data-testid={`text-message-timestamp-${message.id}`}>

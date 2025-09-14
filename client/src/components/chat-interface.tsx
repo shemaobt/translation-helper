@@ -7,7 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Share, Send, Menu, ChevronDown } from "lucide-react";
+import { Bot, Trash2, Share, Send, Menu, ChevronDown, Mic, MicOff, Square } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +43,20 @@ export default function ChatInterface({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  
+  // Speech recognition hook
+  const {
+    transcript,
+    interimTranscript,
+    isListening,
+    startListening,
+    stopListening,
+    resetTranscript,
+    isSupported: isSpeechRecognitionSupported
+  } = useSpeechRecognition();
+  
+  // Speech synthesis hook - expose for message components to use
+  const speechSynthesis = useSpeechSynthesis();
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/chats", chatId, "messages"],
@@ -189,6 +205,28 @@ export default function ChatInterface({
   useEffect(() => {
     autoResizeTextarea();
   }, [message]);
+  
+  // Update message when speech recognition provides text
+  useEffect(() => {
+    if (transcript || interimTranscript) {
+      setMessage(transcript + interimTranscript);
+    }
+  }, [transcript, interimTranscript]);
+  
+  // Toggle speech recognition
+  const toggleSpeechRecognition = () => {
+    if (isListening) {
+      stopListening();
+      // Send message if there's transcribed text
+      if (message.trim()) {
+        handleSubmit(new Event('submit') as any);
+      }
+    } else {
+      resetTranscript();
+      setMessage("");
+      startListening();
+    }
+  };
 
   // Auto-scroll disabled per user request
   // useEffect(() => {
@@ -366,7 +404,11 @@ export default function ChatInterface({
         )}
 
         {messages.map((msg) => (
-          <MessageComponent key={msg.id} message={msg} />
+          <MessageComponent 
+            key={msg.id} 
+            message={msg} 
+            speechSynthesis={speechSynthesis}
+          />
         ))}
 
         {/* Typing Indicator */}
@@ -403,10 +445,26 @@ export default function ChatInterface({
               onKeyDown={handleKeyDown}
               rows={1}
               className={`resize-none ${isMobile ? 'min-h-[44px] max-h-[100px] text-base' : 'min-h-[44px] max-h-[120px]'}`}
-              placeholder={isMobile ? "Ask about stories..." : "Type your message..."}
+              placeholder={isListening ? "Listening..." : (isMobile ? "Ask about stories..." : "Type your message...")}
               data-testid="textarea-message"
             />
           </div>
+          {isSpeechRecognitionSupported && (
+            <Button
+              type="button"
+              onClick={toggleSpeechRecognition}
+              variant={isListening ? "destructive" : "secondary"}
+              className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11 w-11'} ${isListening ? 'recording-active' : ''}`}
+              data-testid="button-microphone"
+              aria-label={isListening ? "Stop recording" : "Start recording"}
+            >
+              {isListening ? (
+                <Square className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <Button
             type="submit"
             disabled={!message.trim() || sendMessageMutation.isPending}
