@@ -70,11 +70,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session
         req.session.userId = user.id;
         
-        res.json({
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+        // Save session to ensure it's persisted
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error('Session save failed:', saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          });
         });
       });
     } catch (error) {
@@ -108,11 +116,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session
         req.session.userId = user.id;
         
-        res.json({
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+        // Save session to ensure it's persisted
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error('Session save failed:', saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          });
         });
       });
     } catch (error) {
