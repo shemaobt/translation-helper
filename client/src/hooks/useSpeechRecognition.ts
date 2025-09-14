@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 
+interface SpeechRecognitionOptions {
+  lang?: string;
+}
+
 interface SpeechRecognitionHook {
   transcript: string;
   interimTranscript: string;
@@ -8,6 +12,8 @@ interface SpeechRecognitionHook {
   stopListening: () => void;
   resetTranscript: () => void;
   isSupported: boolean;
+  lastError: string | null;
+  permissionDenied: boolean;
 }
 
 // Define the Web Speech API types
@@ -34,11 +40,15 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
-export function useSpeechRecognition(): SpeechRecognitionHook {
+export function useSpeechRecognition(options: SpeechRecognitionOptions = {}): SpeechRecognitionHook {
+  const { lang = 'en-US' } = options;
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const shouldContinueRef = useRef(false);
 
   // Check if browser supports Web Speech API
   const isSupported = typeof window !== 'undefined' && 
@@ -52,31 +62,56 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+    recognition.lang = lang;
 
     recognition.onstart = () => {
       setIsListening(true);
+      setLastError(null);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      // Auto-restart if user still wants to continue
+      if (shouldContinueRef.current) {
+        setTimeout(() => {
+          if (shouldContinueRef.current && recognitionRef.current) {
+            try {
+              recognition.start();
+            } catch (e) {
+              console.error('Failed to restart recognition:', e);
+              setLastError('Failed to restart recording');
+            }
+          }
+        }, 100);
+      }
     };
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
+      setLastError(event.error);
       
-      // Auto-restart for certain errors
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+      // Handle permission denied
+      if (event.error === 'not-allowed') {
+        setPermissionDenied(true);
+        shouldContinueRef.current = false;
+        return;
+      }
+      
+      // Auto-restart for benign errors
+      const benignErrors = ['no-speech', 'audio-capture', 'network'];
+      if (benignErrors.includes(event.error) && shouldContinueRef.current) {
         setTimeout(() => {
-          if (recognitionRef.current && isListening) {
+          if (shouldContinueRef.current && recognitionRef.current) {
             try {
               recognition.start();
             } catch (e) {
               console.error('Failed to restart recognition:', e);
+              setLastError('Failed to restart recording');
             }
           }
-        }, 100);
+        }, 500);
       }
     };
 
@@ -108,25 +143,33 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
         recognitionRef.current.stop();
       }
     };
-  }, [isSupported, isListening]);
+  }, [isSupported, lang]); // Remove isListening from dependencies!
 
   const startListening = () => {
     if (!isSupported || !recognitionRef.current || isListening) return;
+    
+    setPermissionDenied(false);
+    setLastError(null);
+    shouldContinueRef.current = true;
     
     try {
       recognitionRef.current.start();
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
+      setLastError('Failed to start recording');
     }
   };
 
   const stopListening = () => {
-    if (!recognitionRef.current || !isListening) return;
+    if (!recognitionRef.current) return;
+    
+    shouldContinueRef.current = false;
     
     try {
       recognitionRef.current.stop();
     } catch (error) {
       console.error('Failed to stop speech recognition:', error);
+      setLastError('Failed to stop recording');
     }
   };
 
@@ -142,6 +185,8 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     startListening,
     stopListening,
     resetTranscript,
-    isSupported
+    isSupported,
+    lastError,
+    permissionDenied
   };
 }
