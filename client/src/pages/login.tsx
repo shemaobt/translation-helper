@@ -63,7 +63,7 @@ function Login() {
   return (
     <div className="min-h-screen max-h-screen overflow-hidden flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardContent>
+        <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
