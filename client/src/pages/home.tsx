@@ -50,7 +50,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative" data-testid="page-home">
+    <div className={`min-h-screen bg-background flex relative ${!chatId ? 'overflow-hidden' : ''}`} data-testid="page-home">
       {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
         <div 
