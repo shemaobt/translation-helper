@@ -1,35 +1,55 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { createContext, useContext } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
-// Generate or get anonymous user ID from localStorage
-function getAnonymousUserId() {
-  let userId = localStorage.getItem('anonymous_user_id');
-  if (!userId) {
-    userId = 'anon_' + Math.random().toString(36).substr(2, 9) + Date.now();
-    localStorage.setItem('anonymous_user_id', userId);
-  }
-  return userId;
+interface User {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
 }
 
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (user: User) => void;
+  logout: () => void;
+}
+
+export const AuthContext = createContext<AuthContextType | null>(null);
+
 export function useAuth() {
-  // Keep the same hook pattern but return anonymous user
-  const { data: authenticatedUser, isLoading } = useQuery({
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
+
+export function useAuthQuery() {
+  return useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    enabled: false, // Disable the actual query
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+}
 
-  // Create anonymous user data
-  const anonymousUser = {
-    id: getAnonymousUserId(),
-    email: 'anonymous@user.com',
-    firstName: 'Anonymous',
-    lastName: 'User',
-  };
-
-  return {
-    user: anonymousUser,
-    isLoading: false,
-    isAuthenticated: true,
-  };
+export function useLogoutMutation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      // Clear all queries on logout
+      queryClient.clear();
+    },
+    onError: () => {
+      // Even if logout fails on server, clear local cache
+      queryClient.clear();
+    },
+  });
 }

@@ -39,7 +39,7 @@ export default function Sidebar({
 }: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -243,7 +243,10 @@ export default function Sidebar({
             <Button
               variant="ghost"
               className="w-full justify-start text-sm px-4 py-2 h-auto"
-              onClick={() => window.location.href = "/api/logout"}
+              onClick={() => {
+                logout();
+                setUserMenuOpen(false);
+              }}
               data-testid="button-logout"
             >
               <LogOut className="mr-2 h-4 w-4" />

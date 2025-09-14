@@ -1,57 +1,159 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId } from "./openai";
-import { insertChatSchema, insertMessageSchema, insertApiKeySchema } from "@shared/schema";
+import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
+import { z } from "zod";
 
-// Simple anonymous user middleware that ensures users exist in database
-async function useAnonymousUser(req: any, res: any, next: any) {
-  try {
-    // Extract anonymous user ID from headers or create one
-    const userHeader = req.headers['x-anonymous-user'] || 'anon_' + Math.random().toString(36).substr(2, 9) + Date.now();
-    
-    // Ensure user exists in database with unique email
-    await storage.upsertUser({
-      id: userHeader,
-      email: `${userHeader}@anonymous.user`,
-      firstName: 'Anonymous',
-      lastName: 'User',
-    });
-    
-    req.user = {
-      claims: {
-        sub: userHeader
-      }
-    };
-    next();
-  } catch (error) {
-    console.error("Error creating anonymous user:", error);
-    res.status(500).json({ message: "Failed to create anonymous user" });
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (req.session && req.session.userId) {
+    req.userId = req.session.userId;
+    return next();
   }
+  return res.status(401).json({ message: "Authentication required" });
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Skip Replit Auth setup - use anonymous users instead
-  // await setupAuth(app);
+// Explicit validation schemas with security requirements
+const signupValidationSchema = z.object({
+  email: z.string().email().toLowerCase(),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
 
-  // Auth routes - return anonymous user data
-  app.get('/api/auth/user', async (req: any, res) => {
-    // Always return a successful anonymous user
-    res.json({
-      id: 'anonymous',
-      email: 'anonymous@user.com',
-      firstName: 'Anonymous',
-      lastName: 'User',
+const loginValidationSchema = z.object({
+  email: z.string().email().toLowerCase(), 
+  password: z.string().min(1, "Password is required"),
+});
+
+// Rate limiting for authentication routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 auth attempts per windowMs
+  message: { message: "Too many authentication attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth routes
+  app.post('/api/auth/signup', authLimiter, async (req: any, res) => {
+    try {
+      const userData = signupValidationSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      
+      // Create user
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword
+      });
+      
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error('Session regeneration failed:', err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        // Set session
+        req.session.userId = user.id;
+        
+        res.json({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        });
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
+  });
+
+  app.post('/api/auth/login', authLimiter, async (req: any, res) => {
+    try {
+      // Validate login data
+      const { email, password } = loginValidationSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error('Session regeneration failed:', err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        // Set session
+        req.session.userId = user.id;
+        
+        res.json({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        });
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logged out successfully" });
     });
   });
 
-  // Chat routes
-  app.get('/api/chats', useAnonymousUser, async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const user = await storage.getUserById(req.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  // Chat routes
+  app.get('/api/chats', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
       const chats = await storage.getUserChats(userId);
       res.json(chats);
     } catch (error) {
@@ -60,9 +162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/chats', useAnonymousUser, async (req: any, res) => {
+  app.post('/api/chats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const chatData = insertChatSchema.parse({ ...req.body, userId });
       const chat = await storage.createChat(chatData);
       res.json(chat);
@@ -72,9 +174,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
+  app.get('/api/chats/:chatId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { chatId } = req.params;
       const chat = await storage.getChat(chatId, userId);
       if (!chat) {
@@ -87,9 +189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/chats/:chatId/messages', useAnonymousUser, async (req: any, res) => {
+  app.get('/api/chats/:chatId/messages', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { chatId } = req.params;
       const messages = await storage.getChatMessages(chatId, userId);
       res.json(messages);
@@ -99,9 +201,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/chats/:chatId/messages', useAnonymousUser, async (req: any, res) => {
+  app.post('/api/chats/:chatId/messages', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { chatId } = req.params;
       const { content } = req.body;
 
@@ -150,9 +252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
+  app.delete('/api/chats/:chatId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { chatId } = req.params;
       await storage.deleteChat(chatId, userId);
       // Clean up thread to prevent memory leaks
@@ -164,9 +266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/chats/:chatId', useAnonymousUser, async (req: any, res) => {
+  app.patch('/api/chats/:chatId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { chatId } = req.params;
       
       // Create update schema for validating partial chat updates
@@ -189,9 +291,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Key routes
-  app.get('/api/api-keys', useAnonymousUser, async (req: any, res) => {
+  app.get('/api/api-keys', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const apiKeys = await storage.getUserApiKeys(userId);
       
       // Don't return the actual key hash
@@ -208,9 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/api-keys', useAnonymousUser, async (req: any, res) => {
+  app.post('/api/api-keys', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { name } = insertApiKeySchema.parse({ ...req.body, userId });
       
       // Generate a new API key
@@ -235,9 +337,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/api-keys/:keyId', useAnonymousUser, async (req: any, res) => {
+  app.delete('/api/api-keys/:keyId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const { keyId } = req.params;
       await storage.deleteApiKey(keyId, userId);
       res.json({ message: "API key deleted successfully" });
@@ -248,9 +350,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/stats', useAnonymousUser, async (req: any, res) => {
+  app.get('/api/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const stats = await storage.getUserStats(userId);
       res.json(stats);
     } catch (error) {
@@ -268,17 +370,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const apiKey = authHeader.substring(7);
-      const keyHash = await bcrypt.hash(apiKey, 10);
       
-      // Note: In production, you'd want to verify the hash properly
-      // This is a simplified version for demo purposes
-      const storedKey = await storage.getApiKeyByHash(keyHash);
-      if (!storedKey) {
+      // Extract prefix for lookup (first 8 characters)
+      if (apiKey.length < 8) {
+        return res.status(401).json({ message: "Invalid API key format" });
+      }
+      
+      const prefix = apiKey.substring(0, 8);
+      
+      // Get candidate keys by prefix
+      const candidateKeys = await storage.getApiKeysByPrefix(prefix);
+      if (candidateKeys.length === 0) {
+        return res.status(401).json({ message: "Invalid API key" });
+      }
+      
+      // Find matching key using constant-time comparison
+      let matchedKey: any = null;
+      for (const candidateKey of candidateKeys) {
+        const isValid = await bcrypt.compare(apiKey, candidateKey.keyHash);
+        if (isValid) {
+          matchedKey = candidateKey;
+          break;
+        }
+      }
+      
+      if (!matchedKey) {
         return res.status(401).json({ message: "Invalid API key" });
       }
 
-      await storage.updateApiKeyLastUsed(storedKey.id);
-      req.apiKey = storedKey;
+      await storage.updateApiKeyLastUsed(matchedKey.id);
+      req.apiKey = matchedKey;
       next();
     } catch (error) {
       console.error("Error authenticating API key:", error);
