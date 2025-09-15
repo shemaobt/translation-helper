@@ -3,11 +3,78 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import multer from "multer";
+
+// Server-side audio cache for faster TTS responses
+interface CachedAudio {
+  buffer: Buffer;
+  timestamp: number;
+  etag: string;
+}
+
+class AudioCache {
+  private cache = new Map<string, CachedAudio>();
+  private maxSize = 100; // Limit memory usage
+  private ttl = 24 * 60 * 60 * 1000; // 24 hours
+
+  private createCacheKey(text: string, language: string): string {
+    // Normalize text for consistent caching
+    const normalizedText = text.trim().toLowerCase();
+    return createHash('sha256').update(`${normalizedText}:${language}`).digest('hex');
+  }
+
+  private isExpired(cached: CachedAudio): boolean {
+    return Date.now() - cached.timestamp > this.ttl;
+  }
+
+  get(text: string, language: string): CachedAudio | null {
+    const key = this.createCacheKey(text, language);
+    const cached = this.cache.get(key);
+    
+    if (cached && !this.isExpired(cached)) {
+      // LRU: Move to end by re-inserting
+      this.cache.delete(key);
+      this.cache.set(key, cached);
+      return cached;
+    }
+    
+    if (cached) {
+      this.cache.delete(key); // Remove expired
+    }
+    
+    return null;
+  }
+
+  set(text: string, language: string, buffer: Buffer): CachedAudio {
+    const key = this.createCacheKey(text, language);
+    const etag = `"${key.substring(0, 16)}"`;
+    const cached: CachedAudio = {
+      buffer,
+      timestamp: Date.now(),
+      etag
+    };
+
+    // LRU eviction if cache is full
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+
+    this.cache.set(key, cached);
+    return cached;
+  }
+
+  getETag(text: string, language: string): string {
+    const key = this.createCacheKey(text, language);
+    return `"${key.substring(0, 16)}"`;
+  }
+}
+
+const audioCache = new AudioCache();
 
 // Multer configuration for audio uploads
 const upload = multer({
@@ -261,12 +328,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate AI response using the selected assistant
+      const threadId = await getChatThreadId(chatId, userId);
       const aiResponse = await generateAssistantResponse({
         chatId,
         userMessage: content,
         assistantId: chat.assistantId as any,
-        threadId: getChatThreadId(chatId),
-      });
+        threadId: threadId || undefined,
+      }, userId);
 
       // Create assistant message
       const assistantMessage = await storage.createMessage({
@@ -291,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { chatId } = req.params;
       await storage.deleteChat(chatId, userId);
       // Clean up thread to prevent memory leaks
-      clearChatThread(chatId);
+      await clearChatThread(chatId, userId);
       res.json({ message: "Chat deleted successfully" });
     } catch (error) {
       console.error("Error deleting chat:", error);
@@ -461,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chatId: tempChatId,
         messages: messages,
         assistantId: 'storyteller', // Default to storyteller for external API
-      });
+      }, 'api-user'); // Use special API user ID for external requests
 
       // Record usage
       await storage.recordApiUsage({
@@ -522,12 +590,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Text too long (max 4096 characters)" });
       }
 
-      const audioBuffer = await generateSpeech(text, language);
+      // Generate ETag for this content
+      const etag = audioCache.getETag(text, language);
+      
+      // Check if client has cached version
+      const clientETag = req.headers['if-none-match'];
+      if (clientETag === etag) {
+        return res.status(304).end(); // Not Modified
+      }
+
+      // Check server cache first
+      let cached = audioCache.get(text, language);
+      let audioBuffer: Buffer;
+
+      if (cached) {
+        // Cache hit - instant response!
+        audioBuffer = cached.buffer;
+      } else {
+        // Cache miss - generate and cache
+        audioBuffer = await generateSpeech(text, language);
+        cached = audioCache.set(text, language, audioBuffer);
+      }
       
       res.set({
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.length.toString(),
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Cache-Control': 'public, max-age=31536000, immutable', // 1 year - content-addressable
+        'ETag': etag,
       });
       
       res.send(audioBuffer);

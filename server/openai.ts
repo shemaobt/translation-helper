@@ -31,20 +31,21 @@ export interface AssistantResponse {
   tokens: number;
 }
 
-// Store thread IDs for chat sessions
-const chatThreadMap = new Map<string, string>();
+// Thread ID persistence moved to database for durability across restarts
+import { storage } from './storage';
 
 export async function generateAssistantResponse(
-  request: AssistantRequest
+  request: AssistantRequest,
+  userId: string
 ): Promise<AssistantResponse> {
   try {
-    let threadId = request.threadId || chatThreadMap.get(request.chatId);
+    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
     
     // Create a new thread if none exists
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
-      chatThreadMap.set(request.chatId, threadId);
+      await storage.updateChatThreadId(request.chatId, threadId, userId);
     }
 
     // Add the user message to the thread
@@ -99,16 +100,17 @@ export async function generateAssistantResponse(
 }
 
 export async function generateChatCompletion(
-  request: ChatCompletionRequest
+  request: ChatCompletionRequest,
+  userId: string
 ): Promise<AssistantResponse> {
   try {
-    let threadId = request.threadId || chatThreadMap.get(request.chatId);
+    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
     
     // Create a new thread if none exists
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
-      chatThreadMap.set(request.chatId, threadId);
+      await storage.updateChatThreadId(request.chatId, threadId, userId);
     }
 
     // Extract system messages for run instructions
@@ -175,12 +177,12 @@ export async function generateChatCompletion(
   }
 }
 
-export function clearChatThread(chatId: string): void {
-  chatThreadMap.delete(chatId);
+export async function clearChatThread(chatId: string, userId: string): Promise<void> {
+  await storage.updateChatThreadId(chatId, '', userId);
 }
 
-export function getChatThreadId(chatId: string): string | undefined {
-  return chatThreadMap.get(chatId);
+export async function getChatThreadId(chatId: string, userId: string): Promise<string | null> {
+  return await storage.getChatThreadId(chatId, userId);
 }
 
 // Audio processing functions for Whisper and TTS

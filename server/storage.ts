@@ -36,6 +36,8 @@ export interface IStorage {
   createChat(chat: InsertChat): Promise<Chat>;
   updateChatTitle(chatId: string, title: string, userId: string): Promise<void>;
   updateChat(chatId: string, updates: Partial<Pick<InsertChat, 'assistantId' | 'title'>>, userId: string): Promise<Chat>;
+  updateChatThreadId(chatId: string, threadId: string, userId: string): Promise<void>;
+  getChatThreadId(chatId: string, userId: string): Promise<string | null>;
   deleteChat(chatId: string, userId: string): Promise<void>;
   
   // Message operations
@@ -133,6 +135,21 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
       .returning();
     return updatedChat;
+  }
+
+  async updateChatThreadId(chatId: string, threadId: string, userId: string): Promise<void> {
+    await db
+      .update(chats)
+      .set({ threadId, updatedAt: new Date() })
+      .where(and(eq(chats.id, chatId), eq(chats.userId, userId)));
+  }
+
+  async getChatThreadId(chatId: string, userId: string): Promise<string | null> {
+    const [chat] = await db
+      .select({ threadId: chats.threadId })
+      .from(chats)
+      .where(and(eq(chats.id, chatId), eq(chats.userId, userId)));
+    return chat?.threadId || null;
   }
 
   async deleteChat(chatId: string, userId: string): Promise<void> {
