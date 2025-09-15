@@ -475,31 +475,34 @@ export default function ChatInterface({
         <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
           {/* Voice Selector */}
           {speechSynthesis.isSupported && (
-            <Select 
-              value={speechSynthesis.selectedVoice?.name || 'Alloy (Versatile)'} 
-              onValueChange={(voiceName) => {
-                const voice = speechSynthesis.voices.find(v => v.name === voiceName);
-                speechSynthesis.setSelectedVoice(voice || null);
-              }}
-            >
-              <SelectTrigger className={`${isMobile ? 'w-16 h-12' : 'w-20 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-voice">
-                <SelectValue>
-                  <div className="flex items-center gap-1">
-                    <Volume2 className="h-3 w-3" />
-                    <span className="text-xs">
-                      {speechSynthesis.selectedVoice?.name.split(' ')[0] || 'Voice'}
-                    </span>
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {speechSynthesis.voices.map((voice) => (
-                  <SelectItem key={voice.name} value={voice.name} data-testid={`voice-option-${voice.name}`}>
-                    {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center space-x-2">
+              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Choose Voice:</span>
+              <Select 
+                value={speechSynthesis.selectedVoice?.name || 'Alloy (Versatile)'} 
+                onValueChange={(voiceName) => {
+                  const voice = speechSynthesis.voices.find(v => v.name === voiceName);
+                  speechSynthesis.setSelectedVoice(voice || null);
+                }}
+              >
+                <SelectTrigger className={`${isMobile ? 'w-16 h-12' : 'w-20 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-voice">
+                  <SelectValue>
+                    <div className="flex items-center gap-1">
+                      <Volume2 className="h-3 w-3" />
+                      <span className="text-xs">
+                        {speechSynthesis.selectedVoice?.name.split(' ')[0] || 'Voice'}
+                      </span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {speechSynthesis.voices.map((voice) => (
+                    <SelectItem key={voice.name} value={voice.name} data-testid={`voice-option-${voice.name}`}>
+                      {voice.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
           
           {chatId && (
