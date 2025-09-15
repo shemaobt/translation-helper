@@ -502,28 +502,6 @@ export default function ChatInterface({
             </Select>
           )}
           
-          {/* Language Selector */}
-          {(isSpeechRecognitionSupported || speechSynthesis.isSupported) && (
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-              <SelectTrigger className={`${isMobile ? 'w-16 h-12' : 'w-20 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-language">
-                <SelectValue>
-                  <div className="flex items-center gap-1">
-                    <Languages className="h-3 w-3" />
-                    <span className="text-xs">
-                      {LANGUAGE_OPTIONS.find(lang => lang.code === selectedLanguage)?.name.split(' ')[0] || 'Lang'}
-                    </span>
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGE_OPTIONS.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code} data-testid={`language-option-${lang.code}`}>
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           {chatId && (
             <Button 
               variant="ghost" 
