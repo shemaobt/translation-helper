@@ -37,13 +37,20 @@ export function useOpenAISpeechRecognition(
     'navigator' in window && 
     'mediaDevices' in navigator;
 
-  const processAudioChunk = useCallback(async (audioBlob: Blob) => {
+  const processAudioChunk = useCallback(async (audioBlob: Blob, mimeType: string) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
     try {
+      // Determine correct file extension based on MIME type
+      let extension = 'webm';
+      if (mimeType.includes('mp4')) extension = 'mp4';
+      else if (mimeType.includes('ogg')) extension = 'ogg';
+      else if (mimeType.includes('wav')) extension = 'wav';
+      else if (mimeType.includes('webm')) extension = 'webm';
+
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'audio.webm');
+      formData.append('audio', audioBlob, `audio.${extension}`);
 
       const response = await apiRequest('POST', '/api/audio/transcribe', formData);
       const data = await response.json();
@@ -114,7 +121,7 @@ export function useOpenAISpeechRecognition(
         if (chunksRef.current.length > 0) {
           const audioBlob = new Blob(chunksRef.current, { type: selectedMimeType });
           if (audioBlob.size > 1000) { // Only process if there's meaningful audio
-            processAudioChunk(audioBlob);
+            processAudioChunk(audioBlob, selectedMimeType);
           }
           chunksRef.current = []; // Reset for next chunk
         }
@@ -145,7 +152,7 @@ export function useOpenAISpeechRecognition(
         if (chunksRef.current.length > 0) {
           const finalBlob = new Blob(chunksRef.current, { type: selectedMimeType });
           if (finalBlob.size > 1000) {
-            processAudioChunk(finalBlob);
+            processAudioChunk(finalBlob, selectedMimeType);
           }
         }
 
