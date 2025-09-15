@@ -604,9 +604,9 @@ export default function ChatInterface({
             <div className="flex items-center space-x-2">
               <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Choose Voice:</span>
               <Select 
-                value={speechSynthesis.selectedVoice?.name || 'Alloy (Versatile)'} 
-                onValueChange={(voiceName) => {
-                  const voice = speechSynthesis.voices.find(v => v.name === voiceName);
+                value={speechSynthesis.selectedVoice?.id || 'alloy'} 
+                onValueChange={(voiceId) => {
+                  const voice = speechSynthesis.voices.find(v => v.id === voiceId);
                   speechSynthesis.setSelectedVoice(voice || null);
                 }}
               >
@@ -622,7 +622,7 @@ export default function ChatInterface({
                 </SelectTrigger>
                 <SelectContent>
                   {speechSynthesis.voices.map((voice) => (
-                    <SelectItem key={voice.name} value={voice.name} data-testid={`voice-option-${voice.name}`}>
+                    <SelectItem key={voice.id} value={voice.id} data-testid={`voice-option-${voice.id}`}>
                       {voice.name}
                     </SelectItem>
                   ))}

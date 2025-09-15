@@ -688,6 +688,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { text, language = 'en-US', voice } = req.body;
       
+      console.log(`[TTS API] Request: text="${text?.substring(0, 50)}...", language="${language}", voice="${voice}"`);
+      
       if (!text || typeof text !== 'string') {
         return res.status(400).json({ message: "Text is required" });
       }
@@ -702,6 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if client has cached version
       const clientETag = req.headers['if-none-match'];
       if (clientETag === etag) {
+        console.log(`[TTS API] Cache hit (client): ETag match for voice="${voice}"`);
         return res.status(304).end(); // Not Modified
       }
 
@@ -711,9 +714,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (cached) {
         // Cache hit - instant response!
+        console.log(`[TTS API] Cache hit (server): Using cached audio for voice="${voice}"`);
         audioBuffer = cached.buffer;
       } else {
         // Cache miss - generate and cache
+        console.log(`[TTS API] Cache miss: Generating new audio for voice="${voice}"`);
         audioBuffer = await generateSpeech(text, language, voice);
         cached = audioCache.set(text, language, audioBuffer, voice);
       }
