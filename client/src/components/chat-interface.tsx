@@ -8,8 +8,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
 import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useOpenAISpeechRecognition } from "@/hooks/useOpenAISpeechRecognition";
+import { useOpenAISpeechSynthesis } from "@/hooks/useOpenAISpeechSynthesis";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,11 +82,11 @@ export default function ChatInterface({
     isSupported: isSpeechRecognitionSupported,
     lastError,
     permissionDenied
-  } = useSpeechRecognition({ lang: selectedLanguage });
+  } = useOpenAISpeechRecognition({ lang: selectedLanguage });
   
   
   // Speech synthesis hook - expose for message components to use
-  const speechSynthesis = useSpeechSynthesis({ lang: selectedLanguage });
+  const speechSynthesis = useOpenAISpeechSynthesis({ lang: selectedLanguage });
   
 
   // Show toast for speech recognition errors

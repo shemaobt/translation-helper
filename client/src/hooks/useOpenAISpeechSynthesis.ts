@@ -42,10 +42,10 @@ function simpleHash(str: string): string {
 }
 
 // Cache management functions
-function getCachedAudio(text: string, language: string): string | null {
+function getCachedAudio(text: string, language: string, voiceName: string): string | null {
   try {
     const textHash = simpleHash(text);
-    const cacheKey = `${CACHE_KEY_PREFIX}${language}_${textHash}`;
+    const cacheKey = `${CACHE_KEY_PREFIX}${language}_${voiceName}_${textHash}`;
     const cached = localStorage.getItem(cacheKey);
     
     if (cached) {
@@ -68,10 +68,10 @@ function getCachedAudio(text: string, language: string): string | null {
   return null;
 }
 
-function setCachedAudio(text: string, language: string, audioUrl: string): void {
+function setCachedAudio(text: string, language: string, voiceName: string, audioUrl: string): void {
   try {
     const textHash = simpleHash(text);
-    const cacheKey = `${CACHE_KEY_PREFIX}${language}_${textHash}`;
+    const cacheKey = `${CACHE_KEY_PREFIX}${language}_${voiceName}_${textHash}`;
     const cacheData: CachedAudio = {
       url: audioUrl,
       timestamp: Date.now(),
@@ -170,9 +170,10 @@ export function useOpenAISpeechSynthesis(
       cancel();
 
       const language = targetLang || currentLanguageRef.current;
+      const voiceName = selectedVoice?.name || 'Alloy (Versatile)';
       
       // Check cache first
-      let audioUrl = getCachedAudio(text, language);
+      let audioUrl = getCachedAudio(text, language, voiceName);
       
       if (!audioUrl) {
         // Generate new audio via OpenAI TTS
@@ -191,7 +192,7 @@ export function useOpenAISpeechSynthesis(
         audioUrl = URL.createObjectURL(audioBlob);
         
         // Cache the audio
-        setCachedAudio(text, language, audioUrl);
+        setCachedAudio(text, language, voiceName, audioUrl);
       }
 
       // Play the audio

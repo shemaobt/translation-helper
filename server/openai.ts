@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import type { Message } from "@shared/schema";
 import { ASSISTANTS, type AssistantId } from "@shared/schema";
 
@@ -187,7 +187,7 @@ export function getChatThreadId(chatId: string): string | undefined {
 export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<string> {
   try {
     const transcription = await openai.audio.transcriptions.create({
-      file: new File([audioBuffer], filename),
+      file: await toFile(audioBuffer, filename),
       model: "whisper-1",
       language: undefined, // Let Whisper auto-detect language
       response_format: "text"
