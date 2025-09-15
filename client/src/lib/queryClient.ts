@@ -26,14 +26,21 @@ export async function apiRequest(
     'x-anonymous-user': getAnonymousUserId(),
   };
   
-  if (data) {
+  let body: string | FormData | undefined;
+  
+  if (data instanceof FormData) {
+    // For FormData, don't set Content-Type - let browser set it with boundary
+    body = data;
+  } else if (data) {
+    // For regular JSON data
     headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(data);
   }
 
   const res = await fetch(url, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body,
     credentials: "include",
   });
 
