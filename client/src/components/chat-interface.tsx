@@ -84,8 +84,10 @@ export default function ChatInterface({
     permissionDenied
   } = useSpeechRecognition({ lang: selectedLanguage });
   
+  
   // Speech synthesis hook - expose for message components to use
   const speechSynthesis = useSpeechSynthesis({ lang: selectedLanguage });
+  
 
   // Show toast for speech recognition errors
   useEffect(() => {
