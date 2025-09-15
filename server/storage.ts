@@ -43,6 +43,7 @@ export interface IStorage {
   // Message operations
   getChatMessages(chatId: string, userId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message>;
   
   // API Key operations
   getUserApiKeys(userId: string): Promise<ApiKey[]>;
@@ -174,6 +175,15 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const [newMessage] = await db.insert(messages).values(message).returning();
     return newMessage;
+  }
+
+  async updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message> {
+    const [updatedMessage] = await db
+      .update(messages)
+      .set(updates)
+      .where(eq(messages.id, messageId))
+      .returning();
+    return updatedMessage;
   }
 
   // API Key operations
