@@ -21,18 +21,19 @@ class AudioCache {
   private maxSize = 100; // Limit memory usage
   private ttl = 24 * 60 * 60 * 1000; // 24 hours
 
-  private createCacheKey(text: string, language: string): string {
+  private createCacheKey(text: string, language: string, voice?: string): string {
     // Normalize text for consistent caching
     const normalizedText = text.trim().toLowerCase();
-    return createHash('sha256').update(`${normalizedText}:${language}`).digest('hex');
+    const voiceKey = voice || 'default';
+    return createHash('sha256').update(`${normalizedText}:${language}:${voiceKey}`).digest('hex');
   }
 
   private isExpired(cached: CachedAudio): boolean {
     return Date.now() - cached.timestamp > this.ttl;
   }
 
-  get(text: string, language: string): CachedAudio | null {
-    const key = this.createCacheKey(text, language);
+  get(text: string, language: string, voice?: string): CachedAudio | null {
+    const key = this.createCacheKey(text, language, voice);
     const cached = this.cache.get(key);
     
     if (cached && !this.isExpired(cached)) {
@@ -49,8 +50,8 @@ class AudioCache {
     return null;
   }
 
-  set(text: string, language: string, buffer: Buffer): CachedAudio {
-    const key = this.createCacheKey(text, language);
+  set(text: string, language: string, buffer: Buffer, voice?: string): CachedAudio {
+    const key = this.createCacheKey(text, language, voice);
     const etag = `"${key.substring(0, 16)}"`;
     const cached: CachedAudio = {
       buffer,
@@ -68,8 +69,8 @@ class AudioCache {
     return cached;
   }
 
-  getETag(text: string, language: string): string {
-    const key = this.createCacheKey(text, language);
+  getETag(text: string, language: string, voice?: string): string {
+    const key = this.createCacheKey(text, language, voice);
     return `"${key.substring(0, 16)}"`;
   }
 }
@@ -685,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Text-to-speech endpoint using OpenAI TTS
   app.post('/api/audio/speak', requireAuth, async (req: any, res) => {
     try {
-      const { text, language = 'en-US' } = req.body;
+      const { text, language = 'en-US', voice } = req.body;
       
       if (!text || typeof text !== 'string') {
         return res.status(400).json({ message: "Text is required" });
@@ -695,8 +696,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Text too long (max 4096 characters)" });
       }
 
-      // Generate ETag for this content
-      const etag = audioCache.getETag(text, language);
+      // Generate ETag for this content (include voice for proper caching)
+      const etag = audioCache.getETag(text, language, voice);
       
       // Check if client has cached version
       const clientETag = req.headers['if-none-match'];
@@ -705,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check server cache first
-      let cached = audioCache.get(text, language);
+      let cached = audioCache.get(text, language, voice);
       let audioBuffer: Buffer;
 
       if (cached) {
@@ -713,8 +714,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         audioBuffer = cached.buffer;
       } else {
         // Cache miss - generate and cache
-        audioBuffer = await generateSpeech(text, language);
-        cached = audioCache.set(text, language, audioBuffer);
+        audioBuffer = await generateSpeech(text, language, voice);
+        cached = audioCache.set(text, language, audioBuffer, voice);
       }
       
       res.set({

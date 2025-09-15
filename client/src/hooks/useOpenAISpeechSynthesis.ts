@@ -181,7 +181,8 @@ export function useOpenAISpeechSynthesis(
         
         const response = await apiRequest('POST', '/api/audio/speak', {
           text: text.trim(),
-          language
+          language,
+          voice: voiceName
         });
 
         if (!response.ok) {
