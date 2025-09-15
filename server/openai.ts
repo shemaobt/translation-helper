@@ -183,6 +183,64 @@ export function getChatThreadId(chatId: string): string | undefined {
   return chatThreadMap.get(chatId);
 }
 
+// Audio processing functions for Whisper and TTS
+export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<string> {
+  try {
+    const transcription = await openai.audio.transcriptions.create({
+      file: new File([audioBuffer], filename),
+      model: "whisper-1",
+      language: undefined, // Let Whisper auto-detect language
+      response_format: "text"
+    });
+    
+    return transcription;
+  } catch (error) {
+    console.error("Error transcribing audio:", error);
+    throw new Error("Failed to transcribe audio");
+  }
+}
+
+export async function generateSpeech(text: string, language = 'en-US'): Promise<Buffer> {
+  try {
+    // Map languages to appropriate voices
+    const voiceMap: Record<string, string> = {
+      'en-US': 'alloy',
+      'en-GB': 'alloy', 
+      'es-ES': 'nova',
+      'es-MX': 'nova',
+      'fr-FR': 'shimmer',
+      'de-DE': 'echo',
+      'it-IT': 'fable',
+      'pt-BR': 'onyx',
+      'ja-JP': 'alloy',
+      'ko-KR': 'alloy',
+      'zh-CN': 'alloy',
+      'hi-IN': 'alloy',
+      'ar-SA': 'alloy',
+      'ru-RU': 'echo',
+      'nl-NL': 'alloy',
+      'sv-SE': 'alloy',
+      'da-DK': 'alloy'
+    };
+
+    const voice = voiceMap[language] || 'alloy';
+    
+    const speech = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: voice as any,
+      input: text,
+      response_format: "mp3",
+      speed: 0.9 // Slightly slower for better clarity
+    });
+
+    const buffer = Buffer.from(await speech.arrayBuffer());
+    return buffer;
+  } catch (error) {
+    console.error("Error generating speech:", error);
+    throw new Error("Failed to generate speech");
+  }
+}
+
 export function generateChatTitle(firstMessage: string): string {
   // Generate a title from the first user message (max 50 chars)
   const title = firstMessage.trim();
