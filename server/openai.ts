@@ -298,6 +298,8 @@ export async function generateSpeech(text: string, language = 'en-US', voiceId?:
       voice = voiceMap[language] || 'alloy';
     }
     
+    console.log(`[TTS] Generating speech with voice: ${voice} for text: "${text.substring(0, 50)}..."`);
+    
     const speech = await openai.audio.speech.create({
       model: "tts-1-hd", // Use HD model for better quality and potentially faster processing
       voice: voice as any,
