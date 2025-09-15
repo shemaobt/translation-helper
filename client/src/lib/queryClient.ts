@@ -75,11 +75,17 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 30 * 1000, // 30 seconds - fast updates for real-time chat
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep data in memory longer for better UX
+      retry: (failureCount, error: any) => {
+        // Smarter retry logic - don't retry auth errors or not found
+        if (error?.message?.includes('401') || error?.message?.includes('404')) return false;
+        return failureCount < 2;
+      },
+      refetchOnReconnect: true, // Refetch when internet connection restored
     },
     mutations: {
-      retry: false,
+      retry: 1, // Retry mutations once for network issues
     },
   },
 });
