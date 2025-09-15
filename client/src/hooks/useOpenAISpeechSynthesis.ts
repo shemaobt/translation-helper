@@ -144,7 +144,7 @@ export function useOpenAISpeechSynthesis(
   ];
 
   const [selectedVoice, setSelectedVoice] = useState<{name: string, lang: string} | null>(
-    voices[0] // Default to Alloy
+    voices[0] // Default to Alloy (Versatile) - better than Echo
   );
 
   // Update current language when prop changes
