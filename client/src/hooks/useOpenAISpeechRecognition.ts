@@ -42,12 +42,14 @@ export function useOpenAISpeechRecognition(
     isProcessingRef.current = true;
 
     try {
-      // Determine correct file extension based on MIME type
+      // Determine correct file extension based on MIME type for Whisper
       let extension = 'webm';
-      if (mimeType.includes('mp4')) extension = 'mp4';
-      else if (mimeType.includes('ogg')) extension = 'ogg';
-      else if (mimeType.includes('wav')) extension = 'wav';
+      if (mimeType.includes('wav')) extension = 'wav';
+      else if (mimeType.includes('mp4')) extension = 'mp4';
+      else if (mimeType.includes('ogg')) extension = 'ogg';  
       else if (mimeType.includes('webm')) extension = 'webm';
+
+      console.log('Sending audio with MIME type:', mimeType, 'extension:', extension, 'size:', audioBlob.size);
 
       const formData = new FormData();
       formData.append('audio', audioBlob, `audio.${extension}`);
@@ -90,13 +92,13 @@ export function useOpenAISpeechRecognition(
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Determine the best audio format
+      // Determine the best audio format for Whisper compatibility
       const mimeTypes = [
+        'audio/wav',
+        'audio/mp4', 
         'audio/webm;codecs=opus',
         'audio/webm',
-        'audio/mp4',
-        'audio/ogg;codecs=opus',
-        'audio/wav'
+        'audio/ogg;codecs=opus'
       ];
 
       let selectedMimeType = '';
