@@ -264,23 +264,16 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
   }
 }
 
-export async function generateSpeech(text: string, language = 'en-US', voiceName?: string): Promise<Buffer> {
+export async function generateSpeech(text: string, language = 'en-US', voiceId?: string): Promise<Buffer> {
   try {
-    // Map voice names to OpenAI voice IDs
-    const nameToVoiceMap: Record<string, string> = {
-      'Alloy (Versatile)': 'alloy',
-      'Echo (Male)': 'echo',
-      'Fable (British)': 'fable',
-      'Onyx (Deep)': 'onyx',
-      'Nova (Warm)': 'nova',
-      'Shimmer (Soft)': 'shimmer'
-    };
-
-    // Use provided voice name or fall back to language-based mapping
+    // Valid OpenAI voice IDs
+    const validVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+    
+    // Use provided voice ID or fall back to language-based mapping
     let voice = 'alloy'; // default
     
-    if (voiceName && nameToVoiceMap[voiceName]) {
-      voice = nameToVoiceMap[voiceName];
+    if (voiceId && validVoices.includes(voiceId)) {
+      voice = voiceId;
     } else {
       // Fall back to language-based mapping
       const voiceMap: Record<string, string> = {
