@@ -575,6 +575,7 @@ export default function ChatInterface({
               data-testid="textarea-message"
             />
           </div>
+          {/* Voice Input Button - Always show when supported */}
           {isSpeechRecognitionSupported && (
             <Button
               type="button"
@@ -583,9 +584,12 @@ export default function ChatInterface({
               className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11 w-11'} ${isListening ? 'recording-active' : ''}`}
               data-testid="button-microphone"
               aria-label={isListening ? "Stop recording" : "Start recording"}
+              disabled={permissionDenied}
             >
               {isListening ? (
                 <Square className="h-4 w-4" />
+              ) : permissionDenied ? (
+                <MicOff className="h-4 w-4" />
               ) : (
                 <Mic className="h-4 w-4" />
               )}
