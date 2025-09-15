@@ -49,7 +49,6 @@ export function useOpenAISpeechRecognition(
       else if (mimeType.includes('ogg')) extension = 'ogg';  
       else if (mimeType.includes('webm')) extension = 'webm';
 
-      console.log('Sending audio with MIME type:', mimeType, 'extension:', extension, 'size:', audioBlob.size);
 
       const formData = new FormData();
       formData.append('audio', audioBlob, `audio.${extension}`);
@@ -116,22 +115,7 @@ export function useOpenAISpeechRecognition(
 
       mediaRecorderRef.current = mediaRecorder;
 
-      // Process audio in 3-second chunks for real-time transcription
-      let chunkTimer: NodeJS.Timeout;
-      
-      const processChunk = () => {
-        if (chunksRef.current.length > 0) {
-          const audioBlob = new Blob(chunksRef.current, { type: selectedMimeType });
-          if (audioBlob.size > 1000) { // Only process if there's meaningful audio
-            processAudioChunk(audioBlob, selectedMimeType);
-          }
-          chunksRef.current = []; // Reset for next chunk
-        }
-        
-        if (isListening) {
-          chunkTimer = setTimeout(processChunk, 3000); // Process every 3 seconds
-        }
-      };
+      // Store audio data for processing when recording ends
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -142,19 +126,17 @@ export function useOpenAISpeechRecognition(
       mediaRecorder.onstart = () => {
         setIsListening(true);
         setInterimTranscript("Listening...");
-        chunkTimer = setTimeout(processChunk, 3000);
       };
 
       mediaRecorder.onstop = () => {
         setIsListening(false);
         setInterimTranscript("");
-        clearTimeout(chunkTimer);
         
-        // Process final chunk
+        // Process the complete recording
         if (chunksRef.current.length > 0) {
-          const finalBlob = new Blob(chunksRef.current, { type: selectedMimeType });
-          if (finalBlob.size > 1000) {
-            processAudioChunk(finalBlob, selectedMimeType);
+          const audioBlob = new Blob(chunksRef.current, { type: selectedMimeType });
+          if (audioBlob.size > 1000) {
+            processAudioChunk(audioBlob, selectedMimeType);
           }
         }
 
@@ -172,7 +154,7 @@ export function useOpenAISpeechRecognition(
       };
 
       // Start recording
-      mediaRecorder.start(1000); // Collect data every 1 second
+      mediaRecorder.start(); // Collect data when stopped
 
     } catch (error: any) {
       console.error('Error starting recording:', error);
