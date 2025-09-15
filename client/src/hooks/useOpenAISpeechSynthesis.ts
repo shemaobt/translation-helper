@@ -13,9 +13,9 @@ interface OpenAISpeechSynthesisHook {
   isSpeaking: boolean;
   isPaused: boolean;
   isSupported: boolean;
-  voices: Array<{name: string, lang: string}>; // Simplified for consistency
-  selectedVoice: {name: string, lang: string} | null;
-  setSelectedVoice: (voice: {name: string, lang: string} | null) => void;
+  voices: Array<{name: string, lang: string, id: string}>;
+  selectedVoice: {name: string, lang: string, id: string} | null;
+  setSelectedVoice: (voice: {name: string, lang: string, id: string} | null) => void;
 }
 
 // Local cache management
@@ -133,17 +133,17 @@ export function useOpenAISpeechSynthesis(
   // OpenAI TTS is always supported (just needs internet)
   const isSupported = typeof window !== 'undefined';
 
-  // Voice options - simplified for OpenAI TTS
+  // Voice options - with canonical IDs for backend
   const voices = [
-    { name: 'Alloy (Versatile)', lang: 'en-US' },
-    { name: 'Echo (Male)', lang: 'en-US' },
-    { name: 'Fable (British)', lang: 'en-US' },
-    { name: 'Onyx (Deep)', lang: 'en-US' },
-    { name: 'Nova (Warm)', lang: 'en-US' },
-    { name: 'Shimmer (Soft)', lang: 'en-US' }
+    { name: 'Alloy (Versatile)', lang: 'en-US', id: 'alloy' },
+    { name: 'Echo (Male)', lang: 'en-US', id: 'echo' },
+    { name: 'Fable (British)', lang: 'en-US', id: 'fable' },
+    { name: 'Onyx (Deep)', lang: 'en-US', id: 'onyx' },
+    { name: 'Nova (Warm)', lang: 'en-US', id: 'nova' },
+    { name: 'Shimmer (Soft)', lang: 'en-US', id: 'shimmer' }
   ];
 
-  const [selectedVoice, setSelectedVoice] = useState<{name: string, lang: string} | null>(
+  const [selectedVoice, setSelectedVoice] = useState<{name: string, lang: string, id: string} | null>(
     voices[0] // Default to Alloy (Versatile) - better than Echo
   );
 
@@ -170,10 +170,10 @@ export function useOpenAISpeechSynthesis(
       cancel();
 
       const language = targetLang || currentLanguageRef.current;
-      const voiceName = selectedVoice?.name || 'Alloy (Versatile)';
+      const voiceId = selectedVoice?.id || 'alloy';
       
       // Check cache first
-      let audioUrl = getCachedAudio(text, language, voiceName);
+      let audioUrl = getCachedAudio(text, language, voiceId);
       
       if (!audioUrl) {
         // Generate new audio via OpenAI TTS
@@ -182,7 +182,7 @@ export function useOpenAISpeechSynthesis(
         const response = await apiRequest('POST', '/api/audio/speak', {
           text: text.trim(),
           language,
-          voice: voiceName
+          voice: voiceId
         });
 
         if (!response.ok) {
@@ -193,7 +193,7 @@ export function useOpenAISpeechSynthesis(
         audioUrl = URL.createObjectURL(audioBlob);
         
         // Cache the audio
-        setCachedAudio(text, language, voiceName, audioUrl);
+        setCachedAudio(text, language, voiceId, audioUrl);
       }
 
       // Play the audio
