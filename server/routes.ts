@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
+import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
@@ -323,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if this is the first user message and update title immediately
       const existingMessages = await storage.getChatMessages(chatId, userId);
       if (existingMessages.length === 1) {
-        const title = generateChatTitle(content);
+        const title = await generateChatTitle(content);
         await storage.updateChatTitle(chatId, title, userId);
       }
 
@@ -350,6 +350,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating message:", error);
       res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+
+  // Streaming message endpoint for real-time AI responses
+  app.post('/api/chats/:chatId/messages/stream', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chatId } = req.params;
+      const { content } = req.body;
+
+      // Verify chat belongs to user
+      const chat = await storage.getChat(chatId, userId);
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+
+      // Create user message
+      const userMessage = await storage.createMessage({
+        chatId,
+        role: "user",
+        content,
+      });
+
+      // Check if this is the first user message and update title immediately
+      const existingMessages = await storage.getChatMessages(chatId, userId);
+      if (existingMessages.length === 1) {
+        const title = await generateChatTitle(content);
+        await storage.updateChatTitle(chatId, title, userId);
+      }
+
+      // Set up Server-Sent Events
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+
+      // Send initial user message
+      res.write(`data: ${JSON.stringify({ 
+        type: 'user_message', 
+        data: userMessage 
+      })}\n\n`);
+
+      try {
+        // Generate streaming AI response
+        const threadId = await getChatThreadId(chatId, userId);
+        let assistantMessageId: string | null = null;
+        let fullContent = "";
+
+        for await (const chunk of generateAssistantResponseStream({
+          chatId,
+          userMessage: content,
+          assistantId: chat.assistantId as any,
+          threadId: threadId || undefined,
+        }, userId)) {
+          
+          if (chunk.type === 'content') {
+            fullContent += chunk.data;
+            
+            // Create assistant message on first chunk
+            if (!assistantMessageId) {
+              const assistantMessage = await storage.createMessage({
+                chatId,
+                role: "assistant",
+                content: "", // Will be updated incrementally
+              });
+              assistantMessageId = assistantMessage.id;
+              
+              // Send assistant message created event
+              res.write(`data: ${JSON.stringify({ 
+                type: 'assistant_message_start',
+                data: assistantMessage
+              })}\n\n`);
+            }
+
+            // Send content chunk
+            res.write(`data: ${JSON.stringify({ 
+              type: 'content', 
+              data: chunk.data 
+            })}\n\n`);
+
+          } else if (chunk.type === 'done') {
+            // Update the assistant message with final content
+            if (assistantMessageId) {
+              await storage.updateMessage(assistantMessageId, { content: fullContent });
+            }
+
+            // Send completion event
+            res.write(`data: ${JSON.stringify({ 
+              type: 'done', 
+              data: chunk.data 
+            })}\n\n`);
+          }
+        }
+      } catch (streamError) {
+        console.error("Error in streaming response:", streamError);
+        res.write(`data: ${JSON.stringify({ 
+          type: 'error', 
+          data: { message: "Failed to generate streaming response" }
+        })}\n\n`);
+      }
+
+      res.end();
+    } catch (error) {
+      console.error("Error in streaming endpoint:", error);
+      res.status(500).json({ message: "Failed to create streaming message" });
     }
   });
 

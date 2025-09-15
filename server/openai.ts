@@ -99,6 +99,68 @@ export async function generateAssistantResponse(
   }
 }
 
+// New streaming version for real-time responses
+export async function* generateAssistantResponseStream(
+  request: AssistantRequest,
+  userId: string
+): AsyncGenerator<{ type: 'content' | 'done', data: string | AssistantResponse }> {
+  try {
+    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
+    
+    // Create a new thread if none exists
+    if (!threadId) {
+      const thread = await openai.beta.threads.create();
+      threadId = thread.id;
+      await storage.updateChatThreadId(request.chatId, threadId, userId);
+    }
+
+    // Add the user message to the thread
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: request.userMessage,
+    });
+
+    // Create streaming run
+    const runStream = openai.beta.threads.runs.stream(threadId, {
+      assistant_id: ASSISTANTS[request.assistantId].openaiId,
+    });
+
+    let fullContent = "";
+    let totalTokens = 0;
+
+    for await (const chunk of runStream) {
+      if (chunk.event === 'thread.message.delta') {
+        const delta = chunk.data.delta;
+        if (delta.content) {
+          for (const contentPart of delta.content) {
+            if (contentPart.type === 'text' && contentPart.text?.value) {
+              const text = contentPart.text.value;
+              fullContent += text;
+              yield { type: 'content', data: text };
+            }
+          }
+        }
+      } else if (chunk.event === 'thread.run.completed') {
+        totalTokens = chunk.data.usage?.total_tokens || 0;
+      }
+    }
+
+    // Return final response
+    yield { 
+      type: 'done', 
+      data: {
+        content: fullContent,
+        threadId,
+        tokens: totalTokens,
+      } as AssistantResponse 
+    };
+
+  } catch (error) {
+    console.error("OpenAI Assistant API streaming error:", error);
+    throw new Error("Failed to generate streaming response from StoryTeller assistant. Please try again.");
+  }
+}
+
 export async function generateChatCompletion(
   request: ChatCompletionRequest,
   userId: string

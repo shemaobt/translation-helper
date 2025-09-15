@@ -247,6 +247,14 @@ export default function ChatInterface({
     switchAssistantMutation.mutate(assistantId);
   };
 
+  // Streaming message state
+  const [streamingMessage, setStreamingMessage] = useState<{
+    id: string;
+    content: string;
+    isComplete: boolean;
+  } | null>(null);
+
+  // Regular message mutation (fallback)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       const response = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
@@ -284,11 +292,132 @@ export default function ChatInterface({
     },
   });
 
+  // Streaming message function
+  const sendStreamingMessage = async (content: string) => {
+    if (!chatId) return;
+    
+    setIsTyping(true);
+    setStreamingMessage(null);
+    
+    try {
+      const eventSource = new EventSource(`/api/chats/${chatId}/messages/stream`, {
+        // Note: EventSource doesn't support custom headers or POST body directly
+        // We'll need to modify this approach
+      });
+
+      // For now, let's use fetch with streaming
+      const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Streaming request failed');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              switch (data.type) {
+                case 'user_message':
+                  // User message created - refresh queries
+                  queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+                  break;
+                  
+                case 'assistant_message_start':
+                  // Start of assistant message
+                  setIsTyping(false); // Stop typing indicator when streaming starts
+                  setStreamingMessage({
+                    id: data.data.id,
+                    content: '',
+                    isComplete: false,
+                  });
+                  break;
+                  
+                case 'content':
+                  // Streaming content chunk
+                  setStreamingMessage(prev => prev ? {
+                    ...prev,
+                    content: prev.content + data.data,
+                  } : null);
+                  break;
+                  
+                case 'done':
+                  // Stream complete
+                  setIsTyping(false); // Ensure typing indicator is off
+                  setStreamingMessage(prev => prev ? {
+                    ...prev,
+                    isComplete: true,
+                  } : null);
+                  
+                  // Refresh to get final persisted message
+                  setTimeout(() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                    setStreamingMessage(null);
+                  }, 100);
+                  break;
+                  
+                case 'error':
+                  throw new Error(data.data.message);
+              }
+            } catch (parseError) {
+              console.error('Error parsing SSE data:', parseError);
+            }
+          }
+        }
+      }
+      
+      setMessage("");
+      setIsTyping(false);
+      
+    } catch (error) {
+      console.error('Streaming error:', error);
+      setIsTyping(false);
+      setStreamingMessage(null);
+      
+      // Fallback to regular message sending
+      toast({
+        title: "Streaming failed",
+        description: "Falling back to regular messaging",
+        variant: "default",
+      });
+      
+      sendMessageMutation.mutate(content);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !chatId || sendMessageMutation.isPending) return;
+    if (!message.trim() || !chatId || isTyping) return;
     
-    sendMessageMutation.mutate(message.trim());
+    // Use streaming by default, fallback to regular on error
+    sendStreamingMessage(message.trim());
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -523,7 +652,7 @@ export default function ChatInterface({
 
       {/* Chat Messages */}
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 pb-28 space-y-4' : 'p-4 pb-32 space-y-6'}`} data-testid="chat-messages">
-        {messages.length === 0 && (
+        {messages.length === 0 && !streamingMessage && (
           <div className="flex justify-center">
             <div className="max-w-2xl text-center">
               <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -544,8 +673,32 @@ export default function ChatInterface({
           />
         ))}
 
+        {/* Streaming Message */}
+        {streamingMessage && (
+          <div className="flex justify-start" data-testid="streaming-message">
+            <div className="max-w-2xl">
+              <div className="flex items-start space-x-3">
+                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
+                  <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid="text-streaming-content">
+                    {streamingMessage.content}
+                    {!streamingMessage.isComplete && (
+                      <span className="animate-pulse">▋</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 ml-11">
+                {streamingMessage.isComplete ? "Just now" : "Generating..."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Typing Indicator */}
-        {isTyping && (
+        {isTyping && !streamingMessage && (
           <div className="flex justify-start" data-testid="typing-indicator">
             <div className="max-w-2xl">
               <div className="flex items-start space-x-3">
