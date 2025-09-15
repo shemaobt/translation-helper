@@ -510,7 +510,7 @@ export default function ChatInterface({
                   <div className="flex items-center gap-1">
                     <Languages className="h-3 w-3" />
                     <span className="text-xs">
-                      {LANGUAGE_OPTIONS.find(lang => lang.code === selectedLanguage)?.flag || '🌐'}
+                      {LANGUAGE_OPTIONS.find(lang => lang.code === selectedLanguage)?.name.split(' ')[0] || 'Lang'}
                     </span>
                   </div>
                 </SelectValue>
@@ -518,10 +518,7 @@ export default function ChatInterface({
               <SelectContent>
                 {LANGUAGE_OPTIONS.map((lang) => (
                   <SelectItem key={lang.code} value={lang.code} data-testid={`language-option-${lang.code}`}>
-                    <div className="flex items-center gap-2">
-                      <span>{lang.flag}</span>
-                      <span>{lang.name}</span>
-                    </div>
+                    {lang.name}
                   </SelectItem>
                 ))}
               </SelectContent>
