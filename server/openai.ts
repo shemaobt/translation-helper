@@ -264,37 +264,53 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
   }
 }
 
-export async function generateSpeech(text: string, language = 'en-US'): Promise<Buffer> {
+export async function generateSpeech(text: string, language = 'en-US', voiceName?: string): Promise<Buffer> {
   try {
-    // Map languages to appropriate voices
-    const voiceMap: Record<string, string> = {
-      'en-US': 'alloy',
-      'en-GB': 'alloy', 
-      'es-ES': 'nova',
-      'es-MX': 'nova',
-      'fr-FR': 'shimmer',
-      'de-DE': 'echo',
-      'it-IT': 'fable',
-      'pt-BR': 'onyx',
-      'ja-JP': 'alloy',
-      'ko-KR': 'alloy',
-      'zh-CN': 'alloy',
-      'hi-IN': 'alloy',
-      'ar-SA': 'alloy',
-      'ru-RU': 'echo',
-      'nl-NL': 'alloy',
-      'sv-SE': 'alloy',
-      'da-DK': 'alloy'
+    // Map voice names to OpenAI voice IDs
+    const nameToVoiceMap: Record<string, string> = {
+      'Alloy (Versatile)': 'alloy',
+      'Echo (Male)': 'echo',
+      'Fable (British)': 'fable',
+      'Onyx (Deep)': 'onyx',
+      'Nova (Warm)': 'nova',
+      'Shimmer (Soft)': 'shimmer'
     };
 
-    const voice = voiceMap[language] || 'alloy';
+    // Use provided voice name or fall back to language-based mapping
+    let voice = 'alloy'; // default
+    
+    if (voiceName && nameToVoiceMap[voiceName]) {
+      voice = nameToVoiceMap[voiceName];
+    } else {
+      // Fall back to language-based mapping
+      const voiceMap: Record<string, string> = {
+        'en-US': 'alloy',
+        'en-GB': 'alloy', 
+        'es-ES': 'nova',
+        'es-MX': 'nova',
+        'fr-FR': 'shimmer',
+        'de-DE': 'echo',
+        'it-IT': 'fable',
+        'pt-BR': 'onyx',
+        'ja-JP': 'alloy',
+        'ko-KR': 'alloy',
+        'zh-CN': 'alloy',
+        'hi-IN': 'alloy',
+        'ar-SA': 'alloy',
+        'ru-RU': 'echo',
+        'nl-NL': 'alloy',
+        'sv-SE': 'alloy',
+        'da-DK': 'alloy'
+      };
+      voice = voiceMap[language] || 'alloy';
+    }
     
     const speech = await openai.audio.speech.create({
-      model: "tts-1",
+      model: "tts-1-hd", // Use HD model for better quality and potentially faster processing
       voice: voice as any,
       input: text,
       response_format: "mp3",
-      speed: 0.9 // Slightly slower for better clarity
+      speed: 1.0 // Normal speed for faster processing
     });
 
     const buffer = Buffer.from(await speech.arrayBuffer());

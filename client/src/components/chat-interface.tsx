@@ -450,10 +450,7 @@ export default function ChatInterface({
   const toggleSpeechRecognition = () => {
     if (isListening) {
       stopListening();
-      // Send message if there's transcribed text
-      if (message.trim()) {
-        handleSubmit(new Event('submit') as any);
-      }
+      // Don't auto-send - let user edit the transcription
     } else {
       resetTranscript();
       setMessage("");
