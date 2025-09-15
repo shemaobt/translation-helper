@@ -1,12 +1,29 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId } from "./openai";
+import { generateAssistantResponse, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import multer from "multer";
+
+// Multer configuration for audio uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit (Whisper max file size)
+  },
+  fileFilter: (req: any, file: any, cb: any) => {
+    // Accept audio files
+    if (file.mimetype.startsWith('audio/') || file.mimetype === 'video/webm') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'));
+    }
+  }
+});
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
@@ -474,6 +491,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in API chat completion:", error);
       res.status(500).json({ message: "Failed to generate completion" });
+    }
+  });
+
+  // Audio transcription endpoint using OpenAI Whisper
+  app.post('/api/audio/transcribe', requireAuth, upload.single('audio'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No audio file provided" });
+      }
+
+      const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
+      res.json({ text: transcription });
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      res.status(500).json({ message: "Failed to transcribe audio" });
+    }
+  });
+
+  // Text-to-speech endpoint using OpenAI TTS
+  app.post('/api/audio/speak', requireAuth, async (req: any, res) => {
+    try {
+      const { text, language = 'en-US' } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ message: "Text is required" });
+      }
+
+      if (text.length > 4096) {
+        return res.status(400).json({ message: "Text too long (max 4096 characters)" });
+      }
+
+      const audioBuffer = await generateSpeech(text, language);
+      
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioBuffer.length.toString(),
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      });
+      
+      res.send(audioBuffer);
+    } catch (error) {
+      console.error("Error generating speech:", error);
+      res.status(500).json({ message: "Failed to generate speech" });
     }
   });
 
