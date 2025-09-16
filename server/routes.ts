@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
 import OpenAI from "openai";
-import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
+import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
@@ -106,6 +106,36 @@ function requireAuth(req: any, res: any, next: any) {
     return next();
   }
   return res.status(401).json({ message: "Authentication required" });
+}
+
+// Admin authorization middleware
+async function requireAdmin(req: any, res: any, next: any) {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  try {
+    const user = await storage.getUserById(req.session.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    req.userId = user.id;
+    req.user = user;
+    return next();
+  } catch (error) {
+    console.error("Admin authorization error:", error);
+    return res.status(500).json({ message: "Authorization check failed" });
+  }
+}
+
+// CSRF protection middleware - requires custom header for state-changing operations
+function requireCSRFHeader(req: any, res: any, next: any) {
+  const customHeader = req.get('X-Requested-With');
+  if (customHeader !== 'XMLHttpRequest') {
+    return res.status(403).json({ message: "Missing required security header" });
+  }
+  return next();
 }
 
 // Explicit validation schemas with security requirements
@@ -913,6 +943,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxRequests: 50
       }
     });
+  });
+
+  // Feedback routes
+  app.post('/api/feedback', publicApiLimiter, async (req: any, res) => {
+    try {
+      // Validate feedback data
+      const feedbackSchema = insertFeedbackSchema.extend({
+        message: z.string().min(1, "Feedback message is required").max(5000, "Message too long"),
+        userEmail: z.string().email().optional().or(z.literal("")),
+        userName: z.string().optional().or(z.literal("")),
+        category: z.enum(["bug", "feature", "general", "other"]).optional(),
+      });
+
+      const feedbackData = feedbackSchema.parse(req.body);
+      
+      // Extract userId from session if available
+      const userId = req.session?.userId || null;
+
+      const feedback = await storage.createFeedback({
+        ...feedbackData,
+        userId,
+        userEmail: feedbackData.userEmail || undefined,
+        userName: feedbackData.userName || undefined,
+        status: 'new', // Default status
+      });
+
+      res.json({
+        id: feedback.id,
+        message: "Feedback submitted successfully",
+        createdAt: feedback.createdAt,
+      });
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid feedback data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to submit feedback" });
+    }
+  });
+
+  // Admin feedback management routes (requires admin auth)
+  app.get('/api/admin/feedback', requireAdmin, async (req: any, res) => {
+    try {
+      const feedback = await storage.getAllFeedback();
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
+  });
+
+  app.get('/api/admin/feedback/:id', requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const feedback = await storage.getFeedback(id);
+      
+      if (!feedback) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
+  });
+
+  app.patch('/api/admin/feedback/:id', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      // Validate status
+      const statusSchema = z.enum(["new", "read", "resolved"]);
+      const validatedStatus = statusSchema.parse(status);
+
+      const updatedFeedback = await storage.updateFeedbackStatus(id, validatedStatus);
+      
+      if (!updatedFeedback) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+      
+      res.json(updatedFeedback);
+    } catch (error) {
+      console.error("Error updating feedback:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid status", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update feedback" });
+    }
+  });
+
+  app.delete('/api/admin/feedback/:id', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteFeedback(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+      
+      res.json({ message: "Feedback deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting feedback:", error);
+      res.status(500).json({ message: "Failed to delete feedback" });
+    }
   });
 
   // Catch-all for unmatched API routes - return 404 instead of HTML
