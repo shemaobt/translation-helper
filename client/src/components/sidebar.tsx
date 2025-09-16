@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -58,6 +59,14 @@ export default function Sidebar({
   const { data: chats = [] } = useQuery<Chat[]>({
     queryKey: ["/api/chats"],
     retry: false,
+  });
+
+  // Fetch unread feedback count for admin users
+  const { data: unreadFeedbackCount = 0 } = useQuery<number>({
+    queryKey: ["/api/admin/feedback/unread-count"],
+    enabled: isAdmin,
+    retry: false,
+    select: (data: any) => data?.count || 0,
   });
 
   const createChatMutation = useMutation({
@@ -323,7 +332,16 @@ export default function Sidebar({
                     data-testid="link-admin-feedback"
                   >
                     <UserCheck className="mr-2 h-4 w-4" />
-                    Manage Feedback
+                    <span className="flex-1 text-left">Manage Feedback</span>
+                    {unreadFeedbackCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-2 h-5 min-w-[1.25rem] text-xs px-1.5 py-0 rounded-full flex items-center justify-center"
+                        data-testid="badge-unread-feedback"
+                      >
+                        {unreadFeedbackCount}
+                      </Badge>
+                    )}
                   </Button>
                 </Link>
                 <Separator className="my-1" />

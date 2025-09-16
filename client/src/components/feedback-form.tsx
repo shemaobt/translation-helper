@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Dialog,
@@ -54,6 +54,7 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const form = useForm<FeedbackFormData>({
     resolver: zodResolver(feedbackSchema),
@@ -73,6 +74,10 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
       return response.json();
     },
     onSuccess: (data) => {
+      // Invalidate admin feedback queries to update the unread count
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback/unread-count"] });
+      
       toast({
         title: "Feedback submitted successfully!",
         description: "Thank you for your feedback. We appreciate your input and will review it soon.",
