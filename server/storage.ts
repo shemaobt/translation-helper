@@ -4,6 +4,7 @@ import {
   messages,
   apiKeys,
   apiUsage,
+  feedback,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -15,6 +16,8 @@ import {
   type InsertApiKey,
   type ApiUsage,
   type InsertApiUsage,
+  type Feedback,
+  type InsertFeedback,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -60,6 +63,13 @@ export interface IStorage {
     totalApiCalls: number;
     activeApiKeys: number;
   }>;
+  
+  // Feedback operations
+  createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  getAllFeedback(): Promise<Feedback[]>;
+  getFeedback(feedbackId: string): Promise<Feedback | undefined>;
+  updateFeedbackStatus(feedbackId: string, status: 'new' | 'read' | 'resolved'): Promise<Feedback | null>;
+  deleteFeedback(feedbackId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -273,6 +283,46 @@ export class DatabaseStorage implements IStorage {
       totalApiCalls: apiCallCount.count || 0,
       activeApiKeys: activeKeyCount.count || 0,
     };
+  }
+
+  // Feedback operations
+  async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
+    const [newFeedback] = await db
+      .insert(feedback)
+      .values(feedbackData)
+      .returning();
+    return newFeedback;
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return await db
+      .select()
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt));
+  }
+
+  async getFeedback(feedbackId: string): Promise<Feedback | undefined> {
+    const [feedbackItem] = await db
+      .select()
+      .from(feedback)
+      .where(eq(feedback.id, feedbackId));
+    return feedbackItem;
+  }
+
+  async updateFeedbackStatus(feedbackId: string, status: 'new' | 'read' | 'resolved'): Promise<Feedback | null> {
+    const [updatedFeedback] = await db
+      .update(feedback)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(feedback.id, feedbackId))
+      .returning();
+    return updatedFeedback || null;
+  }
+
+  async deleteFeedback(feedbackId: string): Promise<boolean> {
+    const result = await db
+      .delete(feedback)
+      .where(eq(feedback.id, feedbackId));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
