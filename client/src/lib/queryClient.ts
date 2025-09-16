@@ -21,9 +21,11 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  customHeaders?: Record<string, string>,
 ): Promise<Response> {
   const headers: Record<string, string> = {
     'x-anonymous-user': getAnonymousUserId(),
+    ...customHeaders,
   };
   
   let body: string | FormData | undefined;
