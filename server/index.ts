@@ -42,7 +42,7 @@ if (!process.env.DATABASE_URL) {
         connectionString: process.env.DATABASE_URL,
       },
       tableName: 'sessions', // Use existing Drizzle table name
-      createTableIfMissing: false, // Don't auto-create, use existing schema
+      createTableIfMissing: true, // Auto-create table if missing (fixes production)
     });
     
     // Test database connection with error handling
@@ -55,8 +55,10 @@ if (!process.env.DATABASE_URL) {
     });
     
     sessionStore.on('connect', () => {
-      log('Session store connected to database successfully');
+      log('Session store connected to PostgreSQL database successfully');
     });
+    
+    log('Using PostgreSQL session store (production mode)');
     
   } catch (error) {
     log(`Failed to initialize PostgreSQL session store: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -83,8 +85,8 @@ try {
       secure: isReplit || process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      // Use 'none' for Replit to allow cross-domain access, otherwise use strict/lax
-      sameSite: isReplit ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+      // Use 'none' for Replit preview, 'lax' for production (more compatible than strict)
+      sameSite: isReplit ? 'none' : (process.env.NODE_ENV === 'production' ? 'lax' : 'lax'),
     },
   }));
 } catch (error) {
