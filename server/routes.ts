@@ -1028,6 +1028,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // More specific routes must come before generic :id routes
+  app.get('/api/admin/feedback/unread-count', requireAdmin, async (req: any, res) => {
+    try {
+      const unreadCount = await storage.getUnreadFeedbackCount();
+      res.json({ count: unreadCount });
+    } catch (error) {
+      console.error("Error fetching unread feedback count:", error);
+      res.status(500).json({ message: "Failed to fetch unread feedback count" });
+    }
+  });
+
   app.get('/api/admin/feedback/:id', requireAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -1082,16 +1093,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting feedback:", error);
       res.status(500).json({ message: "Failed to delete feedback" });
-    }
-  });
-
-  app.get('/api/admin/feedback/unread-count', requireAdmin, async (req: any, res) => {
-    try {
-      const unreadCount = await storage.getUnreadFeedbackCount();
-      res.json({ count: unreadCount });
-    } catch (error) {
-      console.error("Error fetching unread feedback count:", error);
-      res.status(500).json({ message: "Failed to fetch unread feedback count" });
     }
   });
 

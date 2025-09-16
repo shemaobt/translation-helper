@@ -20,6 +20,7 @@ import {
   Plus, 
   MoreHorizontal, 
   User, 
+  Users,
   ChevronUp, 
   BarChart3, 
   Key, 
@@ -323,6 +324,16 @@ export default function Sidebar({
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
+                  </Button>
+                </Link>
+                <Link href="/admin/users" className="block">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    data-testid="link-admin-users"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    User Management
                   </Button>
                 </Link>
                 <Link href="/admin/feedback" className="block">
