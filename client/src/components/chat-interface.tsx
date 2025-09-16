@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2 } from "lucide-react";
+import FeedbackForm from "./feedback-form";
+import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare } from "lucide-react";
 import { useOpenAISpeechRecognition } from "@/hooks/useOpenAISpeechRecognition";
 import { useOpenAISpeechSynthesis } from "@/hooks/useOpenAISpeechSynthesis";
 import {
@@ -479,6 +480,21 @@ export default function ChatInterface({
             >
               <Menu className="h-4 w-4" />
             </Button>
+            
+            {/* Feedback Button for Welcome Screen */}
+            <FeedbackForm
+              trigger={
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-12 px-3 touch-manipulation hover:bg-muted/50"
+                  data-testid="button-feedback-welcome"
+                  aria-label="Send feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </Button>
+              }
+            />
           </div>
         )}
         
@@ -523,7 +539,7 @@ export default function ChatInterface({
             </div>
 
             {/* Start a New Chat Button */}
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Button 
                 onClick={() => createChatMutation.mutate()}
                 disabled={createChatMutation.isPending}
@@ -532,6 +548,21 @@ export default function ChatInterface({
               >
                 {createChatMutation.isPending ? "Starting..." : "Start a New Chat"}
               </Button>
+              
+              {/* Feedback Button for Welcome Screen (Desktop and Mobile) */}
+              <FeedbackForm
+                trigger={
+                  <Button 
+                    variant="outline"
+                    className={`w-full max-w-sm ${isMobile ? 'h-12' : ''} border-primary/20 hover:bg-primary/5`}
+                    data-testid="button-feedback-welcome-center"
+                    aria-label="Send feedback about the app"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Send Feedback
+                  </Button>
+                }
+              />
             </div>
           </div>
         </div>
@@ -630,6 +661,22 @@ export default function ChatInterface({
               </Select>
             </div>
           )}
+          
+          {/* Feedback Button */}
+          <FeedbackForm
+            trigger={
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={`${isMobile ? 'h-12 px-3 touch-manipulation' : 'px-3'} hover:bg-muted/50`}
+                data-testid="button-feedback-main"
+                aria-label="Send feedback"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {!isMobile && <span className="ml-2 text-sm">Feedback</span>}
+              </Button>
+            }
+          />
           
           {chatId && (
             <Button 
