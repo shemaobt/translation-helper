@@ -257,10 +257,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId = user.id;
         
         // Save session to ensure it's persisted
-        req.session.save((saveErr: any) => {
+        req.session.save(async (saveErr: any) => {
           if (saveErr) {
             console.error('Session save failed:', saveErr);
             return res.status(500).json({ message: "Failed to save session" });
+          }
+          
+          // Track login activity
+          try {
+            await storage.updateUserLastLogin(user.id);
+          } catch (loginTrackErr) {
+            console.error('Failed to track login:', loginTrackErr);
+            // Don't fail the login for tracking errors
           }
           
           res.json({
@@ -325,6 +333,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const chatData = insertChatSchema.parse({ ...req.body, userId });
       const chat = await storage.createChat(chatData);
+      
+      // Track chat creation
+      await storage.incrementUserChatCount(userId);
+      
       res.json(chat);
     } catch (error) {
       console.error("Error creating chat:", error);
@@ -400,6 +412,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "assistant",
         content: aiResponse.content,
       });
+
+      // Track message creation and API usage
+      await Promise.all([
+        storage.incrementUserMessageCount(userId),
+        storage.incrementUserApiUsage(userId)
+      ]);
 
       res.json({ 
         userMessage, 
@@ -493,6 +511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (assistantMessageId) {
               await storage.updateMessage(assistantMessageId, { content: fullContent });
             }
+
+            // Track message creation and API usage for streaming
+            await Promise.all([
+              storage.incrementUserMessageCount(userId),
+              storage.incrementUserApiUsage(userId)
+            ]);
 
             // Send completion event
             res.write(`data: ${JSON.stringify({ 
@@ -733,6 +757,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
+      
+      // Track API usage
+      await storage.incrementUserApiUsage(req.userId);
+      
       res.json({ text: transcription });
     } catch (error) {
       console.error("Error transcribing audio:", error);
@@ -773,6 +801,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Cache miss - generate and cache
         audioBuffer = await generateSpeech(text, language, voice);
         cached = audioCache.set(text, language, audioBuffer, voice);
+        
+        // Track API usage for new generations
+        await storage.incrementUserApiUsage(req.userId);
       }
       
       res.set({
