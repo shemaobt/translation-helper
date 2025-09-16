@@ -146,6 +146,14 @@ export function useOpenAISpeechSynthesis(
   const [selectedVoice, setSelectedVoice] = useState<{name: string, lang: string, id: string} | null>(
     voices[0] // Default to Alloy (Versatile) - better than Echo
   );
+  
+  // Use ref to track current voice to avoid closure issues in callbacks
+  const selectedVoiceRef = useRef(selectedVoice);
+  
+  // Update ref whenever selectedVoice changes
+  useEffect(() => {
+    selectedVoiceRef.current = selectedVoice;
+  }, [selectedVoice]);
 
   // Update current language when prop changes
   useEffect(() => {
@@ -170,7 +178,8 @@ export function useOpenAISpeechSynthesis(
       cancel();
 
       const language = targetLang || currentLanguageRef.current;
-      const voiceId = selectedVoice?.id || 'alloy';
+      // Use ref to get current voice, not the potentially stale closure value
+      const voiceId = selectedVoiceRef.current?.id || 'alloy';
       
       // Check cache first
       let audioUrl = getCachedAudio(text, language, voiceId);
