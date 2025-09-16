@@ -33,6 +33,12 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Activity tracking operations
+  incrementUserChatCount(userId: string): Promise<void>;
+  incrementUserMessageCount(userId: string): Promise<void>;
+  incrementUserApiUsage(userId: string): Promise<void>;
+  updateUserLastLogin(userId: string): Promise<void>;
+  
   // Chat operations
   getUserChats(userId: string): Promise<Chat[]>;
   getChat(chatId: string, userId: string): Promise<Chat | undefined>;
@@ -109,6 +115,47 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Activity tracking operations
+  async incrementUserChatCount(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        chatCount: sql`chat_count + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async incrementUserMessageCount(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        messageCount: sql`message_count + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async incrementUserApiUsage(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        apiUsageCount: sql`api_usage_count + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserLastLogin(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        lastLoginAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
   }
 
   // Chat operations

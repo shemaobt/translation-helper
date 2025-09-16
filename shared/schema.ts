@@ -58,6 +58,11 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  // Usage tracking fields
+  chatCount: integer("chat_count").notNull().default(0),
+  messageCount: integer("message_count").notNull().default(0),
+  apiUsageCount: integer("api_usage_count").notNull().default(0),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
