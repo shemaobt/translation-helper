@@ -293,6 +293,10 @@ export default function Sidebar({
         {/* Dropdown Menu */}
         {userMenuOpen && (
           <div className="mt-2 bg-popover border border-border rounded-md shadow-lg py-2">
+            {/* Debug info */}
+            <div className="px-4 py-2 text-xs text-muted-foreground border-b">
+              Debug: user={user ? 'logged in' : 'not logged in'}, isAdmin={isAdmin ? 'true' : 'false'}
+            </div>
             {/* Admin-only options */}
             {isAdmin && (
               <>
