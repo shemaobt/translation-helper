@@ -1095,6 +1095,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin user management endpoints
+  app.get('/api/admin/users', requireAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsersWithStats();
+      
+      // Remove sensitive information from response
+      const sanitizedUsers = users.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.isAdmin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLoginAt: user.lastLoginAt,
+        stats: user.stats
+      }));
+
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch('/api/admin/users/:userId/admin', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validation: ensure userId is provided and is a valid UUID format
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+
+      // Prevent admins from removing their own admin status
+      if (validatedUserId === req.userId) {
+        return res.status(400).json({ message: "Cannot modify your own admin status" });
+      }
+
+      const updatedUser = await storage.toggleUserAdminStatus(validatedUserId);
+      
+      // Return sanitized user data
+      const sanitizedUser = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        isAdmin: updatedUser.isAdmin,
+        updatedAt: updatedUser.updatedAt
+      };
+
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Error toggling user admin status:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      if (error instanceof Error && error.message === 'User not found') {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(500).json({ message: "Failed to update user admin status" });
+    }
+  });
+
+  app.delete('/api/admin/users/:userId', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validation: ensure userId is provided and is a valid UUID format
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+
+      // Prevent admins from deleting their own account
+      if (validatedUserId === req.userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      const deleted = await storage.deleteUser(validatedUserId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/reset-password', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validation: ensure userId is provided and is a valid UUID format
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+
+      // Generate a secure temporary password
+      const tempPassword = randomBytes(12).toString('base64').replace(/[+/]/g, 'A').substring(0, 12);
+      
+      const updatedUser = await storage.resetUserPassword(validatedUserId, tempPassword);
+      
+      // Return sanitized user data along with the temporary password
+      const sanitizedUser = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        updatedAt: updatedUser.updatedAt,
+        temporaryPassword: tempPassword
+      };
+
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Error resetting user password:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      if (error instanceof Error && error.message === 'User not found or failed to reset password') {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(500).json({ message: "Failed to reset user password" });
+    }
+  });
+
   // Catch-all for unmatched API routes - return 404 instead of HTML
   app.use('/api/*', (req, res) => {
     res.status(404).json({ message: "API endpoint not found" });

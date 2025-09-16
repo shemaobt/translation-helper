@@ -77,6 +77,19 @@ export interface IStorage {
   updateFeedbackStatus(feedbackId: string, status: 'new' | 'read' | 'resolved'): Promise<Feedback | null>;
   deleteFeedback(feedbackId: string): Promise<boolean>;
   getUnreadFeedbackCount(): Promise<number>;
+  
+  // Admin user management operations
+  getAllUsersWithStats(): Promise<(User & {
+    stats: {
+      totalChats: number;
+      totalMessages: number;
+      totalApiKeys: number;
+      totalApiCalls: number;
+    }
+  })[]>;
+  toggleUserAdminStatus(userId: string): Promise<User>;
+  deleteUser(userId: string): Promise<boolean>;
+  resetUserPassword(userId: string, newPassword: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -379,6 +392,138 @@ export class DatabaseStorage implements IStorage {
       .from(feedback)
       .where(eq(feedback.status, 'new'));
     return result.count || 0;
+  }
+
+  // Admin user management operations
+  async getAllUsersWithStats(): Promise<(User & {
+    stats: {
+      totalChats: number;
+      totalMessages: number;
+      totalApiKeys: number;
+      totalApiCalls: number;
+    }
+  })[]> {
+    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+    
+    const usersWithStats = await Promise.all(
+      allUsers.map(async (user) => {
+        // Get total chats for user
+        const [chatCount] = await db
+          .select({ count: count() })
+          .from(chats)
+          .where(eq(chats.userId, user.id));
+
+        // Get total messages from user's chats
+        const [messageCount] = await db
+          .select({ count: count() })
+          .from(messages)
+          .innerJoin(chats, eq(messages.chatId, chats.id))
+          .where(eq(chats.userId, user.id));
+
+        // Get total API keys for user
+        const [apiKeyCount] = await db
+          .select({ count: count() })
+          .from(apiKeys)
+          .where(eq(apiKeys.userId, user.id));
+
+        // Get total API calls from user's API keys
+        const [apiCallCount] = await db
+          .select({ count: count() })
+          .from(apiUsage)
+          .innerJoin(apiKeys, eq(apiUsage.apiKeyId, apiKeys.id))
+          .where(eq(apiKeys.userId, user.id));
+
+        return {
+          ...user,
+          stats: {
+            totalChats: chatCount.count || 0,
+            totalMessages: messageCount.count || 0,
+            totalApiKeys: apiKeyCount.count || 0,
+            totalApiCalls: apiCallCount.count || 0,
+          }
+        };
+      })
+    );
+
+    return usersWithStats;
+  }
+
+  async toggleUserAdminStatus(userId: string): Promise<User> {
+    // First get the current user to know their current admin status
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (!currentUser) {
+      throw new Error('User not found');
+    }
+
+    // Toggle the admin status
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        isAdmin: !currentUser.isAdmin,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error('Failed to update user admin status');
+    }
+
+    return updatedUser;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      // Delete in the correct order to handle foreign key constraints
+      
+      // 1. Delete API usage records for user's API keys
+      await db
+        .delete(apiUsage)
+        .where(sql`api_key_id IN (SELECT id FROM ${apiKeys} WHERE user_id = ${userId})`);
+      
+      // 2. Delete user's API keys
+      await db.delete(apiKeys).where(eq(apiKeys.userId, userId));
+      
+      // 3. Delete messages from user's chats
+      await db
+        .delete(messages)
+        .where(sql`chat_id IN (SELECT id FROM ${chats} WHERE user_id = ${userId})`);
+      
+      // 4. Delete user's chats
+      await db.delete(chats).where(eq(chats.userId, userId));
+      
+      // 5. Delete user's feedback submissions (if userId is linked to feedback)
+      await db.delete(feedback).where(eq(feedback.userId, userId));
+      
+      // 6. Finally delete the user
+      const result = await db.delete(users).where(eq(users.id, userId));
+      
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
+  async resetUserPassword(userId: string, newPassword: string): Promise<User> {
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    // Update user's password
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error('User not found or failed to reset password');
+    }
+
+    return updatedUser;
   }
 }
 
