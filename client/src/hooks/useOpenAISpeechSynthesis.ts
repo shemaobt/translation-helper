@@ -12,6 +12,7 @@ interface OpenAISpeechSynthesisHook {
   cancel: () => void;
   isSpeaking: boolean;
   isPaused: boolean;
+  isLoading: boolean;
   isSupported: boolean;
   voices: Array<{name: string, lang: string, id: string}>;
   selectedVoice: {name: string, lang: string, id: string} | null;
@@ -126,6 +127,7 @@ export function useOpenAISpeechSynthesis(
   const { lang = 'en-US' } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentLanguageRef = useRef<string>(lang);
@@ -168,6 +170,7 @@ export function useOpenAISpeechSynthesis(
     }
     setIsSpeaking(false);
     setIsPaused(false);
+    setIsLoading(false);
   }, []);
 
   const speak = useCallback(async (text: string, targetLang?: string) => {
@@ -186,7 +189,7 @@ export function useOpenAISpeechSynthesis(
       
       if (!audioUrl) {
         // Generate new audio via OpenAI TTS
-        setIsSpeaking(true); // Show loading state
+        setIsLoading(true); // Show loading state for audio generation
         
         const response = await apiRequest('POST', '/api/audio/speak', {
           text: text.trim(),
@@ -203,6 +206,7 @@ export function useOpenAISpeechSynthesis(
         
         // Cache the audio
         setCachedAudio(text, language, voiceId, audioUrl);
+        setIsLoading(false); // Audio generated, stop loading
       }
 
       // Play the audio
@@ -233,6 +237,7 @@ export function useOpenAISpeechSynthesis(
       console.error('Error in text-to-speech:', error);
       setIsSpeaking(false);
       setIsPaused(false);
+      setIsLoading(false);
     }
   }, [isSupported, cancel]);
 
@@ -264,6 +269,7 @@ export function useOpenAISpeechSynthesis(
     cancel,
     isSpeaking,
     isPaused,
+    isLoading,
     isSupported,
     voices,
     selectedVoice,
