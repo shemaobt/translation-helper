@@ -633,7 +633,7 @@ export default function ChatInterface({
           {/* Voice Selector */}
           {speechSynthesis.isSupported && (
             <div className="flex items-center space-x-2">
-              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Choose Voice:</span>
+              <span className="text-sm text-[#000000]">Choose Voice:</span>
               <Select 
                 value={speechSynthesis.selectedVoice?.id || 'alloy'} 
                 onValueChange={(voiceId) => {
@@ -693,7 +693,6 @@ export default function ChatInterface({
           )}
         </div>
       </div>
-
       {/* Chat Messages */}
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 pb-28 space-y-4' : 'p-4 pb-32 space-y-6'}`} data-testid="chat-messages">
         {messages.length === 0 && !streamingMessage && (
@@ -763,7 +762,6 @@ export default function ChatInterface({
 
         <div ref={messagesEndRef} />
       </div>
-
       {/* Message Input - Fixed at bottom */}
       <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'p-4'}`}>
         <form onSubmit={handleSubmit} className={`flex ${isMobile ? 'space-x-2' : 'space-x-3'}`} data-testid="form-message">
