@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import FeedbackForm from "./feedback-form";
 import { 
   Bot, 
   Plus, 
@@ -317,6 +318,22 @@ export default function Sidebar({
                 <Separator className="my-1" />
               </>
             )}
+            {/* Feedback option (visible to all users) */}
+            <FeedbackForm
+              trigger={
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                  data-testid="button-feedback"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Send Feedback
+                </Button>
+              }
+            />
+            
+            <Separator className="my-1" />
+            
             {/* Logout option (visible to all users) */}
             <Button
               variant="ghost"
