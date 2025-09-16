@@ -124,6 +124,24 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiter for public API endpoints
+const publicApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiter for AI endpoints (more restrictive)
+const aiApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 50 AI requests per windowMs
+  message: { error: 'Too many AI requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post('/api/auth/signup', authLimiter, async (req: any, res) => {
@@ -730,6 +748,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating speech:", error);
       res.status(500).json({ message: "Failed to generate speech" });
     }
+  });
+
+  // PUBLIC API ENDPOINTS - No authentication required, but rate limited
+  
+  // Public text translation endpoint
+  app.post('/api/public/translate', aiApiLimiter, async (req: any, res) => {
+    try {
+      const { text, fromLanguage = 'auto', toLanguage = 'en-US', context = '' } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      if (text.length > 2048) {
+        return res.status(400).json({ error: "Text too long (max 2048 characters)" });
+      }
+
+      // Create a translation prompt
+      const prompt = context 
+        ? `Translate the following text from ${fromLanguage} to ${toLanguage}. Context: ${context}\n\nText to translate: ${text}`
+        : `Translate the following text from ${fromLanguage} to ${toLanguage}:\n\n${text}`;
+
+      const response = await generateChatCompletion([
+        { role: 'system', content: 'You are a professional translator. Provide only the translation without any additional text or explanations.' },
+        { role: 'user', content: prompt }
+      ]);
+
+      res.json({
+        translatedText: response,
+        fromLanguage,
+        toLanguage,
+        originalText: text
+      });
+    } catch (error) {
+      console.error("Error in public translation:", error);
+      res.status(500).json({ error: "Translation failed" });
+    }
+  });
+
+  // Public speech-to-text endpoint
+  app.post('/api/public/transcribe', aiApiLimiter, upload.single('audio'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Audio file is required" });
+      }
+
+      const language = req.body.language || 'auto';
+      const result = await transcribeAudio(req.file.buffer, language);
+      
+      res.json({
+        text: result.text,
+        language: result.language || language
+      });
+    } catch (error) {
+      console.error("Error in public transcription:", error);
+      res.status(500).json({ error: "Transcription failed" });
+    }
+  });
+
+  // Public text-to-speech endpoint
+  app.post('/api/public/speak', aiApiLimiter, async (req: any, res) => {
+    try {
+      const { text, language = 'en-US', voice = 'alloy' } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      if (text.length > 1024) {
+        return res.status(400).json({ error: "Text too long (max 1024 characters for public API)" });
+      }
+
+      // Generate ETag for this content
+      const etag = audioCache.getETag(text, language, voice);
+      
+      // Check if client has cached version
+      const clientETag = req.headers['if-none-match'];
+      if (clientETag === etag) {
+        return res.status(304).end(); // Not Modified
+      }
+
+      // Check server cache first
+      let cached = audioCache.get(text, language, voice);
+      let audioBuffer: Buffer;
+
+      if (cached) {
+        audioBuffer = cached.buffer;
+      } else {
+        audioBuffer = await generateSpeech(text, language, voice);
+        cached = audioCache.set(text, language, audioBuffer, voice);
+      }
+      
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioBuffer.length.toString(),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'ETag': etag,
+        'Access-Control-Allow-Origin': '*', // Allow CORS for public API
+        'Access-Control-Allow-Headers': 'Content-Type, If-None-Match',
+      });
+      
+      res.send(audioBuffer);
+    } catch (error) {
+      console.error("Error in public speech generation:", error);
+      res.status(500).json({ error: "Speech generation failed" });
+    }
+  });
+
+  // Public API info endpoint
+  app.get('/api/public/info', publicApiLimiter, (req: any, res) => {
+    res.json({
+      name: "Translation Helper Public API",
+      version: "1.0.0",
+      endpoints: {
+        translate: {
+          method: "POST",
+          path: "/api/public/translate",
+          description: "Translate text between languages",
+          parameters: {
+            text: "string (required, max 2048 chars)",
+            fromLanguage: "string (optional, default: 'auto')",
+            toLanguage: "string (optional, default: 'en-US')",
+            context: "string (optional)"
+          }
+        },
+        transcribe: {
+          method: "POST",
+          path: "/api/public/transcribe",
+          description: "Convert speech to text",
+          parameters: {
+            audio: "file (required, audio format)",
+            language: "string (optional, default: 'auto')"
+          }
+        },
+        speak: {
+          method: "POST",
+          path: "/api/public/speak",
+          description: "Convert text to speech",
+          parameters: {
+            text: "string (required, max 1024 chars)",
+            language: "string (optional, default: 'en-US')",
+            voice: "string (optional, default: 'alloy')"
+          }
+        }
+      },
+      voices: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+      rateLimit: {
+        window: "15 minutes",
+        maxRequests: 50
+      }
+    });
   });
 
   // Catch-all for unmatched API routes - return 404 instead of HTML
