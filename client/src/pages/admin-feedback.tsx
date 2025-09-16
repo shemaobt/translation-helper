@@ -74,6 +74,7 @@ export default function AdminFeedback() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback/unread-count"] });
       toast({
         title: "Success",
         description: "Feedback status updated successfully",
@@ -109,6 +110,7 @@ export default function AdminFeedback() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback/unread-count"] });
       toast({
         title: "Success",
         description: "Feedback deleted successfully",

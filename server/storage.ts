@@ -70,6 +70,7 @@ export interface IStorage {
   getFeedback(feedbackId: string): Promise<Feedback | undefined>;
   updateFeedbackStatus(feedbackId: string, status: 'new' | 'read' | 'resolved'): Promise<Feedback | null>;
   deleteFeedback(feedbackId: string): Promise<boolean>;
+  getUnreadFeedbackCount(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -323,6 +324,14 @@ export class DatabaseStorage implements IStorage {
       .delete(feedback)
       .where(eq(feedback.id, feedbackId));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async getUnreadFeedbackCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(feedback)
+      .where(eq(feedback.status, 'new'));
+    return result.count || 0;
   }
 }
 

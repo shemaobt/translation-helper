@@ -1054,6 +1054,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/feedback/unread-count', requireAdmin, async (req: any, res) => {
+    try {
+      const unreadCount = await storage.getUnreadFeedbackCount();
+      res.json({ count: unreadCount });
+    } catch (error) {
+      console.error("Error fetching unread feedback count:", error);
+      res.status(500).json({ message: "Failed to fetch unread feedback count" });
+    }
+  });
+
   // Catch-all for unmatched API routes - return 404 instead of HTML
   app.use('/api/*', (req, res) => {
     res.status(404).json({ message: "API endpoint not found" });
