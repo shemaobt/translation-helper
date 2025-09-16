@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
-import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2 } from "lucide-react";
+import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2 } from "lucide-react";
 import { useOpenAISpeechRecognition } from "@/hooks/useOpenAISpeechRecognition";
 import { useOpenAISpeechSynthesis } from "@/hooks/useOpenAISpeechSynthesis";
 import {
@@ -727,8 +727,15 @@ export default function ChatInterface({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              className={`resize-none ${isMobile ? 'min-h-[44px] max-h-[100px] text-base' : 'min-h-[44px] max-h-[120px]'}`}
-              placeholder={isListening ? "Listening..." : (isMobile ? "Ask about stories..." : "Type your message...")}
+              disabled={isTyping}
+              className={`resize-none ${isMobile ? 'min-h-[44px] max-h-[100px] text-base' : 'min-h-[44px] max-h-[120px]'} ${isTyping ? 'opacity-60' : ''}`}
+              placeholder={
+                isTyping 
+                  ? "AI is responding..." 
+                  : isListening 
+                    ? "Listening..." 
+                    : (isMobile ? "Ask about stories..." : "Type your message...")
+              }
               data-testid="textarea-message"
             />
           </div>
@@ -741,7 +748,7 @@ export default function ChatInterface({
               className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11 w-11'} ${isListening ? 'recording-active' : ''}`}
               data-testid="button-microphone"
               aria-label={isListening ? "Stop recording" : "Start recording"}
-              disabled={permissionDenied}
+              disabled={permissionDenied || isTyping}
             >
               {isListening ? (
                 <Square className="h-4 w-4" />
@@ -754,12 +761,20 @@ export default function ChatInterface({
           )}
           <Button
             type="submit"
-            disabled={!message.trim() || sendMessageMutation.isPending}
+            disabled={!message.trim() || sendMessageMutation.isPending || isTyping}
             className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation shrink-0' : 'h-11'}`}
             data-testid="button-send"
-            aria-label="Send message"
+            aria-label={
+              isTyping || sendMessageMutation.isPending 
+                ? "Sending..." 
+                : "Send message"
+            }
           >
-            <Send className="h-4 w-4" />
+            {isTyping || sendMessageMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </form>
         <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-muted-foreground mt-2 text-center`}>

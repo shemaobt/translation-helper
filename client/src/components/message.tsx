@@ -1,4 +1,4 @@
-import { Bot, User, Volume2, VolumeX, Pause } from "lucide-react";
+import { Bot, User, Volume2, VolumeX, Pause, Loader2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -11,13 +11,15 @@ interface MessageProps {
 
 export default function MessageComponent({ message, speechSynthesis, selectedLanguage }: MessageProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Sync with speech synthesis state
   useEffect(() => {
     if (speechSynthesis) {
       setIsSpeaking(speechSynthesis.isSpeaking);
+      setIsLoading(speechSynthesis.isLoading);
     }
-  }, [speechSynthesis?.isSpeaking]);
+  }, [speechSynthesis?.isSpeaking, speechSynthesis?.isLoading]);
 
   const handleSpeak = () => {
     if (!speechSynthesis || !speechSynthesis.isSupported) return;
@@ -78,9 +80,21 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
                 size="sm"
                 className="mt-2 h-8 px-2"
                 data-testid={`button-speak-${message.id}`}
-                aria-label={isSpeaking ? "Stop speaking" : "Play message"}
+                disabled={isLoading}
+                aria-label={
+                  isLoading 
+                    ? "Loading audio..." 
+                    : isSpeaking 
+                      ? "Stop speaking" 
+                      : "Play message"
+                }
               >
-                {isSpeaking ? (
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Loading...
+                  </>
+                ) : isSpeaking ? (
                   <>
                     <Pause className="h-3 w-3 mr-1" />
                     Stop
