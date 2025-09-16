@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
+import OpenAI from "openai";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
@@ -76,6 +77,11 @@ class AudioCache {
 }
 
 const audioCache = new AudioCache();
+
+// OpenAI instance for direct API calls
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR 
+});
 
 // Multer configuration for audio uploads
 const upload = multer({
@@ -770,10 +776,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `Translate the following text from ${fromLanguage} to ${toLanguage}. Context: ${context}\n\nText to translate: ${text}`
         : `Translate the following text from ${fromLanguage} to ${toLanguage}:\n\n${text}`;
 
-      const response = await generateChatCompletion([
-        { role: 'system', content: 'You are a professional translator. Provide only the translation without any additional text or explanations.' },
-        { role: 'user', content: prompt }
-      ]);
+      // Create a direct OpenAI chat completion for translation
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: 'system', content: 'You are a professional translator. Provide only the translation without any additional text or explanations.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1000,
+        temperature: 0.1
+      });
+      
+      const response = completion.choices[0].message.content;
 
       res.json({
         translatedText: response,
@@ -794,12 +808,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Audio file is required" });
       }
 
-      const language = req.body.language || 'auto';
-      const result = await transcribeAudio(req.file.buffer, language);
+      const filename = req.file.originalname || 'audio.webm';
+      const transcribedText = await transcribeAudio(req.file.buffer, filename);
       
       res.json({
-        text: result.text,
-        language: result.language || language
+        text: transcribedText,
+        language: req.body.language || 'auto'
       });
     } catch (error) {
       console.error("Error in public transcription:", error);
