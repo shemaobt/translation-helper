@@ -171,14 +171,14 @@ export default function Sidebar({
       <div className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-3 md:p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0">
-            <div className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+            <Link href="/" className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer">
               <img 
                 src={logoImage} 
                 alt="Translation Helper Logo" 
                 className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 object-contain"
                 data-testid="img-app-logo"
               />
-            </div>
+            </Link>
             <span className={`font-semibold text-foreground truncate ${isMobile ? 'text-sm phone-xs:text-xs phone-sm:text-lg' : 'text-sm md:text-base'}`}>Translation Helper</span>
           </div>
           {isMobile && onClose && (
