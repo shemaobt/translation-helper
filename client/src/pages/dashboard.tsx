@@ -35,14 +35,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const [newKeyName, setNewKeyName] = useState("");
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Ensure sidebar is closed when switching to mobile
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  }, [isMobile]);
+  // Sidebar is always visible, no toggle state needed
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -156,28 +149,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background flex relative" data-testid="page-dashboard">
-      {/* Mobile Sidebar Overlay */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          data-testid="sidebar-overlay"
-        />
-      )}
-      
-      {/* Sidebar */}
-      <div className={`
-        ${isMobile 
-          ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
-              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`
-          : 'relative'
-        }
-      `}>
+      {/* Sidebar - Always visible */}
+      <div className="relative h-full">
         <Sidebar 
           isMobile={isMobile}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          isOpen={true}
         />
       </div>
       
@@ -190,16 +166,6 @@ export default function Dashboard() {
                 <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>Dashboard</h1>
                 <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>Monitor your Translation Helper usage</p>
               </div>
-              {isMobile && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSidebarOpen(true)}
-                  data-testid="button-open-sidebar"
-                >
-                  Menu
-                </Button>
-              )}
             </div>
           </div>
 
