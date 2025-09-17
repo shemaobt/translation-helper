@@ -68,8 +68,8 @@ export default function Home() {
             }`
           : 'relative h-full'
         }
-        xs:w-full sm:w-full md:w-80 lg:w-80 xl:w-80 2xl:w-80
-        ${isMobile ? 'w-4/5 xs:w-full sm:w-4/5' : ''}
+        phone-xs:w-full phone-sm:w-full md:w-80 lg:w-80 xl:w-80 2xl:w-80
+        ${isMobile ? 'w-4/5 phone-xs:w-full phone-sm:w-4/5' : ''}
       `}>
         <Sidebar 
           isMobile={isMobile}

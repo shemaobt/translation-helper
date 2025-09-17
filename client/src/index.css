@@ -345,19 +345,26 @@
 
 /* Universal mobile optimizations */
 @media (max-width: 768px) {
-  /* Touch-friendly interactions */
+  /* Touch-friendly interactions for form elements and buttons */
   button, .btn, [role="button"], input, select, textarea {
     min-height: var(--touch-target);
     touch-action: manipulation;
   }
   
-  /* Improved tap targets */
-  a, button, .clickable {
+  /* Improved tap targets only for interactive components */
+  button, .btn, .tap-target, .clickable, [role="button"] {
     min-height: var(--touch-target);
     min-width: var(--touch-target);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+  
+  /* Navigation and menu links get larger tap targets */
+  .nav-link, .menu-item, .sidebar-link {
+    min-height: var(--touch-target);
+    display: flex;
+    align-items: center;
   }
   
   /* Prevent zoom on input focus */
