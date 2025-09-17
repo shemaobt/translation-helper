@@ -37,7 +37,12 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
+  Clock,
+  CheckCircle,
+  XCircle,
+  UserCheck,
+  UserX
 } from "lucide-react";
 
 interface UserWithStats {
@@ -49,6 +54,9 @@ interface UserWithStats {
   createdAt: string | Date;
   updatedAt: string | Date;
   lastLoginAt: string | Date | null;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | null;
+  approvedAt?: string | Date | null;
+  approvedBy?: string | null;
   stats: {
     totalChats: number;
     totalMessages: number;
@@ -67,6 +75,7 @@ export default function AdminUsers() {
   // Filter and sort states
   const [searchQuery, setSearchQuery] = useState("");
   const [adminFilter, setAdminFilter] = useState<string>("all");
+  const [approvalFilter, setApprovalFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   
@@ -266,6 +275,77 @@ export default function AdminUsers() {
     },
   });
 
+  // Approval management mutations
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/approve`, 
+        {},
+        { "X-Requested-With": "XMLHttpRequest" }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User approved successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to approve user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/reject`, 
+        {},
+        { "X-Requested-With": "XMLHttpRequest" }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User rejected successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to reject user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatTimestamp = (timestamp: string | Date | null | undefined) => {
     if (!timestamp) return "Never";
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
@@ -310,7 +390,14 @@ export default function AdminUsers() {
         (adminFilter === "admin" && user.isAdmin) ||
         (adminFilter === "user" && !user.isAdmin);
       
-      return matchesSearch && matchesAdminFilter;
+      // Approval status filter
+      const matchesApprovalFilter = 
+        approvalFilter === "all" ||
+        (approvalFilter === "pending" && user.approvalStatus === "pending") ||
+        (approvalFilter === "approved" && (user.approvalStatus === "approved" || user.approvalStatus === null)) ||
+        (approvalFilter === "rejected" && user.approvalStatus === "rejected");
+      
+      return matchesSearch && matchesAdminFilter && matchesApprovalFilter;
     })
     .sort((a: UserWithStats, b: UserWithStats) => {
       let aValue: any, bValue: any;
@@ -428,6 +515,22 @@ export default function AdminUsers() {
                   </Select>
                 </div>
                 
+                {/* Approval Status Filter */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Approval Status</label>
+                  <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+                    <SelectTrigger data-testid="select-approval-filter">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="pending">Pending approval</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 {/* Sort By */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Sort By</label>
@@ -467,6 +570,7 @@ export default function AdminUsers() {
                   onClick={() => {
                     setSearchQuery("");
                     setAdminFilter("all");
+                    setApprovalFilter("all");
                     setSortBy("createdAt");
                     setSortOrder("desc");
                   }}
@@ -520,6 +624,25 @@ export default function AdminUsers() {
                                     <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300" data-testid={`badge-admin-${user.id}`}>
                                       <Shield className="h-3 w-3 mr-1" />
                                       Admin
+                                    </Badge>
+                                  )}
+                                  {/* Approval Status Badge */}
+                                  {user.approvalStatus === 'pending' && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" data-testid={`badge-pending-${user.id}`}>
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Pending
+                                    </Badge>
+                                  )}
+                                  {user.approvalStatus === 'rejected' && (
+                                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" data-testid={`badge-rejected-${user.id}`}>
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Rejected
+                                    </Badge>
+                                  )}
+                                  {(user.approvalStatus === 'approved' || user.approvalStatus === null) && (
+                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" data-testid={`badge-approved-${user.id}`}>
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Approved
                                     </Badge>
                                   )}
                                 </div>
@@ -629,6 +752,31 @@ export default function AdminUsers() {
                                   <KeyRound className="mr-2 h-4 w-4" />
                                   Reset Password
                                 </DropdownMenuItem>
+                                
+                                {/* Approval Actions - Only show for pending users */}
+                                {user.approvalStatus === 'pending' && (
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => approveUserMutation.mutate(user.id)}
+                                      disabled={approveUserMutation.isPending}
+                                      className="text-green-600 focus:text-green-600"
+                                      data-testid={`button-approve-user-${user.id}`}
+                                    >
+                                      <UserCheck className="mr-2 h-4 w-4" />
+                                      Approve User
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => rejectUserMutation.mutate(user.id)}
+                                      disabled={rejectUserMutation.isPending}
+                                      className="text-red-600 focus:text-red-600"
+                                      data-testid={`button-reject-user-${user.id}`}
+                                    >
+                                      <UserX className="mr-2 h-4 w-4" />
+                                      Reject User
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem 
