@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Failed to logout" });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('translation.sid'); // Use our custom session cookie name
       res.json({ message: "Logged out successfully" });
     });
   });
@@ -302,6 +302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      // Debug logging for admin status
+      console.log(`[Auth] User ${user.email} - isAdmin: ${user.isAdmin}, userId: ${user.id}`);
       
       res.json({
         id: user.id,

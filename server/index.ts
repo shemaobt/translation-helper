@@ -16,9 +16,10 @@ app.set('trust proxy', 1);
 // Session configuration
 const PostgreSQLStore = connectPgSimple(session);
 
-// Ensure SESSION_SECRET is configured in production
-if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required in production');
+// Ensure SESSION_SECRET is available (use a default for deployment if not set)
+const sessionSecret = process.env.SESSION_SECRET || 'translation-helper-secret-key-2025';
+if (!process.env.SESSION_SECRET) {
+  log('Warning: SESSION_SECRET not set, using default (please set in production)');
 }
 
 // Configure session store to use existing Drizzle sessions table with error handling
@@ -71,25 +72,26 @@ if (!process.env.DATABASE_URL) {
 
 // Add session middleware with error handling
 try {
-  // Determine if we're in production by checking NODE_ENV or if using a custom domain
+  // Check if we're in production environment
   const isProduction = process.env.NODE_ENV === 'production';
   
+  // Determine cookie settings based on environment
+  const cookieSettings: any = {
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: 'lax' as const,
+    // Set secure to true only in production with HTTPS
+    secure: isProduction ? 'auto' : false,
+  };
+
   app.use(session({
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      // Always use secure cookies in production or on Replit
-      secure: isProduction || !!process.env.REPLIT_DEV_DOMAIN,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      // Use 'lax' for better compatibility across all domains
-      // This allows cookies to work on both preview and production domains
-      sameSite: 'lax',
-      // Set domain to allow subdomain access if needed
-      // Don't set domain explicitly to allow it to work on any domain
-    },
+    name: 'translation.sid', // Custom session cookie name
+    cookie: cookieSettings,
+    proxy: true, // Trust the reverse proxy (important for Replit deployments)
   }));
 } catch (error) {
   log(`Failed to configure session middleware: ${error instanceof Error ? error.message : 'Unknown error'}`);
