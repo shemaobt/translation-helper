@@ -17,21 +17,33 @@ import { z } from "zod";
 export const ASSISTANTS = {
   storyteller: {
     id: 'storyteller',
-    name: 'StoryTeller Assistant',
-    description: 'Tell me a story',
+    name: 'Storyteller',
+    description: 'What Bible concept do you want to translate? I can tell you a story to help you understand it better, so you can choose the best word or phrase.',
     openaiId: 'asst_eSD18ksRBzC5usjNxbZkmad6'
   },
   conversation: {
     id: 'conversation',
     name: 'Conversation Partner',
-    description: 'Explain it to me',
+    description: 'Want to explore a Bible concept? I can explain it or talk it through with you, so you can understand it more deeply before you translate.',
     openaiId: 'asst_Mxzqh1dfl3ggH83YzhZO6V9z'
   },
   performer: {
     id: 'performer', 
     name: 'Oral Performer',
-    description: 'Give me an oral version',
+    description: 'Struggling to understand a Bible passage? I can say it in clear, natural oral language, so your team can grasp the meaning more easily.',
     openaiId: 'asst_Y6WiCXUTObAb3TNUFG0Yh1Hn'
+  },
+  healthAssessor: {
+    id: 'healthAssessor',
+    name: 'OBT Project Health Assessor',
+    description: 'How\'s your project going? I can help you look at where you are, see what\'s working well, and find out what you might need to keep moving forward in your ministry. The assessment can take over an hour, so we recommend doing it with your team once every quarter.',
+    openaiId: 'asst_EyMCWONERAYPG3FEjuyuKWLC'
+  },
+  backTranslationChecker: {
+    id: 'backTranslationChecker',
+    name: 'Back Translation Checker',
+    description: 'Need to check your translation? I can compare your back translation with the source text and point out possible issues to help you improve accuracy.',
+    openaiId: 'asst_sOGHlFUrgeTGdkRcD44hljrR'
   }
 } as const;
 
