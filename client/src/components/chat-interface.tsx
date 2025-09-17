@@ -601,16 +601,11 @@ export default function ChatInterface({
                   disabled={switchAssistantMutation.isPending}
                   data-testid="button-assistant-switcher"
                 >
-                  <div className="text-left">
-                    <div className="flex items-center gap-2">
-                      <h1 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-foreground`}>
-                        {ASSISTANT_CONFIG[currentAssistant].name}
-                      </h1>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
-                      {ASSISTANT_CONFIG[currentAssistant].description}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <h1 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-foreground`}>
+                      {ASSISTANT_CONFIG[currentAssistant].name}
+                    </h1>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </Button>
               </DropdownMenuTrigger>
