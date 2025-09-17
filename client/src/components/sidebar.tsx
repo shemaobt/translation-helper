@@ -61,7 +61,7 @@ export default function Sidebar({
   const isAdmin = userWithAdmin?.isAdmin === true;
   
   // Debug logging for admin status (only in development)
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log(`[Sidebar] User: ${userWithAdmin?.email}, isAdmin: ${isAdmin}, raw user object:`, user);
   }
 
@@ -167,11 +167,56 @@ export default function Sidebar({
       {/* Header */}
       <div className={`${isMobile ? 'p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-1">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
               <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className={`font-semibold text-foreground ${isMobile ? 'text-lg' : ''}`}>Translation Helper</span>
+            
+            {/* Admin Menu in Header */}
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-8 px-2"
+                    data-testid="button-header-admin-menu"
+                  >
+                    <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400 mr-1" />
+                    <span className="text-xs font-medium">Admin</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="cursor-pointer">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/users" className="cursor-pointer">
+                      <Users className="mr-2 h-4 w-4" />
+                      User Management
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/feedback" className="cursor-pointer">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      <span className="flex-1">Manage Feedback</span>
+                      {unreadFeedbackCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto h-4 min-w-[1.25rem] text-xs px-1 py-0"
+                        >
+                          {unreadFeedbackCount}
+                        </Badge>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           {isMobile && onClose && (
             <Button
@@ -314,26 +359,6 @@ export default function Sidebar({
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Dashboard
-                  </Button>
-                </Link>
-                <Link href="/api-keys" className="block">
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
-                    data-testid="link-api-keys"
-                  >
-                    <Key className="mr-2 h-4 w-4" />
-                    API Keys
-                  </Button>
-                </Link>
-                <Link href="/settings" className="block">
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
-                    data-testid="link-settings"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
                   </Button>
                 </Link>
                 <Link href="/admin/users" className="block">
