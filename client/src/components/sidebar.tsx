@@ -290,7 +290,7 @@ export default function Sidebar({
       </div>
 
       {/* User Menu */}
-      <div className="p-3 md:p-4 border-t border-border">
+      <div className="mt-auto p-3 md:p-4 border-t border-border">
         <Button
           variant="ghost" 
           className={`flex items-center space-x-2 md:space-x-3 p-2 rounded-md hover:bg-accent w-full justify-start ${isMobile ? 'h-10 sm:h-12' : 'h-10'}`}
