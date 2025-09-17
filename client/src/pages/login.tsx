@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Clock, XCircle } from "lucide-react";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
@@ -28,6 +29,10 @@ function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { login } = useAuth();
+
+  // Get URL search parameters to check for messages
+  const urlParams = new URLSearchParams(window.location.search);
+  const messageType = urlParams.get('message');
 
   // Prevent body scrolling when login page is mounted
   useEffect(() => {
@@ -50,8 +55,22 @@ function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/api/auth/login", data);
+        return response.json();
+      } catch (error: any) {
+        // Parse JSON error response to get approval status
+        if (error.message && error.message.includes('{')) {
+          try {
+            const errorJson = JSON.parse(error.message.split(': ')[1]);
+            throw { ...errorJson, originalMessage: error.message };
+          } catch {
+            // If JSON parsing fails, throw original error
+            throw error;
+          }
+        }
+        throw error;
+      }
     },
     onSuccess: (user) => {
       toast({
@@ -62,11 +81,26 @@ function Login() {
       setLocation("/");
     },
     onError: (error: any) => {
-      toast({
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      // Handle specific approval-related errors
+      if (error.approvalStatus === 'pending') {
+        toast({
+          title: "Account pending approval",
+          description: "Your account is awaiting admin approval. Please wait for approval before logging in.",
+          variant: "destructive",
+        });
+      } else if (error.approvalStatus === 'rejected') {
+        toast({
+          title: "Account access denied",
+          description: "Your account has been rejected. Please contact support for assistance.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: error.message || "Please check your credentials and try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -92,6 +126,34 @@ function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Show appropriate message based on URL parameters */}
+          {messageType === 'pending' && (
+            <Alert className="mb-4" data-testid="alert-pending">
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                Your account has been created and is awaiting admin approval. You'll be able to log in once approved.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {messageType === 'rejected' && (
+            <Alert className="mb-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950" data-testid="alert-rejected">
+              <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertDescription className="text-red-800 dark:text-red-200">
+                Your account has been rejected. Please contact support for assistance.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {messageType === 'approved' && (
+            <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950" data-testid="alert-approved">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                Your account has been approved! You can now log in.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
