@@ -708,6 +708,7 @@ export default function ChatInterface({
                 />
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Start a conversation</h2>
+              <p className="text-muted-foreground mb-4">{ASSISTANT_CONFIG[currentAssistant].description}</p>
               <p className="text-muted-foreground">Send a message to begin chatting with your {ASSISTANT_CONFIG[currentAssistant].name}.</p>
             </div>
           </div>
