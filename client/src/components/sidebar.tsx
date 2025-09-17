@@ -166,60 +166,60 @@ export default function Sidebar({
   };
 
   return (
-    <div className={`${isMobile ? 'w-full max-w-xs' : 'w-64 md:w-64 lg:w-72'} bg-card border-r border-border flex flex-col h-full`}>
+    <div className={`${isMobile ? 'w-full max-w-xs phone-xs:max-w-full phone-sm:max-w-sm' : 'w-64 md:w-64 lg:w-72'} bg-card border-r border-border flex flex-col h-full`}>
       {/* Header */}
-      <div className={`${isMobile ? 'p-3 sm:p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-3 md:p-4'} border-b border-border`}>
+      <div className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-3 md:p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 flex-1">
-            <div className="h-8 w-8 rounded-lg flex items-center justify-center overflow-hidden">
+          <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0">
+            <div className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
               <img 
                 src={logoImage} 
                 alt="Translation Helper Logo" 
-                className="h-8 w-8 object-contain"
+                className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 object-contain"
                 data-testid="img-app-logo"
               />
             </div>
-            <span className={`font-semibold text-foreground ${isMobile ? 'text-base sm:text-lg' : 'text-sm md:text-base'}`}>Translation Helper</span>
+            <span className={`font-semibold text-foreground truncate ${isMobile ? 'text-sm phone-xs:text-xs phone-sm:text-lg' : 'text-sm md:text-base'}`}>Translation Helper</span>
           </div>
           {isMobile && onClose && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className={`${isMobile ? 'h-10 w-10 sm:h-12 sm:w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
+              className={`flex-shrink-0 ${isMobile ? 'h-10 w-10 phone-xs:h-8 phone-xs:w-8 phone-sm:h-12 phone-sm:w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-close-sidebar"
               aria-label="Close sidebar"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 phone-xs:h-3 phone-xs:w-3 phone-sm:h-5 phone-sm:w-5" />
             </Button>
           )}
         </div>
       </div>
 
       {/* New Chat Dropdown */}
-      <div className="p-3 md:p-4">
+      <div className="p-3 phone-xs:p-2 phone-sm:p-4 md:p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className={`w-full justify-center space-x-2 ${isMobile ? 'h-10 sm:h-12 text-sm sm:text-base touch-manipulation' : 'h-9 md:h-10'}`}
+              className={`w-full justify-center space-x-2 ${isMobile ? 'h-10 phone-xs:h-12 phone-sm:h-12 text-sm phone-xs:text-xs phone-sm:text-base touch-manipulation' : 'h-9 md:h-10'}`}
               disabled={createChatMutation.isPending}
               data-testid="button-new-chat"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 phone-xs:h-3 phone-xs:w-3 phone-sm:h-4 phone-sm:w-4" />
               <span>New Chat</span>
-              <ChevronDown className="h-3 w-3 ml-1" />
+              <ChevronDown className="h-3 w-3 phone-xs:h-2 phone-xs:w-2 phone-sm:h-3 phone-sm:w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-56 max-h-64 overflow-y-auto">
+          <DropdownMenuContent align="center" className={`${isMobile ? 'w-72 phone-xs:w-64 phone-sm:w-80' : 'w-56'} max-h-64 overflow-y-auto`}>
             {Object.values(ASSISTANTS).map((assistant) => (
               <DropdownMenuItem 
                 key={assistant.id}
                 onClick={() => createChatMutation.mutate(assistant.id as AssistantId)}
                 disabled={createChatMutation.isPending}
-                className="p-3"
+                className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-4 min-h-[44px] touch-manipulation' : 'p-3'}`}
                 data-testid={`new-chat-assistant-${assistant.id}`}
               >
-                <div className="font-medium">{assistant.name}</div>
+                <div className="font-medium text-left">{assistant.name}</div>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
