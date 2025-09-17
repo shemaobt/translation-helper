@@ -8,7 +8,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
 import FeedbackForm from "./feedback-form";
-import { Bot, Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare } from "lucide-react";
+import { Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare } from "lucide-react";
+
+// Use logo from public directory
+const logoImage = "/logo.png";
 import { useOpenAISpeechRecognition } from "@/hooks/useOpenAISpeechRecognition";
 import { useOpenAISpeechSynthesis } from "@/hooks/useOpenAISpeechSynthesis";
 import {
@@ -501,8 +504,13 @@ export default function ChatInterface({
         
         <div className="flex-1 flex justify-center items-center">
           <div className="max-w-2xl text-center">
-            <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bot className="h-8 w-8 text-primary-foreground" />
+            <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
+              <img 
+                src={logoImage} 
+                alt="Translation Helper Logo" 
+                className="h-16 w-16 object-contain"
+                data-testid="img-welcome-screen-logo"
+              />
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">Welcome to Translation Helper</h2>
             <p className="text-muted-foreground mb-6">Start a conversation and I'll help you with translations and storytelling.</p>
@@ -698,8 +706,13 @@ export default function ChatInterface({
         {messages.length === 0 && !streamingMessage && (
           <div className="flex justify-center">
             <div className="max-w-2xl text-center">
-              <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Bot className="h-8 w-8 text-primary-foreground" />
+              <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                <img 
+                  src={logoImage} 
+                  alt="Translation Helper Logo" 
+                  className="h-16 w-16 object-contain"
+                  data-testid="img-welcome-logo"
+                />
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Start a conversation</h2>
               <p className="text-muted-foreground">Send a message to begin chatting with your {ASSISTANT_CONFIG[currentAssistant].name}.</p>
@@ -721,8 +734,13 @@ export default function ChatInterface({
           <div className="flex justify-start" data-testid="streaming-message">
             <div className="max-w-2xl">
               <div className="flex items-start space-x-3">
-                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+                  <img 
+                    src={logoImage} 
+                    alt="Assistant" 
+                    className="h-6 w-6 object-contain"
+                    data-testid="img-assistant-avatar-streaming"
+                  />
                 </div>
                 <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
                   <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid="text-streaming-content">
@@ -745,8 +763,13 @@ export default function ChatInterface({
           <div className="flex justify-start" data-testid="typing-indicator">
             <div className="max-w-2xl">
               <div className="flex items-start space-x-3">
-                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+                  <img 
+                    src={logoImage} 
+                    alt="Assistant" 
+                    className="h-6 w-6 object-contain"
+                    data-testid="img-assistant-avatar-typing"
+                  />
                 </div>
                 <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
                   <div className="flex space-x-1">
