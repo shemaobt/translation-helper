@@ -19,7 +19,7 @@ import {
   Bot, 
   Plus, 
   MoreHorizontal, 
-  User, 
+  User as UserIcon, 
   Users,
   ChevronUp, 
   BarChart3, 
@@ -29,7 +29,8 @@ import {
   MessageSquare,
   X,
   Trash,
-  UserCheck 
+  UserCheck,
+  Shield
 } from "lucide-react";
 import type { Chat, AssistantId } from "@shared/schema";
 
@@ -55,7 +56,14 @@ export default function Sidebar({
   const queryClient = useQueryClient();
 
   // Check if user is admin (only admin can see dashboard, settings, etc.)
-  const isAdmin = (user as any)?.isAdmin === true;
+  // Properly type the user object for admin check
+  const userWithAdmin = user as any;
+  const isAdmin = userWithAdmin?.isAdmin === true;
+  
+  // Debug logging for admin status (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Sidebar] User: ${userWithAdmin?.email}, isAdmin: ${isAdmin}, raw user object:`, user);
+  }
 
   const { data: chats = [] } = useQuery<Chat[]>({
     queryKey: ["/api/chats"],
@@ -275,7 +283,7 @@ export default function Sidebar({
                 data-testid="img-user-avatar"
               />
             ) : (
-              <User className="h-4 w-4 text-muted-foreground" />
+              <UserIcon className="h-4 w-4 text-muted-foreground" />
             )}
           </div>
           <div className="flex-1 min-w-0">
