@@ -834,9 +834,6 @@ export default function ChatInterface({
             )}
           </Button>
         </form>
-        <p className={`${isMobile ? 'text-xs phone-xs:text-xs phone-sm:text-xs' : 'text-xs'} text-muted-foreground mt-2 text-center leading-relaxed`}>
-          {ASSISTANT_CONFIG[currentAssistant].description} powered by {ASSISTANT_CONFIG[currentAssistant].name}
-        </p>
       </div>
     </div>
   );
