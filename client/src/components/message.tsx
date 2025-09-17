@@ -1,4 +1,7 @@
-import { Bot, User, Volume2, VolumeX, Pause, Loader2 } from "lucide-react";
+import { User, Volume2, VolumeX, Pause, Loader2 } from "lucide-react";
+
+// Use logo from public directory
+const logoImage = "/logo.png";
 import type { Message } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -66,8 +69,13 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
     <div className="flex justify-start" data-testid={`message-assistant-${message.id}`}>
       <div className="max-w-2xl">
         <div className="flex items-start space-x-3">
-          <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-            <Bot className="h-4 w-4 text-muted-foreground" />
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+            <img 
+              src={logoImage} 
+              alt="Assistant" 
+              className="h-6 w-6 object-contain"
+              data-testid={`img-assistant-avatar-${message.id}`}
+            />
           </div>
           <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
             <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid={`text-message-content-${message.id}`}>

@@ -23,9 +23,11 @@ import {
   Copy, 
   Trash2,
   TrendingUp,
-  TrendingDown,
-  Bot
+  TrendingDown
 } from "lucide-react";
+
+// Use logo from public directory
+const logoImage = "/logo.png";
 import type { ApiKey } from "@shared/schema";
 
 export default function Dashboard() {
@@ -305,7 +307,12 @@ export default function Dashboard() {
             <CardContent>
               {showNewKey && (
                 <Alert className="mb-6">
-                  <Bot className="h-4 w-4" />
+                  <img 
+                    src={logoImage} 
+                    alt="Assistant" 
+                    className="h-4 w-4 object-contain"
+                    data-testid="img-alert-icon"
+                  />
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">Your new API key has been generated:</p>
@@ -452,7 +459,14 @@ export default function Dashboard() {
 
               {apiKeys.length === 0 && (
                 <div className="text-center py-8">
-                  <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <div className="h-8 w-8 mx-auto mb-2 flex items-center justify-center">
+                    <img 
+                      src={logoImage} 
+                      alt="Assistant" 
+                      className="h-8 w-8 object-contain opacity-60"
+                      data-testid="img-empty-state-icon"
+                    />
+                  </div>
                   <p className="text-sm text-muted-foreground">No API keys yet</p>
                   <p className="text-xs text-muted-foreground">Create your first API key to get started</p>
                 </div>
