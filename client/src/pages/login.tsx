@@ -11,7 +11,10 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff, Bot } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+
+// Use logo from public directory
+const logoImage = "/logo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -75,8 +78,13 @@ function Login() {
     <div className="min-h-screen max-h-screen overflow-hidden flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
-            <Bot className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+            <img 
+              src={logoImage} 
+              alt="Translation Helper Logo" 
+              className="h-12 w-12 object-contain"
+              data-testid="img-login-logo"
+            />
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
