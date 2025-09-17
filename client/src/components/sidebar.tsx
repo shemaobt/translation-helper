@@ -335,6 +335,7 @@ export default function Sidebar({
                   <Button
                     variant="ghost"
                     className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
+                    onClick={() => setUserMenuOpen(false)}
                     data-testid="link-dashboard"
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
@@ -345,6 +346,7 @@ export default function Sidebar({
                   <Button
                     variant="ghost"
                     className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
+                    onClick={() => setUserMenuOpen(false)}
                     data-testid="link-admin-users"
                   >
                     <Users className="mr-2 h-4 w-4" />
@@ -355,6 +357,7 @@ export default function Sidebar({
                   <Button
                     variant="ghost"
                     className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
+                    onClick={() => setUserMenuOpen(false)}
                     data-testid="link-admin-feedback"
                   >
                     <UserCheck className="mr-2 h-4 w-4" />
