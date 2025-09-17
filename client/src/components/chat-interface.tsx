@@ -593,35 +593,9 @@ export default function ChatInterface({
             </Button>
           )}
           <div className="flex-1 min-w-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className={`${isMobile ? 'min-h-[44px] h-11 px-3 phone-sm:h-12 phone-sm:px-3' : 'h-auto p-0'} hover:bg-transparent justify-start touch-manipulation w-full`}
-                  disabled={switchAssistantMutation.isPending}
-                  data-testid="button-assistant-switcher"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h1 className={`${isMobile ? 'text-sm phone-sm:text-base' : 'text-lg'} font-semibold text-foreground truncate`}>
-                      {ASSISTANT_CONFIG[currentAssistant].name}
-                    </h1>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className={`${isMobile ? 'w-72 phone-xs:w-64 phone-sm:w-80' : 'w-64'}`}>
-                {Object.values(ASSISTANT_CONFIG).map((assistant) => (
-                  <DropdownMenuItem 
-                    key={assistant.id}
-                    onClick={() => handleAssistantSwitch(assistant.id as AssistantId)}
-                    className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 min-h-[44px] touch-manipulation' : 'p-3'}`}
-                    data-testid={`assistant-option-${assistant.id}`}
-                  >
-                    <div className="font-medium">{assistant.name}</div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <h1 className={`${isMobile ? 'text-sm phone-sm:text-base' : 'text-lg'} font-semibold text-foreground truncate`}>
+              {ASSISTANT_CONFIG[currentAssistant].name}
+            </h1>
           </div>
         </div>
 
