@@ -494,7 +494,7 @@ export default function AdminUsers() {
                       placeholder="Search by name or email..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className={`pl-10 ${isMobile ? 'min-h-12' : ''}`}
                       data-testid="input-search-users"
                     />
                   </div>
@@ -504,7 +504,7 @@ export default function AdminUsers() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">User Type</label>
                   <Select value={adminFilter} onValueChange={setAdminFilter}>
-                    <SelectTrigger data-testid="select-admin-filter">
+                    <SelectTrigger className={isMobile ? 'min-h-12' : ''} data-testid="select-admin-filter">
                       <SelectValue placeholder="All users" />
                     </SelectTrigger>
                     <SelectContent>
@@ -519,7 +519,7 @@ export default function AdminUsers() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Approval Status</label>
                   <Select value={approvalFilter} onValueChange={setApprovalFilter}>
-                    <SelectTrigger data-testid="select-approval-filter">
+                    <SelectTrigger className={isMobile ? 'min-h-12' : ''} data-testid="select-approval-filter">
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
@@ -535,7 +535,7 @@ export default function AdminUsers() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Sort By</label>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger data-testid="select-sort-by">
+                    <SelectTrigger className={isMobile ? 'min-h-12' : ''} data-testid="select-sort-by">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -555,7 +555,7 @@ export default function AdminUsers() {
                   <Button
                     variant="outline"
                     onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                    className="w-full justify-start"
+                    className={`w-full justify-start ${isMobile ? 'min-h-12' : ''}`}
                     data-testid="button-sort-order"
                   >
                     {sortOrder === "asc" ? <SortAsc className="mr-2 h-4 w-4" /> : <SortDesc className="mr-2 h-4 w-4" />}
@@ -574,6 +574,7 @@ export default function AdminUsers() {
                     setSortBy("createdAt");
                     setSortOrder("desc");
                   }}
+                  className={isMobile ? 'min-h-12' : ''}
                   data-testid="button-clear-filters"
                 >
                   Clear Filters

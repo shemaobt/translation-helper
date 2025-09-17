@@ -232,7 +232,7 @@ export default function AdminFeedback() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger data-testid="select-status-filter">
+                    <SelectTrigger className={isMobile ? 'min-h-12' : ''} data-testid="select-status-filter">
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
@@ -246,7 +246,7 @@ export default function AdminFeedback() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger data-testid="select-category-filter">
+                    <SelectTrigger className={isMobile ? 'min-h-12' : ''} data-testid="select-category-filter">
                       <SelectValue placeholder="All categories" />
                     </SelectTrigger>
                     <SelectContent>
@@ -265,7 +265,7 @@ export default function AdminFeedback() {
                       setStatusFilter("all");
                       setCategoryFilter("all");
                     }}
-                    className="w-full"
+                    className={`w-full ${isMobile ? 'min-h-12' : ''}`}
                     data-testid="button-clear-filters"
                   >
                     Clear Filters

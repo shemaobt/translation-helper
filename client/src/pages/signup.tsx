@@ -36,16 +36,6 @@ function Signup() {
   const { toast } = useToast();
   const { login } = useAuth();
 
-  // Prevent body scrolling when signup page is mounted
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    };
-  }, []);
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -87,7 +77,7 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">

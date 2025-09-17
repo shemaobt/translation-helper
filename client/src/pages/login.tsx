@@ -34,16 +34,6 @@ function Login() {
   const urlParams = new URLSearchParams(window.location.search);
   const messageType = urlParams.get('message');
 
-  // Prevent body scrolling when login page is mounted
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    };
-  }, []);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -109,7 +99,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen max-h-screen overflow-hidden flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
