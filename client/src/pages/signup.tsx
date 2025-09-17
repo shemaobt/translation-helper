@@ -63,13 +63,24 @@ function Signup() {
       const response = await apiRequest("POST", "/api/auth/signup", data);
       return response.json();
     },
-    onSuccess: (user) => {
-      toast({
-        title: "Welcome!",
-        description: "Your account has been created successfully.",
-      });
-      login(user);
-      setLocation("/");
+    onSuccess: (result) => {
+      // Check if the account is pending approval
+      if (result.approvalStatus === 'pending') {
+        toast({
+          title: "Account created!",
+          description: "Your account has been created and is awaiting admin approval. You'll be able to log in once approved.",
+        });
+        // Don't log in, just redirect to login page with a message
+        setLocation("/login?message=pending");
+      } else {
+        // User is approved (likely existing user or special case)
+        toast({
+          title: "Welcome!",
+          description: "Your account has been created successfully.",
+        });
+        login(result);
+        setLocation("/");
+      }
     },
     onError: (error: any) => {
       toast({
