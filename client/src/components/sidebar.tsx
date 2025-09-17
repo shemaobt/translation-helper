@@ -22,6 +22,7 @@ import {
   User as UserIcon, 
   Users,
   ChevronUp, 
+  ChevronDown,
   BarChart3, 
   Key, 
   Settings, 
@@ -33,6 +34,7 @@ import {
   Shield
 } from "lucide-react";
 import type { Chat, AssistantId } from "@shared/schema";
+import { ASSISTANTS } from "@shared/schema";
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -79,10 +81,10 @@ export default function Sidebar({
   });
 
   const createChatMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (assistantId: AssistantId) => {
       const response = await apiRequest("POST", "/api/chats", {
         title: "New Chat",
-        assistantId: selectedAssistant,
+        assistantId: assistantId,
       });
       return response.json();
     },
@@ -188,17 +190,37 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* New Chat Button */}
+      {/* New Chat Dropdown */}
       <div className="p-4">
-        <Button
-          className={`w-full justify-center space-x-2 ${isMobile ? 'h-12 text-base touch-manipulation' : ''}`}
-          onClick={() => createChatMutation.mutate()}
-          disabled={createChatMutation.isPending}
-          data-testid="button-new-chat"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Chat</span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className={`w-full justify-center space-x-2 ${isMobile ? 'h-12 text-base touch-manipulation' : ''}`}
+              disabled={createChatMutation.isPending}
+              data-testid="button-new-chat"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Chat</span>
+              <ChevronDown className="h-3 w-3 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-56">
+            {Object.values(ASSISTANTS).map((assistant) => (
+              <DropdownMenuItem 
+                key={assistant.id}
+                onClick={() => createChatMutation.mutate(assistant.id as AssistantId)}
+                disabled={createChatMutation.isPending}
+                className="p-3"
+                data-testid={`new-chat-assistant-${assistant.id}`}
+              >
+                <div>
+                  <div className="font-medium">{assistant.name}</div>
+                  <div className="text-sm text-muted-foreground">{assistant.description}</div>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Chat History */}
