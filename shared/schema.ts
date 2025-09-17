@@ -58,6 +58,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  // Approval system fields
+  approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by"), // Admin user ID who approved this user
   // Usage tracking fields
   chatCount: integer("chat_count").notNull().default(0),
   messageCount: integer("message_count").notNull().default(0),
@@ -167,8 +171,16 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  approvalStatus: true,
+  approvedAt: true,
+  approvedBy: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const adminApprovalSchema = z.object({
+  userId: z.string(),
+  approvalStatus: z.enum(["approved", "rejected"]),
 });
 
 export const insertChatSchema = createInsertSchema(chats).omit({
