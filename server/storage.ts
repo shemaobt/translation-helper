@@ -90,6 +90,11 @@ export interface IStorage {
   toggleUserAdminStatus(userId: string): Promise<User>;
   deleteUser(userId: string): Promise<boolean>;
   resetUserPassword(userId: string, newPassword: string): Promise<User>;
+  
+  // User approval management operations
+  getPendingUsers(): Promise<User[]>;
+  approveUser(userId: string, approvedById: string): Promise<User>;
+  rejectUser(userId: string, approvedById: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -521,6 +526,55 @@ export class DatabaseStorage implements IStorage {
     
     if (!updatedUser) {
       throw new Error('User not found or failed to reset password');
+    }
+
+    return updatedUser;
+  }
+
+  // User approval management operations
+  async getPendingUsers(): Promise<User[]> {
+    const pendingUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.approvalStatus, 'pending'))
+      .orderBy(desc(users.createdAt));
+    
+    return pendingUsers;
+  }
+
+  async approveUser(userId: string, approvedById: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: approvedById,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error('User not found or failed to approve user');
+    }
+
+    return updatedUser;
+  }
+
+  async rejectUser(userId: string, approvedById: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        approvalStatus: 'rejected',
+        approvedAt: new Date(),
+        approvedBy: approvedById,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error('User not found or failed to reject user');
     }
 
     return updatedUser;

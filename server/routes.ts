@@ -1262,7 +1262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getAllUsersWithStats();
       
-      // Remove sensitive information from response
+      // Remove sensitive information from response but include approval status
       const sanitizedUsers = users.map(user => ({
         id: user.id,
         email: user.email,
@@ -1272,6 +1272,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         lastLoginAt: user.lastLoginAt,
+        approvalStatus: user.approvalStatus,
+        approvedAt: user.approvedAt,
+        approvedBy: user.approvedBy,
         stats: user.stats
       }));
 
@@ -1382,6 +1385,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       res.status(500).json({ message: "Failed to reset user password" });
+    }
+  });
+
+  // Admin user approval management endpoints
+  app.get('/api/admin/users/pending', requireAdmin, async (req: any, res) => {
+    try {
+      const pendingUsers = await storage.getPendingUsers();
+      
+      // Remove sensitive information from response
+      const sanitizedUsers = pendingUsers.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+        approvalStatus: user.approvalStatus
+      }));
+
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching pending users:", error);
+      res.status(500).json({ message: "Failed to fetch pending users" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/approve', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validation: ensure userId is provided and is a valid UUID format
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+
+      const approvedUser = await storage.approveUser(validatedUserId, req.userId);
+      
+      // Return sanitized user data
+      const sanitizedUser = {
+        id: approvedUser.id,
+        email: approvedUser.email,
+        firstName: approvedUser.firstName,
+        lastName: approvedUser.lastName,
+        approvalStatus: approvedUser.approvalStatus,
+        approvedAt: approvedUser.approvedAt,
+        approvedBy: approvedUser.approvedBy,
+        updatedAt: approvedUser.updatedAt
+      };
+
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Error approving user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      if (error instanceof Error && error.message === 'User not found or failed to approve user') {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(500).json({ message: "Failed to approve user" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/reject', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validation: ensure userId is provided and is a valid UUID format
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+
+      const rejectedUser = await storage.rejectUser(validatedUserId, req.userId);
+      
+      // Return sanitized user data
+      const sanitizedUser = {
+        id: rejectedUser.id,
+        email: rejectedUser.email,
+        firstName: rejectedUser.firstName,
+        lastName: rejectedUser.lastName,
+        approvalStatus: rejectedUser.approvalStatus,
+        approvedAt: rejectedUser.approvedAt,
+        approvedBy: rejectedUser.approvedBy,
+        updatedAt: rejectedUser.updatedAt
+      };
+
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      if (error instanceof Error && error.message === 'User not found or failed to reject user') {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(500).json({ message: "Failed to reject user" });
     }
   });
 
