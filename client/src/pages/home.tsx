@@ -54,7 +54,7 @@ export default function Home() {
       {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 2xl:hidden"
           onClick={() => setSidebarOpen(false)}
           data-testid="sidebar-overlay"
         />
@@ -68,6 +68,8 @@ export default function Home() {
             }`
           : 'relative h-full'
         }
+        xs:w-full sm:w-full md:w-80 lg:w-80 xl:w-80 2xl:w-80
+        ${isMobile ? 'w-4/5 xs:w-full sm:w-4/5' : ''}
       `}>
         <Sidebar 
           isMobile={isMobile}
@@ -79,13 +81,15 @@ export default function Home() {
       </div>
       
       {/* Main Chat Interface */}
-      <ChatInterface 
-        chatId={chatId} 
-        isMobile={isMobile}
-        onOpenSidebar={() => setSidebarOpen(true)}
-        defaultAssistant={defaultAssistant}
-        onDefaultAssistantChange={setDefaultAssistant}
-      />
+      <div className="flex-1 flex flex-col min-w-0">
+        <ChatInterface 
+          chatId={chatId} 
+          isMobile={isMobile}
+          onOpenSidebar={() => setSidebarOpen(true)}
+          defaultAssistant={defaultAssistant}
+          onDefaultAssistantChange={setDefaultAssistant}
+        />
+      </div>
     </div>
   );
 }
