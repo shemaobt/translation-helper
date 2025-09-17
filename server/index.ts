@@ -71,8 +71,8 @@ if (!process.env.DATABASE_URL) {
 
 // Add session middleware with error handling
 try {
-  // Determine if we're on Replit by checking for REPLIT_DEV_DOMAIN
-  const isReplit = !!process.env.REPLIT_DEV_DOMAIN;
+  // Determine if we're in production by checking NODE_ENV or if using a custom domain
+  const isProduction = process.env.NODE_ENV === 'production';
   
   app.use(session({
     store: sessionStore,
@@ -80,13 +80,15 @@ try {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      // For Replit, cookies need to work across preview and direct domains
-      // When sameSite is 'none', secure must be true for modern browsers
-      secure: isReplit || process.env.NODE_ENV === 'production',
+      // Always use secure cookies in production or on Replit
+      secure: isProduction || !!process.env.REPLIT_DEV_DOMAIN,
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      // Use 'none' for Replit preview, 'lax' for production (more compatible than strict)
-      sameSite: isReplit ? 'none' : (process.env.NODE_ENV === 'production' ? 'lax' : 'lax'),
+      // Use 'lax' for better compatibility across all domains
+      // This allows cookies to work on both preview and production domains
+      sameSite: 'lax',
+      // Set domain to allow subdomain access if needed
+      // Don't set domain explicitly to allow it to work on any domain
     },
   }));
 } catch (error) {
