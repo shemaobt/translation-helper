@@ -172,51 +172,6 @@ export default function Sidebar({
               <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className={`font-semibold text-foreground ${isMobile ? 'text-lg' : ''}`}>Translation Helper</span>
-            
-            {/* Admin Menu in Header */}
-            {isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto h-8 px-2"
-                    data-testid="button-header-admin-menu"
-                  >
-                    <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400 mr-1" />
-                    <span className="text-xs font-medium">Admin</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="cursor-pointer">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/users" className="cursor-pointer">
-                      <Users className="mr-2 h-4 w-4" />
-                      User Management
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/feedback" className="cursor-pointer">
-                      <UserCheck className="mr-2 h-4 w-4" />
-                      <span className="flex-1">Manage Feedback</span>
-                      {unreadFeedbackCount > 0 && (
-                        <Badge 
-                          variant="destructive" 
-                          className="ml-auto h-4 min-w-[1.25rem] text-xs px-1 py-0"
-                        >
-                          {unreadFeedbackCount}
-                        </Badge>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
           {isMobile && onClose && (
             <Button

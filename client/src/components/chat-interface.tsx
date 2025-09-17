@@ -468,6 +468,37 @@ export default function ChatInterface({
   if (!chatId) {
     return (
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        {/* Welcome Header with Menu Button */}
+        {isMobile && onOpenSidebar && (
+          <div className="p-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenSidebar}
+              className="h-12 w-12 p-0 touch-manipulation"
+              data-testid="button-open-sidebar-welcome"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            
+            {/* Feedback Button for Welcome Screen */}
+            <FeedbackForm
+              trigger={
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-12 px-3 touch-manipulation hover:bg-muted/50"
+                  data-testid="button-feedback-welcome"
+                  aria-label="Send feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </Button>
+              }
+            />
+          </div>
+        )}
+        
         <div className="flex-1 flex justify-center items-center">
           <div className="max-w-2xl text-center">
             <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -542,6 +573,126 @@ export default function ChatInterface({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {/* Chat Header - Fixed at top */}
+      <div className={`bg-card border-b border-border ${isMobile ? 'p-3 pt-[max(0.75rem,env(safe-area-inset-top))]' : 'p-4'} flex items-center justify-between sticky top-0 z-40 shadow-sm`}>
+        <div className="flex items-center space-x-3">
+          {isMobile && onOpenSidebar && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenSidebar}
+              className={`${isMobile ? 'h-12 w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
+              data-testid="button-open-sidebar"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          )}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className={`${isMobile ? 'h-12 px-3' : 'h-auto p-0'} hover:bg-transparent justify-start touch-manipulation`}
+                  disabled={switchAssistantMutation.isPending}
+                  data-testid="button-assistant-switcher"
+                >
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <h1 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-foreground`}>
+                        {ASSISTANT_CONFIG[currentAssistant].name}
+                      </h1>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
+                      {ASSISTANT_CONFIG[currentAssistant].description}
+                    </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {Object.values(ASSISTANT_CONFIG).map((assistant) => (
+                  <DropdownMenuItem 
+                    key={assistant.id}
+                    onClick={() => handleAssistantSwitch(assistant.id as AssistantId)}
+                    className="p-3"
+                    data-testid={`assistant-option-${assistant.id}`}
+                  >
+                    <div>
+                      <div className="font-medium">{assistant.name}</div>
+                      <div className="text-sm text-muted-foreground">{assistant.description}</div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
+          {/* Voice Selector */}
+          {speechSynthesis.isSupported && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-[#000000]">Choose Voice:</span>
+              <Select 
+                value={speechSynthesis.selectedVoice?.id || 'alloy'} 
+                onValueChange={(voiceId) => {
+                  const voice = speechSynthesis.voices.find(v => v.id === voiceId);
+                  speechSynthesis.setSelectedVoice(voice || null);
+                }}
+              >
+                <SelectTrigger className={`${isMobile ? 'w-16 h-12' : 'w-20 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-voice">
+                  <SelectValue>
+                    <div className="flex items-center gap-1">
+                      <Volume2 className="h-3 w-3" />
+                      <span className="text-xs">
+                        {speechSynthesis.selectedVoice?.name.split(' ')[0] || 'Voice'}
+                      </span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {speechSynthesis.voices.map((voice) => (
+                    <SelectItem key={voice.id} value={voice.id} data-testid={`voice-option-${voice.id}`}>
+                      {voice.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Feedback Button */}
+          <FeedbackForm
+            trigger={
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={`${isMobile ? 'h-12 px-3 touch-manipulation' : 'px-3'} hover:bg-muted/50`}
+                data-testid="button-feedback-main"
+                aria-label="Send feedback"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {!isMobile && <span className="ml-2 text-sm">Feedback</span>}
+              </Button>
+            }
+          />
+          
+          {chatId && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation' : ''}`}
+              onClick={() => deleteChatMutation.mutate()}
+              disabled={deleteChatMutation.isPending}
+              data-testid="button-delete-chat"
+              aria-label="Delete chat"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
       {/* Chat Messages */}
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 pb-28 space-y-4' : 'p-4 pb-32 space-y-6'}`} data-testid="chat-messages">
         {messages.length === 0 && !streamingMessage && (
