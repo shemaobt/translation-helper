@@ -100,12 +100,52 @@ const upload = multer({
 });
 
 // Authentication middleware
-function requireAuth(req: any, res: any, next: any) {
-  if (req.session && req.session.userId) {
-    req.userId = req.session.userId;
-    return next();
+async function requireAuth(req: any, res: any, next: any) {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
   }
-  return res.status(401).json({ message: "Authentication required" });
+  
+  try {
+    const user = await storage.getUserById(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    
+    // Check approval status with legacy user override
+    const approvalStatus = user.approvalStatus ?? 'approved';
+    // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
+    const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
+    
+    if (effectiveApproval === 'pending') {
+      console.warn(`[Auth] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+      return res.status(403).json({ 
+        message: "Your account is awaiting admin approval.",
+        approvalStatus: "pending"
+      });
+    }
+    
+    if (effectiveApproval === 'rejected') {
+      return res.status(403).json({ 
+        message: "Your account has been rejected. Please contact support.",
+        approvalStatus: "rejected"
+      });
+    }
+    
+    if (effectiveApproval !== 'approved') {
+      console.warn(`[Auth] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+      return res.status(403).json({ 
+        message: "Account access denied. Please contact support.",
+        approvalStatus: effectiveApproval
+      });
+    }
+    
+    req.userId = req.session.userId;
+    req.user = user;
+    return next();
+  } catch (error) {
+    console.error("Authentication middleware error:", error);
+    return res.status(500).json({ message: "Authentication check failed" });
+  }
 }
 
 // Admin authorization middleware
@@ -116,7 +156,40 @@ async function requireAdmin(req: any, res: any, next: any) {
   
   try {
     const user = await storage.getUserById(req.session.userId);
-    if (!user || !user.isAdmin) {
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    
+    // Check approval status first with legacy user override
+    const approvalStatus = user.approvalStatus ?? 'approved';
+    // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
+    const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
+    
+    if (effectiveApproval === 'pending') {
+      console.warn(`[Admin] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+      return res.status(403).json({ 
+        message: "Your account is awaiting admin approval.",
+        approvalStatus: "pending"
+      });
+    }
+    
+    if (effectiveApproval === 'rejected') {
+      return res.status(403).json({ 
+        message: "Your account has been rejected. Please contact support.",
+        approvalStatus: "rejected"
+      });
+    }
+    
+    if (effectiveApproval !== 'approved') {
+      console.warn(`[Admin] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+      return res.status(403).json({ 
+        message: "Account access denied. Please contact support.",
+        approvalStatus: effectiveApproval
+      });
+    }
+    
+    // Then check admin status
+    if (!user.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
     }
     
@@ -264,6 +337,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Check approval status before creating session with legacy user override
+      const approvalStatus = user.approvalStatus ?? 'approved';
+      // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
+      const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
+      
+      if (effectiveApproval === 'pending') {
+        console.warn(`[Login] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+        return res.status(403).json({ 
+          message: "Your account is awaiting admin approval. Please wait for approval before logging in.",
+          approvalStatus: "pending"
+        });
+      }
+      
+      if (effectiveApproval === 'rejected') {
+        return res.status(403).json({ 
+          message: "Your account has been rejected. Please contact support for assistance.",
+          approvalStatus: "rejected"
+        });
+      }
+      
+      // Only allow approved users to log in
+      if (effectiveApproval !== 'approved') {
+        console.warn(`[Login] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
+        return res.status(403).json({ 
+          message: "Account access denied. Please contact support.",
+          approvalStatus: effectiveApproval
+        });
       }
       
       // Regenerate session to prevent session fixation
@@ -709,8 +811,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid API key" });
       }
 
+      // Check approval status of the API key owner
+      const keyOwner = await storage.getUserById(matchedKey.userId);
+      if (!keyOwner) {
+        return res.status(401).json({ message: "API key owner not found" });
+      }
+      
+      // Check approval status with legacy user override
+      const approvalStatus = keyOwner.approvalStatus ?? 'approved';
+      // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
+      const effectiveApproval = (approvalStatus === 'pending' && keyOwner.lastLoginAt) ? 'approved' : approvalStatus;
+      
+      if (effectiveApproval === 'pending') {
+        console.warn(`[API] Blocking pending user: approval=${keyOwner.approvalStatus} lastLoginAt=${keyOwner.lastLoginAt} email=${keyOwner.email}`);
+        return res.status(403).json({ 
+          message: "API access denied. Your account is awaiting admin approval.",
+          approvalStatus: "pending"
+        });
+      }
+      
+      if (effectiveApproval === 'rejected') {
+        return res.status(403).json({ 
+          message: "API access denied. Your account has been rejected.",
+          approvalStatus: "rejected"
+        });
+      }
+      
+      if (effectiveApproval !== 'approved') {
+        console.warn(`[API] Blocking unapproved user: approval=${keyOwner.approvalStatus} lastLoginAt=${keyOwner.lastLoginAt} email=${keyOwner.email}`);
+        return res.status(403).json({ 
+          message: "API access denied. Please contact support.",
+          approvalStatus: effectiveApproval
+        });
+      }
+
       await storage.updateApiKeyLastUsed(matchedKey.id);
       req.apiKey = matchedKey;
+      req.userId = keyOwner.id;
+      req.user = keyOwner;
       next();
     } catch (error) {
       console.error("Error authenticating API key:", error);
