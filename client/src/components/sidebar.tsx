@@ -16,7 +16,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import FeedbackForm from "./feedback-form";
 import { 
-  Bot, 
   Plus, 
   MoreHorizontal, 
   User as UserIcon, 
@@ -33,6 +32,8 @@ import {
   UserCheck,
   Shield
 } from "lucide-react";
+// Use logo from public directory
+const logoImage = "/logo.png";
 import type { Chat, AssistantId } from "@shared/schema";
 import { ASSISTANTS } from "@shared/schema";
 
@@ -170,8 +171,13 @@ export default function Sidebar({
       <div className={`${isMobile ? 'p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-              <Bot className="h-4 w-4 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center overflow-hidden">
+              <img 
+                src={logoImage} 
+                alt="Translation Helper Logo" 
+                className="h-8 w-8 object-contain"
+                data-testid="img-app-logo"
+              />
             </div>
             <span className={`font-semibold text-foreground ${isMobile ? 'text-lg' : ''}`}>Translation Helper</span>
           </div>
