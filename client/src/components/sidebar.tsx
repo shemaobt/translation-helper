@@ -166,9 +166,9 @@ export default function Sidebar({
   };
 
   return (
-    <div className={`${isMobile ? 'w-full max-w-sm' : 'w-64'} bg-card border-r border-border flex flex-col h-full`}>
+    <div className={`${isMobile ? 'w-full max-w-xs' : 'w-64 md:w-64 lg:w-72'} bg-card border-r border-border flex flex-col h-full`}>
       {/* Header */}
-      <div className={`${isMobile ? 'p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
+      <div className={`${isMobile ? 'p-3 sm:p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-3 md:p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
             <div className="h-8 w-8 rounded-lg flex items-center justify-center overflow-hidden">
@@ -179,14 +179,14 @@ export default function Sidebar({
                 data-testid="img-app-logo"
               />
             </div>
-            <span className={`font-semibold text-foreground ${isMobile ? 'text-lg' : ''}`}>Translation Helper</span>
+            <span className={`font-semibold text-foreground ${isMobile ? 'text-base sm:text-lg' : 'text-sm md:text-base'}`}>Translation Helper</span>
           </div>
           {isMobile && onClose && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className={`${isMobile ? 'h-12 w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
+              className={`${isMobile ? 'h-10 w-10 sm:h-12 sm:w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-close-sidebar"
               aria-label="Close sidebar"
             >
@@ -197,11 +197,11 @@ export default function Sidebar({
       </div>
 
       {/* New Chat Dropdown */}
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className={`w-full justify-center space-x-2 ${isMobile ? 'h-12 text-base touch-manipulation' : ''}`}
+              className={`w-full justify-center space-x-2 ${isMobile ? 'h-10 sm:h-12 text-sm sm:text-base touch-manipulation' : 'h-9 md:h-10'}`}
               disabled={createChatMutation.isPending}
               data-testid="button-new-chat"
             >
@@ -210,7 +210,7 @@ export default function Sidebar({
               <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-56">
+          <DropdownMenuContent align="center" className="w-56 max-h-64 overflow-y-auto">
             {Object.values(ASSISTANTS).map((assistant) => (
               <DropdownMenuItem 
                 key={assistant.id}
@@ -230,14 +230,14 @@ export default function Sidebar({
       </div>
 
       {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-1 md:space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Chats</h3>
         
         {chats.map((chat) => (
           <div key={chat.id} className="relative group">
             <Link
               href={`/chat/${chat.id}`}
-              className="block p-3 rounded-md hover:bg-accent cursor-pointer transition-colors"
+              className="block p-2 md:p-3 rounded-md hover:bg-accent cursor-pointer transition-colors"
               data-testid={`link-chat-${chat.id}`}
             >
               <div className="flex items-center justify-between">
@@ -284,7 +284,7 @@ export default function Sidebar({
         ))}
 
         {chats.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-6 md:py-8">
             <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No chats yet</p>
             <p className="text-xs text-muted-foreground">Start a new conversation</p>
@@ -293,10 +293,10 @@ export default function Sidebar({
       </div>
 
       {/* User Menu */}
-      <div className="p-4 border-t border-border">
+      <div className="p-3 md:p-4 border-t border-border">
         <Button
           variant="ghost" 
-          className={`flex items-center space-x-3 p-2 rounded-md hover:bg-accent w-full justify-start ${isMobile ? 'h-12' : ''}`}
+          className={`flex items-center space-x-2 md:space-x-3 p-2 rounded-md hover:bg-accent w-full justify-start ${isMobile ? 'h-10 sm:h-12' : 'h-10'}`}
           onClick={() => setUserMenuOpen(!userMenuOpen)}
           aria-expanded={userMenuOpen}
           aria-label="User menu"
@@ -330,14 +330,14 @@ export default function Sidebar({
         
         {/* Dropdown Menu */}
         {userMenuOpen && (
-          <div className="mt-2 bg-popover border border-border rounded-md shadow-lg py-2">
+          <div className="mt-2 bg-popover border border-border rounded-md shadow-lg py-2 max-h-96 overflow-y-auto">
             {/* Admin-only options */}
             {isAdmin && (
               <>
                 <Link href="/dashboard" className="block">
                   <Button
                     variant="ghost"
-                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
                     data-testid="link-dashboard"
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
@@ -347,7 +347,7 @@ export default function Sidebar({
                 <Link href="/admin/users" className="block">
                   <Button
                     variant="ghost"
-                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
                     data-testid="link-admin-users"
                   >
                     <Users className="mr-2 h-4 w-4" />
@@ -357,7 +357,7 @@ export default function Sidebar({
                 <Link href="/admin/feedback" className="block">
                   <Button
                     variant="ghost"
-                    className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                    className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
                     data-testid="link-admin-feedback"
                   >
                     <UserCheck className="mr-2 h-4 w-4" />
