@@ -523,7 +523,6 @@ export default function ChatInterface({
                     <div className="flex items-center justify-center w-full relative">
                       <div className="text-center">
                         <div className="font-medium">{ASSISTANT_CONFIG[currentAssistant].name}</div>
-                        <div className="text-sm text-muted-foreground">{ASSISTANT_CONFIG[currentAssistant].description}</div>
                       </div>
                       <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-0 flex-shrink-0" />
                     </div>
@@ -537,10 +536,7 @@ export default function ChatInterface({
                       className="p-3"
                       data-testid={`assistant-option-${assistant.id}-welcome`}
                     >
-                      <div>
-                        <div className="font-medium">{assistant.name}</div>
-                        <div className="text-sm text-muted-foreground">{assistant.description}</div>
-                      </div>
+                      <div className="font-medium">{assistant.name}</div>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -626,10 +622,7 @@ export default function ChatInterface({
                     className="p-3"
                     data-testid={`assistant-option-${assistant.id}`}
                   >
-                    <div>
-                      <div className="font-medium">{assistant.name}</div>
-                      <div className="text-sm text-muted-foreground">{assistant.description}</div>
-                    </div>
+                    <div className="font-medium">{assistant.name}</div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

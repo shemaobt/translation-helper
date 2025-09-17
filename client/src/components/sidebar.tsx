@@ -219,10 +219,7 @@ export default function Sidebar({
                 className="p-3"
                 data-testid={`new-chat-assistant-${assistant.id}`}
               >
-                <div>
-                  <div className="font-medium">{assistant.name}</div>
-                  <div className="text-sm text-muted-foreground">{assistant.description}</div>
-                </div>
+                <div className="font-medium">{assistant.name}</div>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
