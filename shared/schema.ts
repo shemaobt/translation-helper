@@ -18,19 +18,19 @@ export const ASSISTANTS = {
   storyteller: {
     id: 'storyteller',
     name: 'StoryTeller Assistant',
-    description: 'Biblical storytelling assistant',
+    description: 'Tell me a story',
     openaiId: 'asst_eSD18ksRBzC5usjNxbZkmad6'
   },
   conversation: {
     id: 'conversation',
     name: 'Conversation Partner',
-    description: 'Conversation practice assistant',
+    description: 'Explain it to me',
     openaiId: 'asst_Mxzqh1dfl3ggH83YzhZO6V9z'
   },
   performer: {
     id: 'performer', 
     name: 'Oral Performer',
-    description: 'Oral performance assistant',
+    description: 'Give me an oral version',
     openaiId: 'asst_Y6WiCXUTObAb3TNUFG0Yh1Hn'
   }
 } as const;
