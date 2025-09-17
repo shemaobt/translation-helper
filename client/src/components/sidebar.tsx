@@ -186,11 +186,11 @@ export default function Sidebar({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className={`flex-shrink-0 ${isMobile ? 'h-10 w-10 phone-xs:h-8 phone-xs:w-8 phone-sm:h-12 phone-sm:w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
+              className={`flex-shrink-0 ${isMobile ? 'min-h-[44px] min-w-[44px] h-11 w-11 phone-sm:h-12 phone-sm:w-12' : 'h-8 w-8'} p-0 touch-manipulation`}
               data-testid="button-close-sidebar"
               aria-label="Close sidebar"
             >
-              <X className="h-4 w-4 phone-xs:h-3 phone-xs:w-3 phone-sm:h-5 phone-sm:w-5" />
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -201,13 +201,13 @@ export default function Sidebar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className={`w-full justify-center space-x-2 ${isMobile ? 'h-10 phone-xs:h-12 phone-sm:h-12 text-sm phone-xs:text-xs phone-sm:text-base touch-manipulation' : 'h-9 md:h-10'}`}
+              className={`w-full justify-center space-x-2 ${isMobile ? 'min-h-[44px] h-11 phone-sm:h-12 text-sm phone-sm:text-base touch-manipulation' : 'h-9 md:h-10'}`}
               disabled={createChatMutation.isPending}
               data-testid="button-new-chat"
             >
-              <Plus className="h-4 w-4 phone-xs:h-3 phone-xs:w-3 phone-sm:h-4 phone-sm:w-4" />
+              <Plus className="h-4 w-4" />
               <span>New Chat</span>
-              <ChevronDown className="h-3 w-3 phone-xs:h-2 phone-xs:w-2 phone-sm:h-3 phone-sm:w-3 ml-1" />
+              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className={`${isMobile ? 'w-72 phone-xs:w-64 phone-sm:w-80' : 'w-56'} max-h-64 overflow-y-auto`}>
