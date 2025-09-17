@@ -204,8 +204,9 @@ export default function ChatInterface({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+      // Remove cached data for the deleted chat instead of trying to refetch it
+      queryClient.removeQueries({ queryKey: ["/api/chats", chatId] });
+      queryClient.removeQueries({ queryKey: ["/api/chats", chatId, "messages"] });
       toast({
         title: "Success",
         description: "Chat deleted successfully",
