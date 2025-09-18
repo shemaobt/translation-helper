@@ -503,7 +503,7 @@ export default function ChatInterface({
         )}
         
         <div className="flex-1 flex justify-center items-center">
-          <div className="max-w-2xl text-center">
+          <div className={`max-w-2xl text-center mx-auto ${isMobile ? 'px-4 phone-xs:px-3 phone-sm:px-4' : ''}`}>
             <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
               <img 
                 src={logoImage} 
@@ -648,7 +648,7 @@ export default function ChatInterface({
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 pb-28 space-y-4' : 'p-4 pb-32 space-y-6'}`} data-testid="chat-messages">
         {messages.length === 0 && !streamingMessage && (
           <div className="flex justify-center">
-            <div className="max-w-2xl text-center">
+            <div className={`max-w-2xl text-center mx-auto ${isMobile ? 'px-4 phone-xs:px-3 phone-sm:px-4' : ''}`}>
               <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
                 <img 
                   src={logoImage} 
