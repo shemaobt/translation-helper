@@ -168,7 +168,7 @@ export default function Sidebar({
   return (
     <div className={`w-full ${isMobile ? 'max-w-xs phone-xs:max-w-full phone-sm:max-w-sm' : ''} bg-card ${!isMobile ? 'border-r border-border' : ''} flex flex-col h-full`}>
       {/* Header */}
-      <div className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-4 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-3 md:p-4'} border-b border-border`}>
+      <div className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0">
             <Link href="/" className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer">
