@@ -593,9 +593,6 @@ export default function ChatInterface({
             </Button>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className={`${isMobile ? 'text-sm phone-sm:text-base' : 'text-lg'} font-semibold text-foreground truncate`}>
-              {ASSISTANT_CONFIG[currentAssistant].name}
-            </h1>
           </div>
         </div>
 
@@ -792,6 +789,9 @@ export default function ChatInterface({
             )}
           </Button>
         </form>
+        <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mt-2 text-center`}>
+          You are chatting with {ASSISTANT_CONFIG[currentAssistant].name}
+        </p>
       </div>
     </div>
   );
