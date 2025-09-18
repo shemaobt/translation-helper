@@ -513,7 +513,7 @@ export default function ChatInterface({
               />
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">Welcome to Translation Helper</h2>
-            <p className="text-muted-foreground mb-6">Start a conversation and I'll help you with translations and storytelling.</p>
+            <p className="text-muted-foreground mb-6">We are here to assist Bible Translation teams. If you are a translator, a facilitator, a translation advisor, a mentor or a consultant, we are here to serve you!</p>
             
             <div className="mb-6">
               <label className="block text-sm font-medium text-foreground mb-2">Choose your assistant:</label>
