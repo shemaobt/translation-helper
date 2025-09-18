@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,25 @@ export default function Sidebar({
     retry: false,
     select: (data: any) => data?.count || 0,
   });
+
+  // Fetch pending users count for admin users
+  const { data: pendingUsersCount = 0 } = useQuery<number>({
+    queryKey: ["/api/admin/users/pending-count"],
+    enabled: isAdmin,
+    retry: false,
+    select: (data: any) => data?.count || 0,
+  });
+
+  // Show toast notification for pending users
+  useEffect(() => {
+    if (isAdmin && pendingUsersCount > 0) {
+      toast({
+        title: "Pending User Approvals",
+        description: `You have ${pendingUsersCount} user${pendingUsersCount > 1 ? 's' : ''} awaiting approval. Click User Management to review.`,
+        variant: "default",
+      });
+    }
+  }, [pendingUsersCount, isAdmin, toast]);
 
   const createChatMutation = useMutation({
     mutationFn: async (assistantId: AssistantId) => {
@@ -350,7 +369,16 @@ export default function Sidebar({
                     data-testid="link-admin-users"
                   >
                     <Users className="mr-2 h-4 w-4" />
-                    User Management
+                    <span className="flex-1 text-left">User Management</span>
+                    {pendingUsersCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-2 h-5 min-w-[1.25rem] text-xs px-1.5 py-0 rounded-full flex items-center justify-center"
+                        data-testid="badge-pending-users"
+                      >
+                        {pendingUsersCount}
+                      </Badge>
+                    )}
                   </Button>
                 </Link>
                 <Link href="/admin/feedback" className="block">
