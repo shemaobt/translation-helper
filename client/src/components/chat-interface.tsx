@@ -648,19 +648,7 @@ export default function ChatInterface({
             }
           />
           
-          {chatId && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className={`${isMobile ? 'h-12 w-12 p-0 touch-manipulation' : ''}`}
-              onClick={() => deleteChatMutation.mutate()}
-              disabled={deleteChatMutation.isPending}
-              data-testid="button-delete-chat"
-              aria-label="Delete chat"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          
         </div>
       </div>
       {/* Chat Messages */}
