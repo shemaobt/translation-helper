@@ -579,7 +579,7 @@ export default function ChatInterface({
     <div className="flex-1 flex flex-col min-h-0">
       {/* Chat Header - Fixed at top */}
       <div className={`bg-card border-b border-border ${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pt-[max(0.75rem,env(safe-area-inset-top))]' : 'p-4'} flex items-center justify-between sticky top-0 z-40`}>
-        <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0">
+        <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0 h-10">
           {isMobile && onOpenSidebar && (
             <Button
               variant="ghost"
