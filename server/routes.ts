@@ -1410,6 +1410,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/users/pending-count', requireAdmin, async (req: any, res) => {
+    try {
+      const pendingCount = await storage.getPendingUsersCount();
+      res.json({ count: pendingCount });
+    } catch (error) {
+      console.error("Error fetching pending users count:", error);
+      res.status(500).json({ message: "Failed to fetch pending users count" });
+    }
+  });
+
   app.post('/api/admin/users/:userId/approve', requireAdmin, requireCSRFHeader, async (req: any, res) => {
     try {
       const { userId } = req.params;

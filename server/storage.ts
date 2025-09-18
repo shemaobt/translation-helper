@@ -93,6 +93,7 @@ export interface IStorage {
   
   // User approval management operations
   getPendingUsers(): Promise<User[]>;
+  getPendingUsersCount(): Promise<number>;
   approveUser(userId: string, approvedById: string): Promise<User>;
   rejectUser(userId: string, approvedById: string): Promise<User>;
 }
@@ -540,6 +541,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(users.createdAt));
     
     return pendingUsers;
+  }
+
+  async getPendingUsersCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(eq(users.approvalStatus, 'pending'));
+    return result.count || 0;
   }
 
   async approveUser(userId: string, approvedById: string): Promise<User> {
