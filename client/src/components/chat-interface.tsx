@@ -610,10 +610,10 @@ export default function ChatInterface({
                   speechSynthesis.setSelectedVoice(voice || null);
                 }}
               >
-                <SelectTrigger className={`${isMobile ? 'w-12 h-12' : 'w-10 h-8'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-voice">
+                <SelectTrigger className={`${isMobile ? 'w-14 h-12' : 'w-12 h-10'} border-0 bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0`} data-testid="select-voice">
                   <SelectValue>
                     <div className="flex items-center justify-center">
-                      <Volume2 className="h-5 w-5" />
+                      <Volume2 className="h-6 w-6" />
                     </div>
                   </SelectValue>
                 </SelectTrigger>
