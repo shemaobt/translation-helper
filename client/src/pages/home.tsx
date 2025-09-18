@@ -65,11 +65,9 @@ export default function Home() {
         ${isMobile 
           ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`
-          : 'relative h-full'
+            } w-4/5 max-w-sm`
+          : 'relative h-full w-80'
         }
-        phone-xs:w-full phone-sm:w-full md:w-80 lg:w-80 xl:w-80 2xl:w-80
-        ${isMobile ? 'w-4/5 phone-xs:w-full phone-sm:w-4/5' : ''}
       `}>
         <Sidebar 
           isMobile={isMobile}
