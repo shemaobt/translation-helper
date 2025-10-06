@@ -71,7 +71,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
   // Approval system fields
-  approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("approved"),
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by"), // Admin user ID who approved this user
   // Usage tracking fields
