@@ -272,52 +272,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword
       });
       
-      // Check approval status - don't log in pending users
-      const approvalStatus = user.approvalStatus ?? 'pending';
-      
-      if (approvalStatus === 'pending') {
-        return res.status(201).json({
-          message: "Account created successfully. Your account is awaiting admin approval.",
-          approvalStatus: "pending",
-          email: user.email
-        });
-      }
-      
-      // Only log in approved users (legacy behavior for existing approved users)
-      if (approvalStatus === 'approved') {
-        // Regenerate session to prevent session fixation
-        req.session.regenerate((err: any) => {
-          if (err) {
-            console.error('Session regeneration failed:', err);
-            return res.status(500).json({ message: "Failed to create session" });
+      // Auto-approve and log in all new users
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error('Session regeneration failed:', err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        // Set session
+        req.session.userId = user.id;
+        
+        // Save session to ensure it's persisted
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error('Session save failed:', saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
           }
           
-          // Set session
-          req.session.userId = user.id;
-          
-          // Save session to ensure it's persisted
-          req.session.save((saveErr: any) => {
-            if (saveErr) {
-              console.error('Session save failed:', saveErr);
-              return res.status(500).json({ message: "Failed to save session" });
-            }
-            
-            res.json({
-              id: user.id,
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              isAdmin: user.isAdmin,
-            });
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            isAdmin: user.isAdmin,
           });
         });
-      } else {
-        // Rejected or other status
-        return res.status(403).json({ 
-          message: "Account creation failed. Please contact support.",
-          approvalStatus: approvalStatus 
-        });
-      }
+      });
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account" });
