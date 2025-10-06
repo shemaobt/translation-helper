@@ -299,8 +299,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
+      // Handle validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      // Handle database unique constraint violations (race condition on duplicate email)
+      if (error.code === '23505' || error.constraint?.includes('email')) {
+        return res.status(400).json({ message: "User already exists" });
+      }
       res.status(500).json({ message: "Failed to create account" });
     }
   });
