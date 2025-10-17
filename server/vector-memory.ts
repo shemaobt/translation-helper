@@ -136,6 +136,7 @@ export async function searchRelevantMessages(params: {
   query: string;
   facilitatorId?: string;
   userId?: string;
+  excludeChatId?: string;
   limit?: number;
   scoreThreshold?: number;
 }): Promise<Array<{
@@ -170,6 +171,16 @@ export async function searchRelevantMessages(params: {
       ];
     }
 
+    // Exclude current chat to avoid finding the message we just sent
+    if (params.excludeChatId) {
+      filter.must_not = [
+        {
+          key: 'chatId',
+          match: { value: params.excludeChatId },
+        },
+      ];
+    }
+
     const searchResults = await qdrant.search(COLLECTION_NAME, {
       vector: queryEmbedding,
       limit,
@@ -197,6 +208,7 @@ export async function searchRelevantMessages(params: {
  */
 export async function searchGlobalMemory(params: {
   query: string;
+  excludeChatId?: string;
   limit?: number;
   scoreThreshold?: number;
 }): Promise<Array<{
@@ -212,9 +224,21 @@ export async function searchGlobalMemory(params: {
     const limit = params.limit || 10;
     const scoreThreshold = params.scoreThreshold || 0.75;
 
+    // Exclude current chat to avoid finding the message we just sent
+    const filter: any = {};
+    if (params.excludeChatId) {
+      filter.must_not = [
+        {
+          key: 'chatId',
+          match: { value: params.excludeChatId },
+        },
+      ];
+    }
+
     const searchResults = await qdrant.search(COLLECTION_NAME, {
       vector: queryEmbedding,
       limit,
+      filter: Object.keys(filter).length > 0 ? filter : undefined,
       with_payload: true,
       score_threshold: scoreThreshold,
     });
@@ -238,33 +262,37 @@ export async function searchGlobalMemory(params: {
  */
 export async function getContextForQuery(params: {
   query: string;
+  chatId?: string;
   facilitatorId?: string;
   userId?: string;
   includeGlobal?: boolean;
 }): Promise<string> {
   try {
     console.log('[Vector Memory] Searching for context with params:', {
+      chatId: params.chatId,
       facilitatorId: params.facilitatorId,
       userId: params.userId,
       includeGlobal: params.includeGlobal,
       queryPreview: params.query.substring(0, 50) + '...'
     });
 
-    // First, search facilitator/user-specific messages
+    // First, search facilitator/user-specific messages (excluding current chat)
     const relevantMessages = await searchRelevantMessages({
       query: params.query,
       facilitatorId: params.facilitatorId,
       userId: params.userId,
+      excludeChatId: params.chatId,
       limit: 3,
     });
 
     console.log(`[Vector Memory] Found ${relevantMessages.length} relevant user messages`);
 
-    // Optionally add global context for cross-learning
+    // Optionally add global context for cross-learning (excluding current chat)
     let globalMessages: any[] = [];
     if (params.includeGlobal) {
       globalMessages = await searchGlobalMemory({
         query: params.query,
+        excludeChatId: params.chatId,
         limit: 2,
         scoreThreshold: 0.8,
       });

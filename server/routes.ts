@@ -530,9 +530,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateChatTitle(chatId, title, userId);
       }
 
-      // Retrieve relevant context from vector memory
+      // Retrieve relevant context from vector memory (excluding current chat)
       const relevantContext = await getContextForQuery({
         query: content,
+        chatId,
         facilitatorId,
         userId,
         includeGlobal: true,
@@ -628,9 +629,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateChatTitle(chatId, title, userId);
       }
 
-      // Retrieve relevant context from vector memory
+      // Retrieve relevant context from vector memory (excluding current chat)
       const relevantContext = await getContextForQuery({
         query: content,
+        chatId,
         facilitatorId,
         userId,
         includeGlobal: true,
