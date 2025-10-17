@@ -5,6 +5,11 @@ import {
   apiKeys,
   apiUsage,
   feedback,
+  facilitators,
+  facilitatorCompetencies,
+  facilitatorQualifications,
+  mentorshipActivities,
+  quarterlyReports,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -18,6 +23,16 @@ import {
   type InsertApiUsage,
   type Feedback,
   type InsertFeedback,
+  type Facilitator,
+  type InsertFacilitator,
+  type FacilitatorCompetency,
+  type InsertFacilitatorCompetency,
+  type FacilitatorQualification,
+  type InsertFacilitatorQualification,
+  type MentorshipActivity,
+  type InsertMentorshipActivity,
+  type QuarterlyReport,
+  type InsertQuarterlyReport,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -96,6 +111,31 @@ export interface IStorage {
   getPendingUsersCount(): Promise<number>;
   approveUser(userId: string, approvedById: string): Promise<User>;
   rejectUser(userId: string, approvedById: string): Promise<User>;
+  
+  // Facilitator operations
+  getFacilitatorByUserId(userId: string): Promise<Facilitator | undefined>;
+  createFacilitator(facilitator: InsertFacilitator): Promise<Facilitator>;
+  updateFacilitator(facilitatorId: string, updates: Partial<InsertFacilitator>): Promise<Facilitator>;
+  
+  // Competency operations
+  getFacilitatorCompetencies(facilitatorId: string): Promise<FacilitatorCompetency[]>;
+  upsertCompetency(competency: InsertFacilitatorCompetency): Promise<FacilitatorCompetency>;
+  updateCompetencyStatus(competencyId: string, status: string, notes?: string): Promise<FacilitatorCompetency>;
+  
+  // Qualification operations
+  getFacilitatorQualifications(facilitatorId: string): Promise<FacilitatorQualification[]>;
+  createQualification(qualification: InsertFacilitatorQualification): Promise<FacilitatorQualification>;
+  deleteQualification(qualificationId: string): Promise<void>;
+  
+  // Mentorship activity operations
+  getFacilitatorActivities(facilitatorId: string): Promise<MentorshipActivity[]>;
+  createActivity(activity: InsertMentorshipActivity): Promise<MentorshipActivity>;
+  updateFacilitatorTotals(facilitatorId: string): Promise<void>;
+  
+  // Quarterly report operations
+  getFacilitatorReports(facilitatorId: string): Promise<QuarterlyReport[]>;
+  createQuarterlyReport(report: InsertQuarterlyReport): Promise<QuarterlyReport>;
+  getLatestReport(facilitatorId: string): Promise<QuarterlyReport | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -587,6 +627,178 @@ export class DatabaseStorage implements IStorage {
     }
 
     return updatedUser;
+  }
+
+  // Facilitator operations
+  async getFacilitatorByUserId(userId: string): Promise<Facilitator | undefined> {
+    const [facilitator] = await db
+      .select()
+      .from(facilitators)
+      .where(eq(facilitators.userId, userId));
+    return facilitator;
+  }
+
+  async createFacilitator(facilitatorData: InsertFacilitator): Promise<Facilitator> {
+    const [facilitator] = await db
+      .insert(facilitators)
+      .values(facilitatorData)
+      .returning();
+    return facilitator;
+  }
+
+  async updateFacilitator(facilitatorId: string, updates: Partial<InsertFacilitator>): Promise<Facilitator> {
+    const [updated] = await db
+      .update(facilitators)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(facilitators.id, facilitatorId))
+      .returning();
+    
+    if (!updated) {
+      throw new Error('Facilitator not found');
+    }
+    
+    return updated;
+  }
+
+  // Competency operations
+  async getFacilitatorCompetencies(facilitatorId: string): Promise<FacilitatorCompetency[]> {
+    return await db
+      .select()
+      .from(facilitatorCompetencies)
+      .where(eq(facilitatorCompetencies.facilitatorId, facilitatorId))
+      .orderBy(facilitatorCompetencies.competencyId);
+  }
+
+  async upsertCompetency(competency: InsertFacilitatorCompetency): Promise<FacilitatorCompetency> {
+    const [result] = await db
+      .insert(facilitatorCompetencies)
+      .values(competency)
+      .onConflictDoUpdate({
+        target: [facilitatorCompetencies.facilitatorId, facilitatorCompetencies.competencyId],
+        set: {
+          status: competency.status,
+          notes: competency.notes,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async updateCompetencyStatus(competencyId: string, status: string, notes?: string): Promise<FacilitatorCompetency> {
+    const [updated] = await db
+      .update(facilitatorCompetencies)
+      .set({ 
+        status: status as any,
+        notes,
+        lastUpdated: new Date(),
+      })
+      .where(eq(facilitatorCompetencies.id, competencyId))
+      .returning();
+    
+    if (!updated) {
+      throw new Error('Competency not found');
+    }
+    
+    return updated;
+  }
+
+  // Qualification operations
+  async getFacilitatorQualifications(facilitatorId: string): Promise<FacilitatorQualification[]> {
+    return await db
+      .select()
+      .from(facilitatorQualifications)
+      .where(eq(facilitatorQualifications.facilitatorId, facilitatorId))
+      .orderBy(desc(facilitatorQualifications.completionDate));
+  }
+
+  async createQualification(qualification: InsertFacilitatorQualification): Promise<FacilitatorQualification> {
+    const [created] = await db
+      .insert(facilitatorQualifications)
+      .values(qualification)
+      .returning();
+    return created;
+  }
+
+  async deleteQualification(qualificationId: string): Promise<void> {
+    await db
+      .delete(facilitatorQualifications)
+      .where(eq(facilitatorQualifications.id, qualificationId));
+  }
+
+  // Mentorship activity operations
+  async getFacilitatorActivities(facilitatorId: string): Promise<MentorshipActivity[]> {
+    return await db
+      .select()
+      .from(mentorshipActivities)
+      .where(eq(mentorshipActivities.facilitatorId, facilitatorId))
+      .orderBy(desc(mentorshipActivities.activityDate));
+  }
+
+  async createActivity(activity: InsertMentorshipActivity): Promise<MentorshipActivity> {
+    const [created] = await db
+      .insert(mentorshipActivities)
+      .values(activity)
+      .returning();
+    
+    // Update facilitator totals after creating activity
+    if (created.facilitatorId) {
+      await this.updateFacilitatorTotals(created.facilitatorId);
+    }
+    
+    return created;
+  }
+
+  async updateFacilitatorTotals(facilitatorId: string): Promise<void> {
+    // Get all activities for this facilitator
+    const activities = await db
+      .select()
+      .from(mentorshipActivities)
+      .where(eq(mentorshipActivities.facilitatorId, facilitatorId));
+    
+    // Count unique languages
+    const uniqueLanguages = new Set(activities.map(a => a.languageName));
+    const totalLanguages = uniqueLanguages.size;
+    
+    // Sum all chapters
+    const totalChapters = activities.reduce((sum, a) => sum + (a.chaptersCount || 0), 0);
+    
+    // Update facilitator record
+    await db
+      .update(facilitators)
+      .set({
+        totalLanguagesMentored: totalLanguages,
+        totalChaptersMentored: totalChapters,
+        updatedAt: new Date(),
+      })
+      .where(eq(facilitators.id, facilitatorId));
+  }
+
+  // Quarterly report operations
+  async getFacilitatorReports(facilitatorId: string): Promise<QuarterlyReport[]> {
+    return await db
+      .select()
+      .from(quarterlyReports)
+      .where(eq(quarterlyReports.facilitatorId, facilitatorId))
+      .orderBy(desc(quarterlyReports.periodEnd));
+  }
+
+  async createQuarterlyReport(report: InsertQuarterlyReport): Promise<QuarterlyReport> {
+    const [created] = await db
+      .insert(quarterlyReports)
+      .values(report)
+      .returning();
+    return created;
+  }
+
+  async getLatestReport(facilitatorId: string): Promise<QuarterlyReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(quarterlyReports)
+      .where(eq(quarterlyReports.facilitatorId, facilitatorId))
+      .orderBy(desc(quarterlyReports.periodEnd))
+      .limit(1);
+    return report;
   }
 }
 

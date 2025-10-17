@@ -193,12 +193,12 @@ export default function Sidebar({
             <Link href="/" className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer">
               <img 
                 src={logoImage} 
-                alt="Translation Helper Logo" 
+                alt="OBT Mentor Companion Logo" 
                 className="h-8 w-8 phone-xs:h-6 phone-xs:w-6 phone-sm:h-8 phone-sm:w-8 object-contain"
                 data-testid="img-app-logo"
               />
             </Link>
-            <span className={`font-semibold text-foreground truncate ${isMobile ? 'text-sm phone-xs:text-xs phone-sm:text-lg' : 'text-sm md:text-base'}`}>Translation Helper</span>
+            <span className={`font-semibold text-foreground truncate ${isMobile ? 'text-sm phone-xs:text-xs phone-sm:text-lg' : 'text-sm md:text-base'}`}>OBT Mentor Companion</span>
           </div>
           {isMobile && onClose && (
             <Button

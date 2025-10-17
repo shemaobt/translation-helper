@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import { neon } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeQdrantCollection } from "./vector-memory";
 
 const app = express();
 app.use(express.json());
@@ -17,7 +18,7 @@ app.set('trust proxy', 1);
 const PostgreSQLStore = connectPgSimple(session);
 
 // Ensure SESSION_SECRET is available (use a default for deployment if not set)
-const sessionSecret = process.env.SESSION_SECRET || 'translation-helper-secret-key-2025';
+const sessionSecret = process.env.SESSION_SECRET || 'obt-mentor-companion-secret-2025';
 if (!process.env.SESSION_SECRET) {
   log('Warning: SESSION_SECRET not set, using default (please set in production)');
 }
@@ -89,7 +90,7 @@ try {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    name: 'translation.sid', // Custom session cookie name
+    name: 'obt_mentor.sid', // Custom session cookie name
     cookie: cookieSettings,
     proxy: true, // Trust the reverse proxy (important for Replit deployments)
   }));
@@ -143,6 +144,15 @@ app.get('/health', (req: Request, res: Response) => {
 (async () => {
   try {
     const server = await registerRoutes(app);
+
+    // Initialize Qdrant collection for global memory
+    try {
+      await initializeQdrantCollection();
+      log('Qdrant vector memory initialized successfully');
+    } catch (error) {
+      log(`Warning: Qdrant initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      log('Continuing without vector memory (semantic search will be unavailable)');
+    }
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

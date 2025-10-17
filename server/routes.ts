@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
 import OpenAI from "openai";
+import { storeMessageEmbedding, getContextForQuery } from "./vector-memory";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
@@ -500,12 +501,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Chat not found" });
       }
 
+      // Get facilitator info for context and embedding storage
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      const facilitatorId = facilitator?.id;
+
       // Create user message
       const userMessage = await storage.createMessage({
         chatId,
         role: "user",
         content,
       });
+
+      // Store user message embedding in Qdrant (non-blocking)
+      storeMessageEmbedding({
+        messageId: userMessage.id,
+        chatId,
+        userId,
+        facilitatorId,
+        content,
+        role: 'user',
+        timestamp: new Date(),
+      }).catch(err => console.error('Error storing user message embedding:', err));
 
       // Check if this is the first user message and update title immediately
       const existingMessages = await storage.getChatMessages(chatId, userId);
@@ -514,11 +530,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateChatTitle(chatId, title, userId);
       }
 
+      // Retrieve relevant context from vector memory
+      const relevantContext = await getContextForQuery({
+        query: content,
+        facilitatorId,
+        userId,
+        includeGlobal: true,
+      });
+
+      // Prepare user message with context if available
+      const messageWithContext = relevantContext 
+        ? `${relevantContext}\n\n---\n\nUser Question:\n${content}`
+        : content;
+
       // Generate AI response using the selected assistant
       const threadId = await getChatThreadId(chatId, userId);
       const aiResponse = await generateAssistantResponse({
         chatId,
-        userMessage: content,
+        userMessage: messageWithContext,
         assistantId: chat.assistantId as any,
         threadId: threadId || undefined,
       }, userId);
@@ -529,6 +558,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "assistant",
         content: aiResponse.content,
       });
+
+      // Store assistant message embedding in Qdrant (non-blocking)
+      storeMessageEmbedding({
+        messageId: assistantMessage.id,
+        chatId,
+        userId,
+        facilitatorId,
+        content: aiResponse.content,
+        role: 'assistant',
+        timestamp: new Date(),
+      }).catch(err => console.error('Error storing assistant message embedding:', err));
 
       // Track message creation and API usage
       await Promise.all([
@@ -559,6 +599,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Chat not found" });
       }
 
+      // Get facilitator info for context and embedding storage
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      const facilitatorId = facilitator?.id;
+
       // Create user message
       const userMessage = await storage.createMessage({
         chatId,
@@ -566,12 +610,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
       });
 
+      // Store user message embedding in Qdrant (non-blocking)
+      storeMessageEmbedding({
+        messageId: userMessage.id,
+        chatId,
+        userId,
+        facilitatorId,
+        content,
+        role: 'user',
+        timestamp: new Date(),
+      }).catch(err => console.error('Error storing user message embedding:', err));
+
       // Check if this is the first user message and update title immediately
       const existingMessages = await storage.getChatMessages(chatId, userId);
       if (existingMessages.length === 1) {
         const title = await generateChatTitle(content);
         await storage.updateChatTitle(chatId, title, userId);
       }
+
+      // Retrieve relevant context from vector memory
+      const relevantContext = await getContextForQuery({
+        query: content,
+        facilitatorId,
+        userId,
+        includeGlobal: true,
+      });
 
       // Set up Server-Sent Events
       res.setHeader('Content-Type', 'text/event-stream');
@@ -586,14 +649,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })}\n\n`);
 
       try {
-        // Generate streaming AI response
+        // Generate streaming AI response with relevant context
         const threadId = await getChatThreadId(chatId, userId);
         let assistantMessageId: string | null = null;
         let fullContent = "";
 
+        // Prepare user message with context if available
+        const messageWithContext = relevantContext 
+          ? `${relevantContext}\n\n---\n\nUser Question:\n${content}`
+          : content;
+
         for await (const chunk of generateAssistantResponseStream({
           chatId,
-          userMessage: content,
+          userMessage: messageWithContext,
           assistantId: chat.assistantId as any,
           threadId: threadId || undefined,
         }, userId)) {
@@ -627,6 +695,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Update the assistant message with final content
             if (assistantMessageId) {
               await storage.updateMessage(assistantMessageId, { content: fullContent });
+              
+              // Store assistant message embedding in Qdrant (non-blocking)
+              storeMessageEmbedding({
+                messageId: assistantMessageId,
+                chatId,
+                userId,
+                facilitatorId,
+                content: fullContent,
+                role: 'assistant',
+                timestamp: new Date(),
+              }).catch(err => console.error('Error storing assistant message embedding:', err));
             }
 
             // Track message creation and API usage for streaming
@@ -1090,7 +1169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public API info endpoint
   app.get('/api/public/info', publicApiLimiter, (req: any, res) => {
     res.json({
-      name: "Translation Helper Public API",
+      name: "OBT Mentor Companion Public API",
       version: "1.0.0",
       endpoints: {
         translate: {
@@ -1479,6 +1558,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       res.status(500).json({ message: "Failed to reject user" });
+    }
+  });
+
+  // OBT Mentor - Facilitator Profile Routes
+  app.get('/api/facilitator/profile', requireAuth, async (req: any, res) => {
+    try {
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        // Auto-create facilitator profile if it doesn't exist
+        const newFacilitator = await storage.createFacilitator({
+          userId: req.userId,
+        });
+        return res.json(newFacilitator);
+      }
+      
+      res.json(facilitator);
+    } catch (error) {
+      console.error("Error fetching facilitator profile:", error);
+      res.status(500).json({ message: "Failed to fetch facilitator profile" });
+    }
+  });
+
+  app.post('/api/facilitator/profile', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { region, mentorSupervisor } = req.body;
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (facilitator) {
+        // Update existing facilitator
+        const updated = await storage.updateFacilitator(facilitator.id, {
+          region,
+          mentorSupervisor,
+        });
+        return res.json(updated);
+      } else {
+        // Create new facilitator
+        const created = await storage.createFacilitator({
+          userId: req.userId,
+          region,
+          mentorSupervisor,
+        });
+        return res.json(created);
+      }
+    } catch (error) {
+      console.error("Error updating facilitator profile:", error);
+      res.status(500).json({ message: "Failed to update facilitator profile" });
+    }
+  });
+
+  // Competency Routes
+  app.get('/api/facilitator/competencies', requireAuth, async (req: any, res) => {
+    try {
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const competencies = await storage.getFacilitatorCompetencies(facilitator.id);
+      res.json(competencies);
+    } catch (error) {
+      console.error("Error fetching competencies:", error);
+      res.status(500).json({ message: "Failed to fetch competencies" });
+    }
+  });
+
+  app.post('/api/facilitator/competencies', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { competencyId, status, notes } = req.body;
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found" });
+      }
+      
+      const competency = await storage.upsertCompetency({
+        facilitatorId: facilitator.id,
+        competencyId,
+        status,
+        notes,
+      });
+      
+      res.json(competency);
+    } catch (error) {
+      console.error("Error updating competency:", error);
+      res.status(500).json({ message: "Failed to update competency" });
+    }
+  });
+
+  // Qualification Routes
+  app.get('/api/facilitator/qualifications', requireAuth, async (req: any, res) => {
+    try {
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const qualifications = await storage.getFacilitatorQualifications(facilitator.id);
+      res.json(qualifications);
+    } catch (error) {
+      console.error("Error fetching qualifications:", error);
+      res.status(500).json({ message: "Failed to fetch qualifications" });
+    }
+  });
+
+  app.post('/api/facilitator/qualifications', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { courseTitle, institution, completionDate, credential, description } = req.body;
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found" });
+      }
+      
+      const qualification = await storage.createQualification({
+        facilitatorId: facilitator.id,
+        courseTitle,
+        institution,
+        completionDate: completionDate ? new Date(completionDate) : null,
+        credential,
+        description,
+      });
+      
+      res.json(qualification);
+    } catch (error) {
+      console.error("Error creating qualification:", error);
+      res.status(500).json({ message: "Failed to create qualification" });
+    }
+  });
+
+  app.delete('/api/facilitator/qualifications/:qualificationId', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { qualificationId } = req.params;
+      
+      await storage.deleteQualification(qualificationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting qualification:", error);
+      res.status(500).json({ message: "Failed to delete qualification" });
+    }
+  });
+
+  // Mentorship Activity Routes
+  app.get('/api/facilitator/activities', requireAuth, async (req: any, res) => {
+    try {
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const activities = await storage.getFacilitatorActivities(facilitator.id);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  app.post('/api/facilitator/activities', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { languageName, chaptersCount, activityDate, notes } = req.body;
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found" });
+      }
+      
+      const activity = await storage.createActivity({
+        facilitatorId: facilitator.id,
+        languageName,
+        chaptersCount: chaptersCount || 1,
+        activityDate: activityDate ? new Date(activityDate) : undefined,
+        notes,
+      });
+      
+      res.json(activity);
+    } catch (error) {
+      console.error("Error creating activity:", error);
+      res.status(500).json({ message: "Failed to create activity" });
+    }
+  });
+
+  // Quarterly Report Routes
+  app.get('/api/facilitator/reports', requireAuth, async (req: any, res) => {
+    try {
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const reports = await storage.getFacilitatorReports(facilitator.id);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ message: "Failed to fetch reports" });
     }
   });
 
