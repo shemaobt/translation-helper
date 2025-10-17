@@ -1764,6 +1764,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/facilitator/reports/generate', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { periodStart, periodEnd } = req.body;
+      
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ message: "Period start and end dates are required" });
+      }
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found" });
+      }
+      
+      // Fetch all data for the report period
+      const competencies = await storage.getFacilitatorCompetencies(facilitator.id);
+      const qualifications = await storage.getFacilitatorQualifications(facilitator.id);
+      const activities = await storage.getFacilitatorActivities(facilitator.id);
+      
+      // Filter activities by date range
+      const startDate = new Date(periodStart);
+      const endDate = new Date(periodEnd);
+      const periodActivities = activities.filter(activity => {
+        if (!activity.activityDate) return false;
+        const activityDate = new Date(activity.activityDate);
+        return activityDate >= startDate && activityDate <= endDate;
+      });
+      
+      // Compile report data
+      const reportData = {
+        facilitator: {
+          name: facilitator.name,
+          email: facilitator.email,
+          region: facilitator.region,
+          languages: facilitator.languages
+        },
+        period: {
+          start: periodStart,
+          end: periodEnd
+        },
+        competencies: competencies.map(c => ({
+          competencyId: c.competencyId,
+          status: c.status,
+          notes: c.notes,
+          lastUpdated: c.lastUpdated
+        })),
+        qualifications: qualifications.map(q => ({
+          courseTitle: q.courseTitle,
+          institution: q.institution,
+          completionDate: q.completionDate,
+          credential: q.credential,
+          description: q.description
+        })),
+        activities: periodActivities.map(a => ({
+          languageName: a.languageName,
+          chaptersCount: a.chaptersCount,
+          activityDate: a.activityDate,
+          notes: a.notes
+        })),
+        summary: {
+          totalCompetencies: competencies.length,
+          completedCompetencies: competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length,
+          totalQualifications: qualifications.length,
+          totalActivities: periodActivities.length,
+          totalChapters: periodActivities.reduce((sum, a) => sum + a.chaptersCount, 0),
+          languages: [...new Set(periodActivities.map(a => a.languageName))]
+        }
+      };
+      
+      // Create the report
+      const report = await storage.createQuarterlyReport({
+        facilitatorId: facilitator.id,
+        periodStart: startDate,
+        periodEnd: endDate,
+        reportData
+      });
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  app.delete('/api/facilitator/reports/:reportId', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { reportId } = req.params;
+      
+      await storage.deleteQuarterlyReport(reportId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+
   // Catch-all for unmatched API routes - return 404 instead of HTML
   app.use('/api/*', (req, res) => {
     res.status(404).json({ message: "API endpoint not found" });
