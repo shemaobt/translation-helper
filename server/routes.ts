@@ -1795,10 +1795,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Compile report data
       const reportData = {
         facilitator: {
-          name: facilitator.name,
-          email: facilitator.email,
           region: facilitator.region,
-          languages: facilitator.languages
+          mentorSupervisor: facilitator.mentorSupervisor,
+          totalLanguagesMentored: facilitator.totalLanguagesMentored,
+          totalChaptersMentored: facilitator.totalChaptersMentored
         },
         period: {
           start: periodStart,
@@ -1829,7 +1829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalQualifications: qualifications.length,
           totalActivities: periodActivities.length,
           totalChapters: periodActivities.reduce((sum, a) => sum + a.chaptersCount, 0),
-          languages: [...new Set(periodActivities.map(a => a.languageName))]
+          languages: Array.from(new Set(periodActivities.map(a => a.languageName)))
         }
       };
       
