@@ -13,41 +13,42 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Assistant configurations
+// Assistant configuration for OBT Mentor
 export const ASSISTANTS = {
-  storyteller: {
-    id: 'storyteller',
-    name: 'Storyteller',
-    description: 'What Bible concept do you want to translate? I can tell you a story to help you understand it better, so you can choose the best word or phrase.',
-    openaiId: 'asst_eSD18ksRBzC5usjNxbZkmad6'
-  },
-  conversation: {
-    id: 'conversation',
-    name: 'Conversation Partner',
-    description: 'Want to explore a Bible concept? I can explain it or talk it through with you, so you can understand it more deeply before you translate.',
-    openaiId: 'asst_Mxzqh1dfl3ggH83YzhZO6V9z'
-  },
-  performer: {
-    id: 'performer', 
-    name: 'Oral Performer',
-    description: 'Struggling to understand a Bible passage? I can say it in clear, natural oral language, so your team can grasp the meaning more easily.',
-    openaiId: 'asst_Y6WiCXUTObAb3TNUFG0Yh1Hn'
-  },
-  healthAssessor: {
-    id: 'healthAssessor',
-    name: 'OBT Project Health Assessor',
-    description: 'How\'s your project going? I can help you look at where you are, see what\'s working well, and find out what you might need to keep moving forward in your ministry. The assessment can take over an hour, so we recommend doing it with your team once every quarter.',
-    openaiId: 'asst_EyMCWONERAYPG3FEjuyuKWLC'
-  },
-  backTranslationChecker: {
-    id: 'backTranslationChecker',
-    name: 'Back Translation Checker',
-    description: 'Need to check your translation? I can compare your back translation with the source text and point out possible issues to help you improve accuracy.',
-    openaiId: 'asst_sOGHlFUrgeTGdkRcD44hljrR'
+  obtMentor: {
+    id: 'obtMentor',
+    name: 'OBT Mentor Assistant',
+    description: 'A friendly and supportive assistant guiding Oral Bible Translation (OBT) facilitators in their journey to become mentors within Youth With A Mission (YWAM).',
+    openaiId: 'asst_placeholder' // Will be updated with actual OpenAI assistant ID
   }
 } as const;
 
 export type AssistantId = keyof typeof ASSISTANTS;
+
+// OBT Core Competencies
+export const CORE_COMPETENCIES = {
+  biblical_knowledge: 'Biblical Knowledge and Theology',
+  translation_theory: 'Translation Theory and Practice',
+  oral_methods: 'Oral Communication Methods',
+  facilitation_skills: 'Facilitation and Teaching Skills',
+  intercultural_communication: 'Intercultural Communication',
+  project_management: 'OBT Project Management',
+  mentorship_practice: 'Mentorship and Coaching',
+  spiritual_formation: 'Spiritual Formation and Discipleship'
+} as const;
+
+export type CompetencyId = keyof typeof CORE_COMPETENCIES;
+
+// Growth status levels
+export const GROWTH_STATUSES = {
+  not_started: 'Not Yet Started',
+  emerging: 'Emerging',
+  growing: 'Growing',
+  proficient: 'Proficient',
+  advanced: 'Advanced'
+} as const;
+
+export type GrowthStatus = keyof typeof GROWTH_STATUSES;
 
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
@@ -86,7 +87,7 @@ export const users = pgTable("users", {
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  assistantId: varchar("assistant_id").notNull().default('storyteller'),
+  assistantId: varchar("assistant_id").notNull().default('obtMentor'),
   title: varchar("title").notNull(),
   threadId: varchar("thread_id"), // OpenAI thread ID for conversation context
   createdAt: timestamp("created_at").defaultNow(),
@@ -132,11 +133,74 @@ export const feedback = pgTable("feedback", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Facilitator profiles (extends user with OBT-specific data)
+export const facilitators = pgTable("facilitators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  region: varchar("region"), // Geographic region where facilitator works
+  mentorSupervisor: varchar("mentor_supervisor"), // Name of their supervisor
+  totalLanguagesMentored: integer("total_languages_mentored").notNull().default(0),
+  totalChaptersMentored: integer("total_chapters_mentored").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facilitator competencies tracking
+export const facilitatorCompetencies = pgTable("facilitator_competencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  facilitatorId: varchar("facilitator_id").notNull().references(() => facilitators.id, { onDelete: "cascade" }),
+  competencyId: varchar("competency_id").notNull(), // References CORE_COMPETENCIES keys
+  status: varchar("status", { 
+    enum: ["not_started", "emerging", "growing", "proficient", "advanced"] 
+  }).notNull().default("not_started"),
+  notes: text("notes"), // Comments on progress
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Formal qualifications tracking
+export const facilitatorQualifications = pgTable("facilitator_qualifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  facilitatorId: varchar("facilitator_id").notNull().references(() => facilitators.id, { onDelete: "cascade" }),
+  courseTitle: varchar("course_title").notNull(),
+  institution: varchar("institution").notNull(),
+  completionDate: timestamp("completion_date"),
+  credential: varchar("credential"), // Certificate, diploma, etc.
+  description: text("description"), // Brief description of content
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Mentorship activities tracking
+export const mentorshipActivities = pgTable("mentorship_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  facilitatorId: varchar("facilitator_id").notNull().references(() => facilitators.id, { onDelete: "cascade" }),
+  languageName: varchar("language_name").notNull(),
+  chaptersCount: integer("chapters_count").notNull().default(1),
+  activityDate: timestamp("activity_date").defaultNow(),
+  notes: text("notes"), // Additional context about the activity
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Quarterly reports
+export const quarterlyReports = pgTable("quarterly_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  facilitatorId: varchar("facilitator_id").notNull().references(() => facilitators.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  reportData: jsonb("report_data").notNull(), // Full report JSON structure
+  generatedAt: timestamp("generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   chats: many(chats),
   apiKeys: many(apiKeys),
   feedback: many(feedback),
+  facilitator: one(facilitators, {
+    fields: [users.id],
+    references: [facilitators.userId],
+  }),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -177,6 +241,45 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   user: one(users, {
     fields: [feedback.userId],
     references: [users.id],
+  }),
+}));
+
+export const facilitatorsRelations = relations(facilitators, ({ one, many }) => ({
+  user: one(users, {
+    fields: [facilitators.userId],
+    references: [users.id],
+  }),
+  competencies: many(facilitatorCompetencies),
+  qualifications: many(facilitatorQualifications),
+  activities: many(mentorshipActivities),
+  reports: many(quarterlyReports),
+}));
+
+export const facilitatorCompetenciesRelations = relations(facilitatorCompetencies, ({ one }) => ({
+  facilitator: one(facilitators, {
+    fields: [facilitatorCompetencies.facilitatorId],
+    references: [facilitators.id],
+  }),
+}));
+
+export const facilitatorQualificationsRelations = relations(facilitatorQualifications, ({ one }) => ({
+  facilitator: one(facilitators, {
+    fields: [facilitatorQualifications.facilitatorId],
+    references: [facilitators.id],
+  }),
+}));
+
+export const mentorshipActivitiesRelations = relations(mentorshipActivities, ({ one }) => ({
+  facilitator: one(facilitators, {
+    fields: [mentorshipActivities.facilitatorId],
+    references: [facilitators.id],
+  }),
+}));
+
+export const quarterlyReportsRelations = relations(quarterlyReports, ({ one }) => ({
+  facilitator: one(facilitators, {
+    fields: [quarterlyReports.facilitatorId],
+    references: [facilitators.id],
   }),
 }));
 
@@ -225,6 +328,34 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   updatedAt: true,
 });
 
+export const insertFacilitatorSchema = createInsertSchema(facilitators).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacilitatorCompetencySchema = createInsertSchema(facilitatorCompetencies).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export const insertFacilitatorQualificationSchema = createInsertSchema(facilitatorQualifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMentorshipActivitySchema = createInsertSchema(mentorshipActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertQuarterlyReportSchema = createInsertSchema(quarterlyReports).omit({
+  id: true,
+  createdAt: true,
+  generatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -239,3 +370,13 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 export type InsertApiUsage = z.infer<typeof insertApiUsageSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Facilitator = typeof facilitators.$inferSelect;
+export type InsertFacilitator = z.infer<typeof insertFacilitatorSchema>;
+export type FacilitatorCompetency = typeof facilitatorCompetencies.$inferSelect;
+export type InsertFacilitatorCompetency = z.infer<typeof insertFacilitatorCompetencySchema>;
+export type FacilitatorQualification = typeof facilitatorQualifications.$inferSelect;
+export type InsertFacilitatorQualification = z.infer<typeof insertFacilitatorQualificationSchema>;
+export type MentorshipActivity = typeof mentorshipActivities.$inferSelect;
+export type InsertMentorshipActivity = z.infer<typeof insertMentorshipActivitySchema>;
+export type QuarterlyReport = typeof quarterlyReports.$inferSelect;
+export type InsertQuarterlyReport = z.infer<typeof insertQuarterlyReportSchema>;

@@ -63,7 +63,7 @@ export default function ChatInterface({
   chatId, 
   isMobile = false, 
   onOpenSidebar,
-  defaultAssistant = 'storyteller',
+  defaultAssistant = 'obtMentor',
   onDefaultAssistantChange
 }: ChatInterfaceProps) {
   const [message, setMessage] = useState("");

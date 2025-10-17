@@ -49,7 +49,7 @@ export default function Sidebar({
   isMobile = false, 
   isOpen = true, 
   onClose, 
-  selectedAssistant = 'storyteller',
+  selectedAssistant = 'obtMentor',
   onAssistantChange 
 }: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
