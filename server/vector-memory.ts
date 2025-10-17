@@ -243,6 +243,13 @@ export async function getContextForQuery(params: {
   includeGlobal?: boolean;
 }): Promise<string> {
   try {
+    console.log('[Vector Memory] Searching for context with params:', {
+      facilitatorId: params.facilitatorId,
+      userId: params.userId,
+      includeGlobal: params.includeGlobal,
+      queryPreview: params.query.substring(0, 50) + '...'
+    });
+
     // First, search facilitator/user-specific messages
     const relevantMessages = await searchRelevantMessages({
       query: params.query,
@@ -250,6 +257,8 @@ export async function getContextForQuery(params: {
       userId: params.userId,
       limit: 3,
     });
+
+    console.log(`[Vector Memory] Found ${relevantMessages.length} relevant user messages`);
 
     // Optionally add global context for cross-learning
     let globalMessages: any[] = [];
@@ -259,6 +268,7 @@ export async function getContextForQuery(params: {
         limit: 2,
         scoreThreshold: 0.8,
       });
+      console.log(`[Vector Memory] Found ${globalMessages.length} global messages`);
     }
 
     // Format context for the AI
@@ -278,6 +288,11 @@ export async function getContextForQuery(params: {
         context += `${idx + 1}. ${msg.content}\n`;
       });
       context += '\n';
+    }
+
+    console.log(`[Vector Memory] Generated context length: ${context.length} characters`);
+    if (context.length > 0) {
+      console.log('[Vector Memory] Context preview:', context.substring(0, 200) + '...');
     }
 
     return context;
