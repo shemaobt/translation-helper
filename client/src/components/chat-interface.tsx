@@ -140,8 +140,10 @@ export default function ChatInterface({
     retry: false,
   });
 
-  // Derive current assistant: use chat's assistant if available, otherwise default
-  const currentAssistant: AssistantId = (chatId ? (chat?.assistantId as AssistantId | undefined) : defaultAssistant) ?? defaultAssistant;
+  // Derive current assistant: use chat's assistant if available and valid, otherwise default
+  const chatAssistantId = chat?.assistantId as AssistantId | undefined;
+  const isValidAssistantId = chatAssistantId && chatAssistantId in ASSISTANT_CONFIG;
+  const currentAssistant: AssistantId = (chatId && isValidAssistantId ? chatAssistantId : defaultAssistant) ?? defaultAssistant;
 
   const switchAssistantMutation = useMutation({
     mutationFn: async (assistantId: AssistantId) => {
