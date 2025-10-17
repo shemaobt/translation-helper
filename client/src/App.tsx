@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
+import Portfolio from "@/pages/portfolio";
 import AdminFeedback from "@/pages/admin-feedback";
 import AdminUsers from "@/pages/admin-users";
 import Login from "@/pages/login";
@@ -37,6 +38,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/chat/:chatId" component={Home} />
+          <Route path="/portfolio" component={Portfolio} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/api-keys" component={Dashboard} />
           <Route path="/settings" component={Dashboard} />

@@ -404,6 +404,19 @@ export default function Sidebar({
                 <Separator className="my-1" />
               </>
             )}
+            {/* Portfolio option (visible to all users) */}
+            <Link href="/portfolio" className="block">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start text-sm px-4 ${isMobile ? 'h-12' : 'py-2 h-auto'}`}
+                onClick={() => setUserMenuOpen(false)}
+                data-testid="link-portfolio"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Portfólio
+              </Button>
+            </Link>
+            
             {/* Feedback option (visible to all users) */}
             <FeedbackForm
               trigger={
