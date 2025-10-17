@@ -1,0 +1,731 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import Sidebar from "@/components/sidebar";
+import { 
+  Award, 
+  Calendar, 
+  Plus, 
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Target,
+  GraduationCap,
+  Activity
+} from "lucide-react";
+import { 
+  CORE_COMPETENCIES,
+  type CompetencyId,
+  type FacilitatorCompetency, 
+  type FacilitatorQualification, 
+  type MentorshipActivity 
+} from "@shared/schema";
+
+const competencyStatusOptions = ['not_started', 'emerging', 'growing', 'proficient', 'advanced'] as const;
+type CompetencyStatus = typeof competencyStatusOptions[number];
+
+const statusLabels: Record<CompetencyStatus, string> = {
+  not_started: 'Não Iniciado',
+  emerging: 'Emergente',
+  growing: 'Em Crescimento',
+  proficient: 'Proficiente',
+  advanced: 'Avançado'
+};
+
+const statusColors: Record<CompetencyStatus, string> = {
+  not_started: 'text-muted-foreground',
+  emerging: 'text-yellow-600',
+  growing: 'text-blue-600',
+  proficient: 'text-green-600',
+  advanced: 'text-purple-600'
+};
+
+export default function Portfolio() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("competencies");
+
+  // Competency notes editing state
+  const [editingCompetency, setEditingCompetency] = useState<CompetencyId | null>(null);
+  const [tempNotes, setTempNotes] = useState("");
+
+  // Qualifications state
+  const [newQualCourseTitle, setNewQualCourseTitle] = useState("");
+  const [newQualInstitution, setNewQualInstitution] = useState("");
+  const [newQualCompletionDate, setNewQualCompletionDate] = useState("");
+  const [newQualCredential, setNewQualCredential] = useState("");
+  const [newQualDescription, setNewQualDescription] = useState("");
+  const [qualificationDialogOpen, setQualificationDialogOpen] = useState(false);
+
+  // Activities state
+  const [newActivityLanguage, setNewActivityLanguage] = useState("");
+  const [newActivityChapters, setNewActivityChapters] = useState("1");
+  const [newActivityNotes, setNewActivityNotes] = useState("");
+  const [newActivityDate, setNewActivityDate] = useState(new Date().toISOString().split('T')[0]);
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+
+  // Fetch competencies
+  const { data: competencies = [], isLoading: loadingCompetencies } = useQuery<FacilitatorCompetency[]>({
+    queryKey: ['/api/competencies'],
+    enabled: isAuthenticated
+  });
+
+  // Fetch qualifications
+  const { data: qualifications = [], isLoading: loadingQualifications } = useQuery<FacilitatorQualification[]>({
+    queryKey: ['/api/qualifications'],
+    enabled: isAuthenticated
+  });
+
+  // Fetch activities
+  const { data: activities = [], isLoading: loadingActivities } = useQuery<MentorshipActivity[]>({
+    queryKey: ['/api/activities'],
+    enabled: isAuthenticated
+  });
+
+  // Update competency status mutation
+  const updateCompetencyMutation = useMutation({
+    mutationFn: async ({ competencyId, status, notes }: { competencyId: CompetencyId; status: CompetencyStatus; notes?: string }) => {
+      await apiRequest("POST", "/api/competencies", { competencyId, status, notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/competencies'] });
+      toast({
+        title: "Sucesso",
+        description: "Status da competência atualizado",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar competência",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create qualification mutation
+  const createQualificationMutation = useMutation({
+    mutationFn: async (data: { courseTitle: string; institution: string; completionDate: string; credential?: string; description?: string }) => {
+      await apiRequest("POST", "/api/qualifications", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/qualifications'] });
+      setQualificationDialogOpen(false);
+      setNewQualCourseTitle("");
+      setNewQualInstitution("");
+      setNewQualCompletionDate("");
+      setNewQualCredential("");
+      setNewQualDescription("");
+      toast({
+        title: "Sucesso",
+        description: "Qualificação adicionada",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao adicionar qualificação",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete qualification mutation
+  const deleteQualificationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/qualifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/qualifications'] });
+      toast({
+        title: "Sucesso",
+        description: "Qualificação removida",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover qualificação",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create activity mutation
+  const createActivityMutation = useMutation({
+    mutationFn: async (data: { languageName: string; chaptersCount: number; activityDate: string; notes?: string }) => {
+      await apiRequest("POST", "/api/activities", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      setActivityDialogOpen(false);
+      setNewActivityLanguage("");
+      setNewActivityChapters("1");
+      setNewActivityNotes("");
+      setNewActivityDate(new Date().toISOString().split('T')[0]);
+      toast({
+        title: "Sucesso",
+        description: "Atividade registrada",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao registrar atividade",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete activity mutation
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/activities/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      toast({
+        title: "Sucesso",
+        description: "Atividade removida",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover atividade",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Calculate competency progress
+  const competencyProgress = Object.keys(CORE_COMPETENCIES).length > 0
+    ? (competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length / Object.keys(CORE_COMPETENCIES).length) * 100
+    : 0;
+
+  // Get status for a competency
+  const getCompetencyStatus = (competencyId: CompetencyId): CompetencyStatus => {
+    const competency = competencies.find(c => c.competencyId === competencyId);
+    return (competency?.status as CompetencyStatus) || 'not_started';
+  };
+
+  // Get notes for a competency
+  const getCompetencyNotes = (competencyId: CompetencyId): string => {
+    const competency = competencies.find(c => c.competencyId === competencyId);
+    return competency?.notes || '';
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex relative" data-testid="page-portfolio">
+      <div className="relative h-full">
+        <Sidebar isMobile={isMobile} isOpen={true} />
+      </div>
+      
+      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+        <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
+          {/* Header */}
+          <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
+              Portfólio de Facilitador
+            </h1>
+            <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
+              Acompanhe suas competências, qualificações e atividades de tradução
+            </p>
+          </div>
+
+          {/* Competency Overview */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Progresso Geral das Competências</span>
+                <span className="text-sm text-muted-foreground">{Math.round(competencyProgress)}%</span>
+              </div>
+              <Progress value={competencyProgress} className="h-2" />
+            </CardContent>
+          </Card>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="competencies" data-testid="tab-competencies">
+                <Target className="h-4 w-4 mr-2" />
+                {!isMobile && "Competências"}
+              </TabsTrigger>
+              <TabsTrigger value="qualifications" data-testid="tab-qualifications">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                {!isMobile && "Qualificações"}
+              </TabsTrigger>
+              <TabsTrigger value="activities" data-testid="tab-activities">
+                <Activity className="h-4 w-4 mr-2" />
+                {!isMobile && "Atividades"}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Competencies Tab */}
+            <TabsContent value="competencies" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Target className="h-5 w-5" />
+                    <span>Competências Principais</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Acompanhe o desenvolvimento de suas competências de facilitação TBO
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingCompetencies ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {(Object.keys(CORE_COMPETENCIES) as CompetencyId[]).map((competencyId) => {
+                        const status = getCompetencyStatus(competencyId);
+                        const notes = getCompetencyNotes(competencyId);
+                        const isEditing = editingCompetency === competencyId;
+
+                        return (
+                          <Card key={competencyId} data-testid={`card-competency-${competencyId}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    {status === 'proficient' || status === 'advanced' ? (
+                                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                      <Circle className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                    <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
+                                      {CORE_COMPETENCIES[competencyId]}
+                                    </h3>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Select
+                                      value={status}
+                                      onValueChange={(value) => updateCompetencyMutation.mutate({ 
+                                        competencyId, 
+                                        status: value as CompetencyStatus,
+                                        notes
+                                      })}
+                                    >
+                                      <SelectTrigger className="w-48" data-testid={`select-status-${competencyId}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {competencyStatusOptions.map(statusOption => (
+                                          <SelectItem key={statusOption} value={statusOption}>
+                                            {statusLabels[statusOption]}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Badge className={statusColors[status]}>
+                                      {statusLabels[status]}
+                                    </Badge>
+                                  </div>
+                                  {notes && !isEditing && (
+                                    <p className="text-sm text-muted-foreground mt-2" data-testid={`text-competency-notes-${competencyId}`}>
+                                      {notes}
+                                    </p>
+                                  )}
+                                  {isEditing && (
+                                    <div className="mt-2 space-y-2">
+                                      <Textarea
+                                        value={tempNotes}
+                                        onChange={(e) => setTempNotes(e.target.value)}
+                                        placeholder="Adicione notas sobre seu progresso..."
+                                        rows={2}
+                                      />
+                                      <div className="flex space-x-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            updateCompetencyMutation.mutate({ 
+                                              competencyId, 
+                                              status,
+                                              notes: tempNotes
+                                            });
+                                            setEditingCompetency(null);
+                                          }}
+                                        >
+                                          Salvar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingCompetency(null);
+                                            setTempNotes("");
+                                          }}
+                                        >
+                                          Cancelar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {!isEditing && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setTempNotes(notes);
+                                        setEditingCompetency(competencyId);
+                                      }}
+                                      className="mt-2"
+                                    >
+                                      {notes ? 'Editar Notas' : 'Adicionar Notas'}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Qualifications Tab */}
+            <TabsContent value="qualifications" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center space-x-2">
+                        <GraduationCap className="h-5 w-5" />
+                        <span>Qualificações</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Gerencie suas qualificações e certificações formais
+                      </CardDescription>
+                    </div>
+                    <Dialog open={qualificationDialogOpen} onOpenChange={setQualificationDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-qualification">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Qualificação</DialogTitle>
+                          <DialogDescription>
+                            Registre uma nova qualificação ou certificação formal
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="qual-course">Título do Curso</Label>
+                            <Input
+                              id="qual-course"
+                              value={newQualCourseTitle}
+                              onChange={(e) => setNewQualCourseTitle(e.target.value)}
+                              placeholder="Ex: Certificação em TBO"
+                              data-testid="input-course-title"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="qual-institution">Instituição</Label>
+                            <Input
+                              id="qual-institution"
+                              value={newQualInstitution}
+                              onChange={(e) => setNewQualInstitution(e.target.value)}
+                              placeholder="Ex: JOCUM/YWAM"
+                              data-testid="input-institution"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="qual-completion">Data de Conclusão</Label>
+                            <Input
+                              id="qual-completion"
+                              type="date"
+                              value={newQualCompletionDate}
+                              onChange={(e) => setNewQualCompletionDate(e.target.value)}
+                              data-testid="input-completion-date"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="qual-credential">Credencial (opcional)</Label>
+                            <Input
+                              id="qual-credential"
+                              value={newQualCredential}
+                              onChange={(e) => setNewQualCredential(e.target.value)}
+                              placeholder="Ex: Certificado, Diploma"
+                              data-testid="input-credential"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="qual-description">Descrição (opcional)</Label>
+                            <Textarea
+                              id="qual-description"
+                              value={newQualDescription}
+                              onChange={(e) => setNewQualDescription(e.target.value)}
+                              placeholder="Breve descrição do conteúdo..."
+                              rows={3}
+                              data-testid="input-description"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            onClick={() => createQualificationMutation.mutate({
+                              courseTitle: newQualCourseTitle,
+                              institution: newQualInstitution,
+                              completionDate: newQualCompletionDate,
+                              credential: newQualCredential || undefined,
+                              description: newQualDescription || undefined
+                            })}
+                            disabled={!newQualCourseTitle.trim() || !newQualInstitution.trim() || !newQualCompletionDate || createQualificationMutation.isPending}
+                            data-testid="button-confirm-add-qualification"
+                          >
+                            {createQualificationMutation.isPending ? "Adicionando..." : "Adicionar Qualificação"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingQualifications ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : qualifications.length === 0 ? (
+                    <div className="text-center py-8">
+                      <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-muted-foreground">Nenhuma qualificação ainda</p>
+                      <p className="text-xs text-muted-foreground">Adicione sua primeira qualificação</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {qualifications.map((qualification) => (
+                        <Card key={qualification.id} data-testid={`card-qualification-${qualification.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Award className="h-5 w-5 text-primary" />
+                                  <h3 className="font-medium" data-testid={`text-course-title-${qualification.id}`}>
+                                    {qualification.courseTitle}
+                                  </h3>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2" data-testid={`text-institution-${qualification.id}`}>
+                                  {qualification.institution}
+                                </p>
+                                <div className="flex items-center space-x-3 text-sm mb-2">
+                                  {qualification.credential && (
+                                    <Badge>{qualification.credential}</Badge>
+                                  )}
+                                  {qualification.completionDate && (
+                                    <span className="text-muted-foreground" data-testid={`text-completion-date-${qualification.id}`}>
+                                      {new Date(qualification.completionDate).toLocaleDateString('pt-BR')}
+                                    </span>
+                                  )}
+                                </div>
+                                {qualification.description && (
+                                  <p className="text-sm text-muted-foreground" data-testid={`text-description-${qualification.id}`}>
+                                    {qualification.description}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteQualificationMutation.mutate(qualification.id)}
+                                className="text-destructive hover:text-destructive"
+                                data-testid={`button-delete-qualification-${qualification.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Activities Tab */}
+            <TabsContent value="activities" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Activity className="h-5 w-5" />
+                        <span>Atividades de Tradução</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Registre suas atividades de tradução bíblica oral
+                      </CardDescription>
+                    </div>
+                    <Dialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-activity">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Registrar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Registrar Atividade</DialogTitle>
+                          <DialogDescription>
+                            Registre uma nova atividade de tradução bíblica
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="activity-language">Nome do Idioma</Label>
+                            <Input
+                              id="activity-language"
+                              value={newActivityLanguage}
+                              onChange={(e) => setNewActivityLanguage(e.target.value)}
+                              placeholder="Ex: Karajá, Yanomami"
+                              data-testid="input-language-name"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="activity-chapters">Quantidade de Capítulos</Label>
+                            <Input
+                              id="activity-chapters"
+                              type="number"
+                              min="1"
+                              value={newActivityChapters}
+                              onChange={(e) => setNewActivityChapters(e.target.value)}
+                              data-testid="input-chapters-count"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="activity-date">Data da Atividade</Label>
+                            <Input
+                              id="activity-date"
+                              type="date"
+                              value={newActivityDate}
+                              onChange={(e) => setNewActivityDate(e.target.value)}
+                              data-testid="input-activity-date"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="activity-notes">Notas (opcional)</Label>
+                            <Textarea
+                              id="activity-notes"
+                              value={newActivityNotes}
+                              onChange={(e) => setNewActivityNotes(e.target.value)}
+                              placeholder="Contexto adicional sobre a atividade..."
+                              rows={4}
+                              data-testid="input-activity-notes"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            onClick={() => createActivityMutation.mutate({
+                              languageName: newActivityLanguage,
+                              chaptersCount: parseInt(newActivityChapters),
+                              activityDate: newActivityDate,
+                              notes: newActivityNotes || undefined
+                            })}
+                            disabled={!newActivityLanguage.trim() || !newActivityDate || !newActivityChapters || createActivityMutation.isPending}
+                            data-testid="button-confirm-add-activity"
+                          >
+                            {createActivityMutation.isPending ? "Registrando..." : "Registrar Atividade"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingActivities ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-muted-foreground">Nenhuma atividade ainda</p>
+                      <p className="text-xs text-muted-foreground">Registre sua primeira atividade de tradução</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {activities.map((activity) => (
+                        <Card key={activity.id} data-testid={`card-activity-${activity.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Calendar className="h-5 w-5 text-primary" />
+                                  <h3 className="font-medium" data-testid={`text-language-name-${activity.id}`}>
+                                    {activity.languageName}
+                                  </h3>
+                                </div>
+                                <div className="flex items-center space-x-3 text-sm mb-2">
+                                  <Badge>{activity.chaptersCount} capítulo(s)</Badge>
+                                  {activity.activityDate && (
+                                    <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
+                                      {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                    </span>
+                                  )}
+                                </div>
+                                {activity.notes && (
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid={`text-activity-notes-${activity.id}`}>
+                                    {activity.notes}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteActivityMutation.mutate(activity.id)}
+                                className="text-destructive hover:text-destructive"
+                                data-testid={`button-delete-activity-${activity.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+}
