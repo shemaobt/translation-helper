@@ -83,14 +83,14 @@ function Signup() {
           <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
             <img 
               src={logoImage} 
-              alt="Translation Helper Logo" 
+              alt="OBT Mentor Companion Logo" 
               className="h-12 w-12 object-contain"
               data-testid="img-signup-logo"
             />
           </div>
           <CardTitle className="text-2xl">Create account</CardTitle>
           <CardDescription>
-            Sign up to start using Translation Helper
+            Sign up to start using OBT Mentor Companion
           </CardDescription>
         </CardHeader>
         <CardContent>

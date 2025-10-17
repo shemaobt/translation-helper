@@ -105,14 +105,14 @@ function Login() {
           <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
             <img 
               src={logoImage} 
-              alt="Translation Helper Logo" 
+              alt="OBT Mentor Companion Logo" 
               className="h-12 w-12 object-contain"
               data-testid="img-login-logo"
             />
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
-            Sign in to your Translation Helper account
+            Sign in to your OBT Mentor Companion account
           </CardDescription>
         </CardHeader>
         <CardContent>

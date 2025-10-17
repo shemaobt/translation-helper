@@ -1,6 +1,6 @@
 # Overview
 
-This is a Translation Helper application - an AI-powered chat interface that serves as an intelligent translation assistant. The application uses the StoryTeller AI assistant via OpenAI's Assistant API to provide conversational translation services. Built as a full-stack web application, it features user authentication, chat management, API key management, and usage tracking capabilities.
+This is an OBT Mentor Companion application - an AI-powered mentorship tracking and assessment system for Oral Bible Translation (OBT) facilitators in Youth With A Mission (YWAM). The application uses OpenAI's Assistant API integrated with Qdrant vector database for global memory search. Built as a full-stack web application, it features facilitator portfolios, competency tracking, qualification management, mentorship activity logging, quarterly report generation, and semantic search across all conversations.
 
 # User Preferences
 

@@ -1,6 +1,6 @@
-# Translation Helper - AI-Powered Voice Translation App
+# OBT Mentor Companion - AI-Powered Mentorship Assistant
 
-A comprehensive OpenAI-powered voice-enabled translation helper chat application with universal browser compatibility, featuring OpenAI Whisper for speech-to-text, OpenAI TTS for text-to-speech, real-time streaming responses, and optimized performance through advanced caching strategies.
+A comprehensive OpenAI-powered mentorship tracking and assessment application for Oral Bible Translation (OBT) facilitators in Youth With A Mission (YWAM). Features competency tracking, qualification management, mentorship activity logging, quarterly report generation, and global memory search powered by Qdrant vector database.
 
 ## Features
 
