@@ -1852,6 +1852,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { reportId } = req.params;
       
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found" });
+      }
+      
+      // Fetch the report and verify ownership
+      const report = await storage.getQuarterlyReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      if (report.facilitatorId !== facilitator.id) {
+        return res.status(403).json({ message: "Unauthorized to delete this report" });
+      }
+      
       await storage.deleteQuarterlyReport(reportId);
       res.json({ success: true });
     } catch (error) {

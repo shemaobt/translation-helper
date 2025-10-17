@@ -1,6 +1,6 @@
 # Overview
 
-This is an OBT Mentor Companion application - an AI-powered mentorship tracking and assessment system for Oral Bible Translation (OBT) facilitators in Youth With A Mission (YWAM). The application uses OpenAI's Assistant API integrated with Qdrant vector database for global memory search. Built as a full-stack web application, it features facilitator portfolios, competency tracking, qualification management, mentorship activity logging, quarterly report generation, and semantic search across all conversations.
+This is the OBT Mentor Companion application - an AI-powered mentorship tracking and assessment system for YWAM Oral Bible Translation (OBT) facilitators. The application uses a dedicated OBT Mentor AI assistant via OpenAI's Assistant API to provide conversational mentorship guidance. Built as a full-stack web application, it features user authentication with admin approval workflow, facilitator portfolio management (competencies, qualifications, activities), quarterly report generation with Portuguese UI, and global memory search using Qdrant Cloud vector database with semantic search across all facilitator conversations.
 
 # User Preferences
 
@@ -27,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL session store
 - **Strategy**: Passport.js with OpenID Connect strategy
 - **Security**: HTTP-only cookies with secure flag for production
+- **User Approval**: Admin-controlled approval workflow for new user registration
 
 ## Database Architecture
 - **Database**: PostgreSQL with Neon serverless driver
@@ -35,49 +36,117 @@ Preferred communication style: Simple, everyday language.
 - **Connection**: Connection pooling via Neon's serverless pool
 
 ## Data Models
-- **Users**: Profile information, authentication data, timestamps
+- **Users**: Profile information, authentication data, admin status, approval workflow
+- **Facilitators**: Extended user profile with region, supervisor, mentorship totals
+- **Facilitator Competencies**: Track 8 core OBT competencies with status levels
+- **Facilitator Qualifications**: Formal courses, credentials, institutions
+- **Mentorship Activities**: Language translation work with chapter counts
+- **Quarterly Reports**: Compiled facilitator data snapshots for assessment periods
 - **Chats**: Conversation containers with titles and user associations
 - **Messages**: Individual chat messages with role-based typing (user/assistant)
-- **API Keys**: User-generated API keys for external access with usage tracking
 - **Sessions**: Authentication session storage (required for Replit Auth)
 
+## Core Competencies Tracked
+1. Scripture Engagement
+2. Oral Bible Translation Methods
+3. Cultural Sensitivity
+4. Community Development
+5. Team Leadership
+6. Training & Facilitation
+7. Technology Integration
+8. Program Assessment
+
+Status levels: not_started, developing, proficient, advanced
+
 ## AI Integration
-- **Provider**: OpenAI API with dedicated Assistant (StoryTeller)
-- **Model**: GPT-based conversation using OpenAI's Assistant API
+- **Provider**: OpenAI API with dedicated OBT Mentor Assistant
+- **Model**: GPT-4 via OpenAI's Assistant API
 - **Thread Management**: Persistent conversation threads for context retention
-- **Token Tracking**: Usage monitoring for cost and analytics
+- **Global Memory**: Qdrant vector database stores all conversation embeddings
+- **Semantic Search**: Retrieves relevant past conversations for contextual responses
+- **Cross-Learning**: Access insights from other facilitators globally
+- **Embedding Model**: text-embedding-3-small (1536 dimensions)
+
+## Vector Memory System (Qdrant)
+- **Provider**: Qdrant Cloud vector database
+- **Collection**: obt_global_memory
+- **Dimensions**: 1536 (OpenAI text-embedding-3-small)
+- **Distance Metric**: Cosine similarity
+- **Indexes**: userId, facilitatorId, chatId for efficient filtering
+- **Search Types**: 
+  - Facilitator-specific: User's own conversation history
+  - Global: Cross-learning from all facilitators
+- **Context Injection**: Relevant memories automatically added to AI prompts
 
 ## API Design
 - **Style**: RESTful API with consistent endpoint patterns
 - **Authentication**: Session-based authentication middleware
 - **Error Handling**: Centralized error handling with proper HTTP status codes
+- **Security**: CSRF protection on state-changing endpoints
 - **Logging**: Request/response logging for API endpoints
+- **Authorization**: Ownership validation for sensitive operations (reports, profiles)
+
+## Portfolio Management
+### Competencies Tab
+- Track progress across 8 core OBT competencies
+- Update status levels with notes
+- Portuguese labels: "Competências"
+
+### Qualifications Tab  
+- Record formal courses and credentials
+- Store institution, completion date, credential type
+- Portuguese labels: "Qualificações"
+
+### Activities Tab
+- Log language translation mentorship work
+- Track chapters mentored per language
+- Automatic facilitator totals calculation
+- Portuguese labels: "Atividades"
+
+### Reports Tab
+- Generate quarterly reports for date ranges
+- View compiled facilitator data: competencies, qualifications, activities
+- Summary statistics: total chapters, languages, competency completion
+- Delete old reports
+- Portuguese labels: "Relatórios"
 
 ## Development Environment
 - **Hot Reload**: Vite HMR for frontend, tsx watch mode for backend
 - **Type Safety**: Shared TypeScript types between frontend and backend
-- **Path Aliases**: Absolute imports using path mapping
+- **Path Aliases**: Absolute imports using path mapping (@/components, @shared, @assets)
 - **Replit Integration**: Special development plugins for Replit environment
+- **Database Tools**: Drizzle Kit for schema management (npm run db:push)
 
 ## Production Architecture
 - **Frontend**: Static assets served from Express
 - **Backend**: Single Node.js process serving both API and static files
 - **Build Process**: Frontend built to dist/public, backend bundled to dist/index.js
 - **Environment**: Production-optimized builds with proper asset handling
+- **Deployment**: Replit deployment system for publishing
+
+## Security Features
+- **Authentication**: Session-based with HTTP-only cookies
+- **Authorization**: Ownership validation on all sensitive operations
+- **CSRF Protection**: Required on all state-changing endpoints
+- **Admin Controls**: User approval workflow prevents unauthorized access
+- **Report Security**: Reports accessible only to owning facilitator
+- **Password Hashing**: bcryptjs for secure password handling
 
 # External Dependencies
 
 ## Core Infrastructure
 - **Database**: Neon PostgreSQL serverless database
 - **Authentication**: Replit Auth OIDC provider
-- **AI Service**: OpenAI API with Assistant endpoints
+- **AI Service**: OpenAI API with Assistant endpoints and Embeddings API
+- **Vector Database**: Qdrant Cloud for semantic memory search
 
 ## Frontend Libraries
 - **UI Components**: Radix UI primitive components for accessibility
 - **Styling**: Tailwind CSS for utility-first styling
 - **State Management**: TanStack Query for server state
-- **Date Handling**: date-fns for date manipulation
+- **Date Handling**: date-fns for date manipulation and formatting
 - **Form Handling**: React Hook Form with Zod validation
+- **Icons**: lucide-react for UI icons
 
 ## Backend Services
 - **Web Framework**: Express.js with TypeScript
@@ -86,9 +155,45 @@ Preferred communication style: Simple, everyday language.
 - **Session Storage**: connect-pg-simple for PostgreSQL sessions
 - **Password Hashing**: bcryptjs for secure password handling
 - **HTTP Client**: Built-in fetch for OpenAI API communication
+- **Vector Database Client**: @qdrant/js-client-rest for Qdrant Cloud
 
 ## Development Tools
 - **Build Tools**: Vite for frontend, esbuild for backend
 - **TypeScript**: Full TypeScript support across the stack
 - **Development Server**: Vite dev server with Express integration
 - **Replit Plugins**: Special development tools for Replit environment
+- **Schema Management**: Drizzle Kit for database migrations
+
+# Recent Changes (October 2024)
+
+## Complete Transformation from Translation Helper
+- Renamed all branding from "Translation Helper" to "OBT Mentor Companion"
+- Removed translation, voice recognition, and TTS features
+- Implemented mentorship tracking system with portfolio management
+- Added Qdrant Cloud integration for global memory search
+- Built quarterly report generation system with Portuguese UI
+- Added admin approval workflow for new users
+- Implemented comprehensive security for report access
+
+## Database Schema Updates
+- Added facilitators table with region, supervisor, totals
+- Added facilitator_competencies for tracking 8 core competencies
+- Added facilitator_qualifications for course/credential records
+- Added mentorship_activities for language work logging
+- Added quarterly_reports for assessment period snapshots
+- Added approval workflow fields to users table
+
+## AI System Enhancements
+- Replaced multiple assistants with single OBT Mentor assistant
+- Integrated Qdrant vector database for conversation embeddings
+- Implemented semantic search for contextual AI responses
+- Added cross-facilitator learning with global memory search
+- Automatic context injection from relevant past conversations
+
+## UI/UX Improvements
+- Built portfolio management page with 4 tabs (Portuguese labels)
+- Added competency tracker with status level selection
+- Created qualification management with form validation
+- Implemented activity logger with automatic totals calculation
+- Added quarterly report generation with date range picker
+- Improved sidebar navigation with facilitator-focused items
