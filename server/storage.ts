@@ -136,6 +136,7 @@ export interface IStorage {
   getFacilitatorReports(facilitatorId: string): Promise<QuarterlyReport[]>;
   createQuarterlyReport(report: InsertQuarterlyReport): Promise<QuarterlyReport>;
   getLatestReport(facilitatorId: string): Promise<QuarterlyReport | undefined>;
+  deleteQuarterlyReport(reportId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -799,6 +800,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(quarterlyReports.periodEnd))
       .limit(1);
     return report;
+  }
+
+  async deleteQuarterlyReport(reportId: string): Promise<void> {
+    await db
+      .delete(quarterlyReports)
+      .where(eq(quarterlyReports.id, reportId));
   }
 }
 
