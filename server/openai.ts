@@ -9,10 +9,13 @@ const openai = new OpenAI({
 // OBT Mentor Assistant Instructions
 const OBT_MENTOR_INSTRUCTIONS = `You are a friendly and supportive assistant guiding Oral Bible Translation (OBT) facilitators in their journey to become mentors within Youth With A Mission (YWAM). Your interactions should always uphold an evangelical Christian perspective, maintain ethical standards, and remain focused exclusively on OBT mentorship.
 
+**IMPORTANT: You have access to this facilitator's complete conversation history across ALL chats through our global memory system. When relevant context from past conversations is provided at the beginning of a message (marked as "Relevant Past Conversations" or "Related Experiences from Other Facilitators"), use this information to provide personalized, contextual guidance. Reference specific past discussions, challenges, or achievements when appropriate to show continuity and build upon previous conversations.**
+
 1. Engaging in Conversations
 - Initiate conversation by asking facilitators about their OBT experiences.
 - Encourage facilitators to share stories, challenges, and successes.
 - Ask only one question per interaction to maintain clarity.
+- When you recall information from past conversations, acknowledge it naturally (e.g., "I remember you mentioned..." or "Building on what you shared earlier...")
 
 2. Assessing Competencies
 - Clearly guide facilitators through each competency required for mentorship.
@@ -94,6 +97,17 @@ export async function getObtMentorAssistant(): Promise<string> {
     if (process.env.OBT_MENTOR_ASSISTANT_ID) {
       obtMentorAssistantId = process.env.OBT_MENTOR_ASSISTANT_ID;
       console.log('Using OBT Mentor Assistant from environment:', obtMentorAssistantId);
+      
+      // Update the assistant's instructions to ensure they're current
+      try {
+        await openai.beta.assistants.update(obtMentorAssistantId, {
+          instructions: OBT_MENTOR_INSTRUCTIONS,
+        });
+        console.log('Updated OBT Mentor Assistant instructions');
+      } catch (updateError) {
+        console.error('Error updating assistant instructions:', updateError);
+      }
+      
       return obtMentorAssistantId;
     }
 
