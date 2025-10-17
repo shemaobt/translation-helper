@@ -166,7 +166,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>Dashboard</h1>
-                <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>Monitor your Translation Helper usage</p>
+                <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>Monitor your OBT Mentor Companion usage</p>
               </div>
             </div>
           </div>
@@ -277,7 +277,7 @@ export default function Dashboard() {
                     <DialogHeader>
                       <DialogTitle>Create API Key</DialogTitle>
                       <DialogDescription>
-                        Generate a new API key to access your Translation Helper programmatically.
+                        Generate a new API key to access your OBT Mentor Companion programmatically.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
