@@ -868,7 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await generateChatCompletion({
         chatId: tempChatId,
         messages: messages,
-        assistantId: 'storyteller', // Default to storyteller for external API
+        assistantId: 'obtMentor', // Default to OBT Mentor for external API
       }, 'api-user'); // Use special API user ID for external requests
 
       // Record usage
