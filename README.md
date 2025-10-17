@@ -1,35 +1,48 @@
-# OBT Mentor Companion - AI-Powered Mentorship Assistant
+# OBT Mentor Companion - AI-Powered Mentorship Tracking System
 
-A comprehensive OpenAI-powered mentorship tracking and assessment application for Oral Bible Translation (OBT) facilitators in Youth With A Mission (YWAM). Features competency tracking, qualification management, mentorship activity logging, quarterly report generation, and global memory search powered by Qdrant vector database.
+A comprehensive mentorship tracking and assessment application for YWAM Oral Bible Translation (OBT) facilitators. Features competency tracking, qualification management, mentorship activity logging, quarterly report generation, and global memory search powered by Qdrant vector database with semantic search.
 
 ## Features
 
 ### 🎯 Core Features
-- **AI-Powered Translation**: Uses OpenAI's Assistant API for intelligent translation services
-- **Voice Recognition**: OpenAI Whisper integration for speech-to-text conversion
-- **Text-to-Speech**: Multiple OpenAI TTS voices with voice-specific caching
-- **Real-time Streaming**: Server-Sent Events (SSE) for streaming AI responses
-- **Multi-language Support**: Comprehensive language support for global users
-- **Chat Management**: Persistent conversation history with chat organization
+- **OBT Mentor Assistant**: Dedicated AI assistant for mentorship guidance and support
+- **Competency Tracking**: Track progress across 8 core OBT competencies with status levels
+- **Qualification Management**: Store and manage formal courses and credentials
+- **Activity Logging**: Record language translation mentorship activities with chapter counts
+- **Quarterly Reports**: Generate comprehensive reports compiling all facilitator data
+- **Global Memory Search**: Semantic search across all facilitator conversations using Qdrant
+- **Portuguese Interface**: Portfolio and report features use Portuguese labels
 
-### 🔊 Voice Features
-- **Speech Recognition**: Record voice messages and convert to text
-- **Multiple TTS Voices**: Choose from 6 different AI voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer)
-- **Voice-Specific Caching**: Instant replay for previously generated audio
-- **Fast Audio Generation**: Optimized TTS model for 1-3 second response times
-- **Transcription Editing**: Edit transcribed text before sending
+### 📊 Competency Tracking
+Track progress in 8 core competencies:
+- Scripture Engagement
+- Oral Bible Translation Methods
+- Cultural Sensitivity
+- Community Development
+- Team Leadership
+- Training & Facilitation
+- Technology Integration
+- Program Assessment
 
-### ⚡ Performance Optimizations
-- **Multi-layer Caching**: Voice-specific audio caching with ETag support
-- **Fast TTS Model**: Uses tts-1 model for optimal speed/quality balance
-- **Real-time Streaming**: SSE for immediate response display
-- **Efficient Audio Processing**: Optimized pipeline for voice features
+Status levels: Not Started, Developing, Proficient, Advanced
+
+### 📚 Portfolio Management
+- **Competencies Tab**: Track competency progress with notes
+- **Qualifications Tab**: Record formal courses, institutions, completion dates
+- **Activities Tab**: Log language translation work with chapter counts
+- **Reports Tab**: Generate and view quarterly assessment reports
+
+### 🔍 AI-Powered Features
+- **Semantic Memory**: Qdrant vector database stores conversation embeddings
+- **Contextual Responses**: AI retrieves relevant past conversations
+- **Cross-Learning**: Access insights from other facilitators globally
+- **OpenAI Integration**: Uses GPT-4 via Assistant API
 
 ### 🔐 Security & Authentication
 - **Replit Auth Integration**: Secure OpenID Connect authentication
 - **Session Management**: PostgreSQL-backed session storage
-- **API Key Management**: User-generated API keys for external access
-- **Usage Tracking**: Monitor API usage and costs
+- **User Approval System**: Admin approval workflow for new users
+- **Secure Reports**: Report access restricted to owning facilitator
 
 ## Tech Stack
 
@@ -46,13 +59,15 @@ A comprehensive OpenAI-powered mentorship tracking and assessment application fo
 - **TypeScript** with ESM modules
 - **Drizzle ORM** with PostgreSQL
 - **Passport.js** with OpenID Connect
-- **OpenAI API** integration
+- **OpenAI API** integration (Assistant API)
+- **Qdrant** vector database for semantic search
 
 ### Database
 - **PostgreSQL** with Neon serverless driver
-- **Session storage** for authentication
-- **Chat and message persistence**
-- **API key management**
+- **Facilitator profiles** with competency tracking
+- **Qualification and activity records**
+- **Quarterly report storage**
+- **Vector embeddings** in Qdrant Cloud
 
 ## Installation & Setup
 
@@ -61,6 +76,7 @@ A comprehensive OpenAI-powered mentorship tracking and assessment application fo
 - PostgreSQL database
 - OpenAI API key
 - Replit account (for authentication)
+- Qdrant Cloud account
 
 ### Environment Variables
 ```bash
@@ -69,6 +85,10 @@ DATABASE_URL=your_postgresql_connection_string
 
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key
+
+# Qdrant Vector Database
+QDRANT_URL=your_qdrant_cloud_url
+QDRANT_API_KEY=your_qdrant_api_key
 
 # Authentication
 REPLIT_OIDC_CLIENT_ID=your_replit_client_id
@@ -103,76 +123,101 @@ npm start
 ## API Documentation
 
 ### Authentication
-The API has two types of endpoints:
-- **Protected endpoints** (`/api/*`) - Require authentication via session cookies
-- **Public endpoints** (`/api/public/*`) - No authentication required, but rate-limited
+All API endpoints require authentication via session cookies.
 
-### Public API Endpoints
+### Portfolio Endpoints
 
-#### Get API Information
+#### Get Facilitator Profile
 ```http
-GET /api/public/info
+GET /api/facilitator
 ```
-Returns information about available public endpoints, rate limits, and available voices.
 
-#### Public Text Translation
+#### Update Facilitator Profile
 ```http
-POST /api/public/translate
+PUT /api/facilitator
 Content-Type: application/json
 
 {
-  "text": "Hello world",
-  "fromLanguage": "en-US",
-  "toLanguage": "es-ES",
-  "context": "Casual greeting"
+  "region": "South America",
+  "mentorSupervisor": "John Doe"
 }
 ```
 
-**Response:**
-```json
-{
-  "translatedText": "Hola mundo",
-  "fromLanguage": "en-US",
-  "toLanguage": "es-ES",
-  "originalText": "Hello world"
-}
-```
-
-#### Public Speech-to-Text
+#### Get Competencies
 ```http
-POST /api/public/transcribe
-Content-Type: multipart/form-data
-
-Form Data:
-- audio: Audio file (required)
-- language: Language code (optional, default: 'auto')
+GET /api/facilitator/competencies
 ```
 
-**Response:**
-```json
-{
-  "text": "Transcribed text content",
-  "language": "en-US"
-}
-```
-
-#### Public Text-to-Speech
+#### Update Competency
 ```http
-POST /api/public/speak
+POST /api/facilitator/competencies
 Content-Type: application/json
 
 {
-  "text": "Hello world",
-  "language": "en-US",
-  "voice": "alloy"
+  "competencyId": "scripture-engagement",
+  "status": "proficient",
+  "notes": "Completed advanced training"
 }
 ```
 
-**Response:** Audio file (MP3 format)
+#### Get Qualifications
+```http
+GET /api/facilitator/qualifications
+```
 
-**Rate Limits for Public API:**
-- 50 requests per 15 minutes per IP address
-- Text length limits: 2048 chars for translation, 1024 chars for TTS
+#### Create Qualification
+```http
+POST /api/facilitator/qualifications
+Content-Type: application/json
+
+{
+  "courseTitle": "OBT Facilitator Training",
+  "institution": "YWAM University",
+  "completionDate": "2024-06-15",
+  "credential": "Certificate"
+}
+```
+
+#### Get Activities
+```http
+GET /api/facilitator/activities
+```
+
+#### Create Activity
+```http
+POST /api/facilitator/activities
+Content-Type: application/json
+
+{
+  "languageName": "Swahili",
+  "chaptersCount": 5,
+  "activityDate": "2024-10-01",
+  "notes": "Gospel of John chapters 1-5"
+}
+```
+
+### Report Endpoints
+
+#### Get Reports
+```http
+GET /api/facilitator/reports
+```
+
+#### Generate Report
+```http
+POST /api/facilitator/reports/generate
+Content-Type: application/json
+
+{
+  "periodStart": "2024-01-01",
+  "periodEnd": "2024-03-31"
+}
+```
+
+#### Delete Report
+```http
+DELETE /api/facilitator/reports/:reportId
+```
 
 ### Chat Endpoints
 
@@ -191,182 +236,70 @@ Content-Type: application/json
 GET /api/chats
 ```
 
-#### Get Chat Messages
-```http
-GET /api/chats/:chatId/messages
-```
-
-#### Send Message
+#### Send Message (with Global Memory)
 ```http
 POST /api/chats/:chatId/messages
 Content-Type: application/json
 
 {
-  "content": "Message content",
-  "role": "user"
+  "content": "How do I improve my facilitation skills?"
 }
 ```
 
-#### Stream AI Response
-```http
-GET /api/chats/:chatId/stream
-Accept: text/event-stream
-```
+The AI automatically retrieves relevant context from:
+- Your past conversations
+- Related experiences from other facilitators (global memory)
 
-### Voice API Endpoints
+## Architecture
 
-#### Speech-to-Text (Whisper)
-```http
-POST /api/audio/transcribe
-Content-Type: multipart/form-data
-Authorization: Required
+### Vector Memory System
+- **Embeddings**: OpenAI text-embedding-3-small (1536 dimensions)
+- **Storage**: Qdrant Cloud vector database
+- **Search**: Cosine similarity with score thresholds
+- **Context**: Facilitator-specific + global cross-learning
 
-Form Data:
-- audio: Audio file (mp3, wav, m4a, etc.)
-- language: Target language code (optional)
-```
-
-**Response:**
-```json
-{
-  "text": "Transcribed text content",
-  "language": "en-US"
-}
-```
-
-#### Text-to-Speech (TTS)
-```http
-POST /api/audio/speak
-Content-Type: application/json
-Authorization: Required
-
-{
-  "text": "Text to convert to speech",
-  "language": "en-US",
-  "voice": "alloy"
-}
-```
-
-**Available Voices:**
-- `alloy` - Versatile and balanced
-- `echo` - Clear and articulate  
-- `fable` - Expressive and warm
-- `onyx` - Deep and authoritative
-- `nova` - Warm and engaging
-- `shimmer` - Soft and gentle
-
-**Response:** Audio file (MP3 format)
-
-### User Management
-
-#### Get Current User
-```http
-GET /api/auth/user
-```
-
-#### Generate API Key
-```http
-POST /api/users/api-keys
-Content-Type: application/json
-
-{
-  "name": "API key name"
-}
-```
-
-#### Get API Keys
-```http
-GET /api/users/api-keys
-```
-
-## Usage Examples
-
-### JavaScript/TypeScript Client
+### Portfolio Data Model
 ```typescript
-// Send a chat message
-const response = await fetch('/api/chats/123/messages', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    content: 'Translate this to Spanish: Hello world',
-    role: 'user'
-  })
-});
+Facilitator {
+  id, userId, region, mentorSupervisor,
+  totalLanguagesMentored, totalChaptersMentored
+}
 
-// Convert speech to text
-const formData = new FormData();
-formData.append('audio', audioFile);
-formData.append('language', 'en-US');
+FacilitatorCompetency {
+  facilitatorId, competencyId, status, notes
+}
 
-const transcription = await fetch('/api/audio/transcribe', {
-  method: 'POST',
-  body: formData
-});
+FacilitatorQualification {
+  facilitatorId, courseTitle, institution,
+  completionDate, credential
+}
 
-// Convert text to speech
-const audioResponse = await fetch('/api/audio/speak', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    text: 'Hello, how are you?',
-    voice: 'alloy',
-    language: 'en-US'
-  })
-});
-const audioBlob = await audioResponse.blob();
+MentorshipActivity {
+  facilitatorId, languageName, chaptersCount,
+  activityDate, notes
+}
+
+QuarterlyReport {
+  facilitatorId, periodStart, periodEnd, reportData
+}
 ```
 
-### Python Client
-```python
-import requests
+## Usage
 
-# Transcribe audio
-with open('audio.mp3', 'rb') as audio_file:
-    response = requests.post(
-        'https://your-app.replit.app/api/audio/transcribe',
-        files={'audio': audio_file},
-        data={'language': 'en-US'}
-    )
-    transcription = response.json()
+### For Facilitators
+1. **Sign up** and wait for admin approval
+2. **Complete profile** with region and supervisor info
+3. **Track competencies** across 8 core areas
+4. **Log activities** for each language mentored
+5. **Record qualifications** from training courses
+6. **Generate reports** quarterly for assessment
+7. **Chat with AI** for mentorship guidance
 
-# Generate speech
-response = requests.post(
-    'https://your-app.replit.app/api/audio/speak',
-    json={
-        'text': 'Hello world',
-        'voice': 'nova',
-        'language': 'en-US'
-    }
-)
-with open('output.mp3', 'wb') as f:
-    f.write(response.content)
-```
-
-## Performance Features
-
-### Caching Strategy
-- **Voice-specific caching**: Each voice has separate cache entries
-- **ETag support**: Efficient client-side caching
-- **Instant replay**: Previously generated audio plays immediately
-- **Memory management**: Automatic cache cleanup and rotation
-
-### Optimization Details
-- **Fast TTS Model**: Uses `tts-1` for 1-3 second generation times
-- **Streaming Responses**: Real-time AI response display
-- **Efficient Audio Processing**: Optimized encoding and delivery
-- **Connection Pooling**: Database connection optimization
-
-## Browser Compatibility
-
-- **Chrome/Chromium**: Full support
-- **Firefox**: Full support  
-- **Safari**: Full support
-- **Edge**: Full support
-- **Mobile browsers**: Responsive design with touch support
+### For Administrators
+1. **Approve users** from pending list
+2. **Monitor facilitators** across regions
+3. **Review reports** for assessment cycles
+4. **Manage permissions** and access
 
 ## Contributing
 
@@ -378,11 +311,12 @@ with open('output.mp3', 'wb') as f:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-- **OpenAI** for providing the AI models and APIs
-- **Replit** for hosting and authentication services
-- **Radix UI** and **shadcn/ui** for the component library
-- **Tailwind CSS** for styling utilities
+- **YWAM** for the Oral Bible Translation program
+- **OpenAI** for AI models and APIs
+- **Qdrant** for vector database capabilities
+- **Replit** for hosting and authentication
+- **Radix UI** and **shadcn/ui** for component library
