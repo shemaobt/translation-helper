@@ -155,7 +155,7 @@ export default function ChatInterface({
       queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
       toast({
         title: "Assistant switched",
-        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId].name}`,
+        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId]?.name || 'OBT Mentor Assistant'}`,
       });
     },
     onError: (error) => {
@@ -245,7 +245,7 @@ export default function ChatInterface({
       onDefaultAssistantChange?.(assistantId);
       toast({
         title: "Assistant switched",
-        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId].name}`,
+        description: `Now chatting with ${ASSISTANT_CONFIG[assistantId]?.name || 'OBT Mentor Assistant'}`,
       });
       return;
     }
@@ -632,8 +632,8 @@ export default function ChatInterface({
                 />
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Start a conversation</h2>
-              <p className="text-muted-foreground mb-4">{ASSISTANT_CONFIG[currentAssistant].description}</p>
-              <p className="text-muted-foreground">Send a message to begin chatting with your {ASSISTANT_CONFIG[currentAssistant].name}.</p>
+              <p className="text-muted-foreground mb-4">{ASSISTANT_CONFIG[currentAssistant]?.description || 'A friendly and supportive assistant guiding Oral Bible Translation (OBT) facilitators.'}</p>
+              <p className="text-muted-foreground">Send a message to begin chatting with your {ASSISTANT_CONFIG[currentAssistant]?.name || 'OBT Mentor Assistant'}.</p>
             </div>
           </div>
         )}
@@ -764,7 +764,7 @@ export default function ChatInterface({
           </Button>
         </form>
         <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mt-2 text-center`}>
-          You are chatting with {ASSISTANT_CONFIG[currentAssistant].name}
+          You are chatting with {ASSISTANT_CONFIG[currentAssistant]?.name || 'OBT Mentor Assistant'}
         </p>
       </div>
     </div>
