@@ -150,7 +150,7 @@ export async function searchRelevantMessages(params: {
   try {
     const queryEmbedding = await generateEmbedding(params.query);
     const limit = params.limit || 5;
-    const scoreThreshold = params.scoreThreshold || 0.7;
+    const scoreThreshold = params.scoreThreshold || 0.5;
 
     // Build filter for facilitator-specific or user-specific search
     const filter: any = {};
@@ -222,7 +222,7 @@ export async function searchGlobalMemory(params: {
   try {
     const queryEmbedding = await generateEmbedding(params.query);
     const limit = params.limit || 10;
-    const scoreThreshold = params.scoreThreshold || 0.75;
+    const scoreThreshold = params.scoreThreshold || 0.6;
 
     // Exclude current chat to avoid finding the message we just sent
     const filter: any = {};
@@ -294,7 +294,7 @@ export async function getContextForQuery(params: {
         query: params.query,
         excludeChatId: params.chatId,
         limit: 2,
-        scoreThreshold: 0.8,
+        scoreThreshold: 0.6,
       });
       console.log(`[Vector Memory] Found ${globalMessages.length} global messages`);
     }
