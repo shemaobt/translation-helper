@@ -507,42 +507,14 @@ export default function ChatInterface({
             <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
               <img 
                 src={logoImage} 
-                alt="Translation Helper Logo" 
+                alt="OBT Mentor Companion Logo" 
                 className="h-16 w-16 object-contain"
                 data-testid="img-welcome-screen-logo"
               />
             </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">Welcome to Translation Helper</h2>
-            <p className="text-muted-foreground mb-6">We are here to assist Bible Translation teams. If you are a translator, a facilitator, a translation advisor, a mentor or a consultant, we are here to serve you!</p>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Welcome to OBT Mentor Companion</h2>
+            <p className="text-muted-foreground mb-6">Your friendly and supportive assistant guiding Oral Bible Translation (OBT) facilitators in their journey to become mentors within Youth With A Mission (YWAM).</p>
             
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-foreground mb-2">Choose your assistant:</label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className={`w-full max-w-sm ${isMobile ? 'h-12' : ''}`} data-testid="button-select-assistant">
-                    <div className="flex items-center justify-center w-full relative">
-                      <div className="text-center">
-                        <div className="font-medium">{ASSISTANT_CONFIG[currentAssistant].name}</div>
-                      </div>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground absolute right-0 flex-shrink-0" />
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="w-80">
-                  {Object.values(ASSISTANT_CONFIG).map((assistant) => (
-                    <DropdownMenuItem 
-                      key={assistant.id}
-                      onClick={() => handleAssistantSwitch(assistant.id as AssistantId)}
-                      className="p-3"
-                      data-testid={`assistant-option-${assistant.id}-welcome`}
-                    >
-                      <div className="font-medium">{assistant.name}</div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
             {/* Start a New Chat Button */}
             <div className="mt-4 space-y-3">
               <Button 
@@ -652,7 +624,7 @@ export default function ChatInterface({
               <div className="h-16 w-16 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
                 <img 
                   src={logoImage} 
-                  alt="Translation Helper Logo" 
+                  alt="OBT Mentor Companion Logo" 
                   className="h-16 w-16 object-contain"
                   data-testid="img-welcome-logo"
                 />
