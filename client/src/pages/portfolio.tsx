@@ -24,14 +24,17 @@ import {
   Circle,
   Target,
   GraduationCap,
-  Activity
+  Activity,
+  FileText,
+  Download
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
   type CompetencyId,
   type FacilitatorCompetency, 
   type FacilitatorQualification, 
-  type MentorshipActivity 
+  type MentorshipActivity,
+  type QuarterlyReport
 } from "@shared/schema";
 
 const competencyStatusOptions = ['not_started', 'emerging', 'growing', 'proficient', 'advanced'] as const;
@@ -77,6 +80,12 @@ export default function Portfolio() {
   const [newActivityNotes, setNewActivityNotes] = useState("");
   const [newActivityDate, setNewActivityDate] = useState(new Date().toISOString().split('T')[0]);
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+
+  // Reports state
+  const [reportPeriodStart, setReportPeriodStart] = useState("");
+  const [reportPeriodEnd, setReportPeriodEnd] = useState("");
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<QuarterlyReport | null>(null);
 
   // Fetch competencies
   const { data: competencies = [], isLoading: loadingCompetencies } = useQuery<FacilitatorCompetency[]>({
@@ -212,6 +221,58 @@ export default function Portfolio() {
     },
   });
 
+  // Fetch reports
+  const { data: reports = [], isLoading: loadingReports } = useQuery<QuarterlyReport[]>({
+    queryKey: ['/api/facilitator/reports'],
+    enabled: isAuthenticated
+  });
+
+  // Generate report mutation
+  const generateReportMutation = useMutation({
+    mutationFn: async (data: { periodStart: string; periodEnd: string }) => {
+      await apiRequest("POST", "/api/facilitator/reports/generate", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/reports'] });
+      setReportDialogOpen(false);
+      setReportPeriodStart("");
+      setReportPeriodEnd("");
+      toast({
+        title: "Sucesso",
+        description: "Relatório gerado com sucesso",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao gerar relatório",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete report mutation
+  const deleteReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      await apiRequest("DELETE", `/api/facilitator/reports/${reportId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/reports'] });
+      setSelectedReport(null);
+      toast({
+        title: "Sucesso",
+        description: "Relatório removido",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover relatório",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Calculate competency progress
   const competencyProgress = Object.keys(CORE_COMPETENCIES).length > 0
     ? (competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length / Object.keys(CORE_COMPETENCIES).length) * 100
@@ -272,7 +333,7 @@ export default function Portfolio() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="competencies" data-testid="tab-competencies">
                 <Target className="h-4 w-4 mr-2" />
                 {!isMobile && "Competências"}
@@ -284,6 +345,10 @@ export default function Portfolio() {
               <TabsTrigger value="activities" data-testid="tab-activities">
                 <Activity className="h-4 w-4 mr-2" />
                 {!isMobile && "Atividades"}
+              </TabsTrigger>
+              <TabsTrigger value="reports" data-testid="tab-reports">
+                <FileText className="h-4 w-4 mr-2" />
+                {!isMobile && "Relatórios"}
               </TabsTrigger>
             </TabsList>
 
@@ -718,6 +783,212 @@ export default function Portfolio() {
                           </CardContent>
                         </Card>
                       ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Reports Tab */}
+            <TabsContent value="reports" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center space-x-2">
+                        <FileText className="h-5 w-5" />
+                        <span>Relatórios Trimestrais</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Gere e visualize relatórios trimestrais de progresso
+                      </CardDescription>
+                    </div>
+                    <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-generate-report">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Gerar Relatório
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Gerar Relatório Trimestral</DialogTitle>
+                          <DialogDescription>
+                            Selecione o período para o relatório
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="report-start">Início do Período</Label>
+                            <Input
+                              id="report-start"
+                              type="date"
+                              value={reportPeriodStart}
+                              onChange={(e) => setReportPeriodStart(e.target.value)}
+                              data-testid="input-period-start"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="report-end">Fim do Período</Label>
+                            <Input
+                              id="report-end"
+                              type="date"
+                              value={reportPeriodEnd}
+                              onChange={(e) => setReportPeriodEnd(e.target.value)}
+                              data-testid="input-period-end"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            onClick={() => generateReportMutation.mutate({
+                              periodStart: reportPeriodStart,
+                              periodEnd: reportPeriodEnd
+                            })}
+                            disabled={!reportPeriodStart || !reportPeriodEnd || generateReportMutation.isPending}
+                            data-testid="button-confirm-generate-report"
+                          >
+                            {generateReportMutation.isPending ? "Gerando..." : "Gerar Relatório"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingReports ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : reports.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-muted-foreground">Nenhum relatório ainda</p>
+                      <p className="text-xs text-muted-foreground">Gere seu primeiro relatório trimestral</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reports.map((report) => {
+                        const reportData = report.reportData as any;
+                        return (
+                          <Card key={report.id} data-testid={`card-report-${report.id}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <FileText className="h-5 w-5 text-primary" />
+                                    <h3 className="font-medium" data-testid={`text-report-period-${report.id}`}>
+                                      Relatório: {new Date(report.periodStart).toLocaleDateString('pt-BR')} - {new Date(report.periodEnd).toLocaleDateString('pt-BR')}
+                                    </h3>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mb-3">
+                                    Gerado em: {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('pt-BR') : 'N/A'}
+                                  </div>
+                                  
+                                  {selectedReport?.id === report.id && reportData && (
+                                    <div className="mt-4 space-y-4 border-t pt-4">
+                                      {/* Summary */}
+                                      <div>
+                                        <h4 className="font-medium mb-2">Resumo</h4>
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                          <div>
+                                            <span className="text-muted-foreground">Competências Concluídas:</span>{' '}
+                                            <span className="font-medium">{reportData.summary?.completedCompetencies || 0} / {reportData.summary?.totalCompetencies || 0}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Qualificações:</span>{' '}
+                                            <span className="font-medium">{reportData.summary?.totalQualifications || 0}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Atividades:</span>{' '}
+                                            <span className="font-medium">{reportData.summary?.totalActivities || 0}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Capítulos Traduzidos:</span>{' '}
+                                            <span className="font-medium">{reportData.summary?.totalChapters || 0}</span>
+                                          </div>
+                                        </div>
+                                        {reportData.summary?.languages && reportData.summary.languages.length > 0 && (
+                                          <div className="mt-2">
+                                            <span className="text-sm text-muted-foreground">Idiomas:</span>{' '}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {reportData.summary.languages.map((lang: string, idx: number) => (
+                                                <Badge key={idx} variant="secondary">{lang}</Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Competencies */}
+                                      {reportData.competencies && reportData.competencies.length > 0 && (
+                                        <div>
+                                          <h4 className="font-medium mb-2">Competências ({reportData.competencies.length})</h4>
+                                          <div className="space-y-1 text-sm">
+                                            {reportData.competencies.slice(0, 5).map((comp: any, idx: number) => (
+                                              <div key={idx} className="flex justify-between">
+                                                <span>{CORE_COMPETENCIES[comp.competencyId as CompetencyId]}</span>
+                                                <Badge variant="outline" className="text-xs">
+                                                  {statusLabels[comp.status as CompetencyStatus]}
+                                                </Badge>
+                                              </div>
+                                            ))}
+                                            {reportData.competencies.length > 5 && (
+                                              <p className="text-xs text-muted-foreground italic">
+                                                +{reportData.competencies.length - 5} mais...
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Activities */}
+                                      {reportData.activities && reportData.activities.length > 0 && (
+                                        <div>
+                                          <h4 className="font-medium mb-2">Atividades do Período ({reportData.activities.length})</h4>
+                                          <div className="space-y-1 text-sm">
+                                            {reportData.activities.slice(0, 3).map((act: any, idx: number) => (
+                                              <div key={idx} className="flex justify-between">
+                                                <span>{act.languageName}</span>
+                                                <span className="text-muted-foreground">{act.chaptersCount} cap.</span>
+                                              </div>
+                                            ))}
+                                            {reportData.activities.length > 3 && (
+                                              <p className="text-xs text-muted-foreground italic">
+                                                +{reportData.activities.length - 3} mais...
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="flex space-x-2 mt-3">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setSelectedReport(selectedReport?.id === report.id ? null : report)}
+                                      data-testid={`button-toggle-report-${report.id}`}
+                                    >
+                                      {selectedReport?.id === report.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteReportMutation.mutate(report.id)}
+                                  className="text-destructive hover:text-destructive"
+                                  data-testid={`button-delete-report-${report.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
