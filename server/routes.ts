@@ -782,11 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get any image attachments for vision processing
       const attachments = await storage.getMessageAttachments(userMessage.id);
       const imageAttachments = attachments.filter(att => att.fileType === 'image');
-      const imageUrls = imageAttachments.map(att => {
-        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-        const host = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-        return `${protocol}://${host}/${att.storagePath}`;
-      });
+      const imageFilePaths = imageAttachments.map(att => att.storagePath);
 
       // Prepare user message with context if available
       const messageWithContext = relevantContext 
@@ -800,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userMessage: messageWithContext,
         assistantId: chat.assistantId as any,
         threadId: threadId || undefined,
-        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        imageFilePaths: imageFilePaths.length > 0 ? imageFilePaths : undefined,
       }, userId);
 
       // Create assistant message
@@ -944,11 +940,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For new messages without attachments, there's nothing to wait for
       const attachments = await storage.getMessageAttachments(userMessage.id);
       const imageAttachments = attachments.filter(att => att.fileType === 'image');
-      const imageUrls = imageAttachments.map(att => {
-        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-        const host = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-        return `${protocol}://${host}/${att.storagePath}`;
-      });
+      const imageFilePaths = imageAttachments.map(att => att.storagePath);
+      
+      if (imageFilePaths.length > 0) {
+        console.log('[Image File Paths]', imageFilePaths);
+      }
 
       // Retrieve comprehensive context (portfolio + recent messages + vector search)
       const relevantContext = await getComprehensiveContext({
@@ -1094,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userMessage: messageWithContext,
           assistantId: chat.assistantId as any,
           threadId: threadId || undefined,
-          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          imageFilePaths: imageFilePaths.length > 0 ? imageFilePaths : undefined,
         }, userId, toolCallExecutor)) {
           
           if (chunk.type === 'tool_call') {
