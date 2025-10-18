@@ -1,6 +1,7 @@
 import {
   users,
   chats,
+  chatChains,
   messages,
   messageAttachments,
   apiKeys,
@@ -16,6 +17,8 @@ import {
   type InsertUser,
   type Chat,
   type InsertChat,
+  type ChatChain,
+  type InsertChatChain,
   type Message,
   type InsertMessage,
   type MessageAttachment,
@@ -56,6 +59,16 @@ export interface IStorage {
   incrementUserMessageCount(userId: string): Promise<void>;
   incrementUserApiUsage(userId: string): Promise<void>;
   updateUserLastLogin(userId: string): Promise<void>;
+  
+  // Chat chain operations
+  getUserChatChains(userId: string): Promise<ChatChain[]>;
+  getChatChain(chainId: string, userId: string): Promise<ChatChain | undefined>;
+  createChatChain(chain: InsertChatChain): Promise<ChatChain>;
+  updateChatChain(chainId: string, updates: Partial<InsertChatChain>, userId: string): Promise<ChatChain>;
+  deleteChatChain(chainId: string, userId: string): Promise<void>;
+  getChainChats(chainId: string, userId: string): Promise<Chat[]>;
+  addChatToChain(chatId: string, chainId: string, userId: string): Promise<Chat>;
+  removeChatFromChain(chatId: string, userId: string): Promise<Chat>;
   
   // Chat operations
   getUserChats(userId: string): Promise<Chat[]>;
@@ -128,6 +141,7 @@ export interface IStorage {
   getFacilitatorCompetencies(facilitatorId: string): Promise<FacilitatorCompetency[]>;
   upsertCompetency(competency: InsertFacilitatorCompetency): Promise<FacilitatorCompetency>;
   updateCompetencyStatus(competencyId: string, status: string, notes?: string): Promise<FacilitatorCompetency>;
+  recalculateCompetencies(facilitatorId: string): Promise<void>;
   
   // Qualification operations
   getFacilitatorQualifications(facilitatorId: string): Promise<FacilitatorQualification[]>;
@@ -224,6 +238,96 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));
+  }
+
+  // Chat chain operations
+  async getUserChatChains(userId: string): Promise<ChatChain[]> {
+    return await db
+      .select()
+      .from(chatChains)
+      .where(eq(chatChains.userId, userId))
+      .orderBy(desc(chatChains.updatedAt));
+  }
+
+  async getChatChain(chainId: string, userId: string): Promise<ChatChain | undefined> {
+    const [chain] = await db
+      .select()
+      .from(chatChains)
+      .where(and(eq(chatChains.id, chainId), eq(chatChains.userId, userId)));
+    return chain;
+  }
+
+  async createChatChain(chain: InsertChatChain): Promise<ChatChain> {
+    const [newChain] = await db.insert(chatChains).values(chain).returning();
+    return newChain;
+  }
+
+  async updateChatChain(chainId: string, updates: Partial<InsertChatChain>, userId: string): Promise<ChatChain> {
+    const [updatedChain] = await db
+      .update(chatChains)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(chatChains.id, chainId), eq(chatChains.userId, userId)))
+      .returning();
+    return updatedChain;
+  }
+
+  async deleteChatChain(chainId: string, userId: string): Promise<void> {
+    // First, remove all chats from this chain
+    await db
+      .update(chats)
+      .set({ chainId: null, sequenceIndex: null })
+      .where(eq(chats.chainId, chainId));
+    
+    // Then delete the chain
+    await db
+      .delete(chatChains)
+      .where(and(eq(chatChains.id, chainId), eq(chatChains.userId, userId)));
+  }
+
+  async getChainChats(chainId: string, userId: string): Promise<Chat[]> {
+    return await db
+      .select()
+      .from(chats)
+      .where(and(eq(chats.chainId, chainId), eq(chats.userId, userId)))
+      .orderBy(chats.sequenceIndex);
+  }
+
+  async addChatToChain(chatId: string, chainId: string, userId: string): Promise<Chat> {
+    // Get the max sequence index for this chain
+    const chainChats = await this.getChainChats(chainId, userId);
+    const nextIndex = chainChats.length;
+    
+    const [updatedChat] = await db
+      .update(chats)
+      .set({ 
+        chainId, 
+        sequenceIndex: nextIndex,
+        updatedAt: new Date()
+      })
+      .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
+      .returning();
+    
+    // Update chain's updatedAt
+    await db
+      .update(chatChains)
+      .set({ updatedAt: new Date() })
+      .where(eq(chatChains.id, chainId));
+    
+    return updatedChat;
+  }
+
+  async removeChatFromChain(chatId: string, userId: string): Promise<Chat> {
+    const [updatedChat] = await db
+      .update(chats)
+      .set({ 
+        chainId: null, 
+        sequenceIndex: null,
+        updatedAt: new Date()
+      })
+      .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
+      .returning();
+    
+    return updatedChat;
   }
 
   // Chat operations
@@ -725,6 +829,68 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updated;
+  }
+
+  async recalculateCompetencies(facilitatorId: string): Promise<void> {
+    // Import here to avoid circular dependencies
+    const { calculateCompetencyScores, scoreToStatus } = await import('./competency-mapping');
+    
+    // Get all qualifications for this facilitator
+    const qualifications = await this.getFacilitatorQualifications(facilitatorId);
+    
+    // Calculate scores
+    const scores = calculateCompetencyScores(qualifications);
+    
+    // Get existing competencies
+    const existingCompetencies = await this.getFacilitatorCompetencies(facilitatorId);
+    const competencyMap = new Map(
+      existingCompetencies.map(c => [c.competencyId, c])
+    );
+    
+    // Update each competency with calculated scores
+    const scoreEntries = Array.from(scores.entries());
+    for (const [competencyId, score] of scoreEntries) {
+      const suggestedStatus = scoreToStatus(score);
+      const existing = competencyMap.get(competencyId);
+      
+      if (existing) {
+        // Update existing competency
+        if (existing.statusSource === 'auto') {
+          // Auto mode: update status automatically
+          await db
+            .update(facilitatorCompetencies)
+            .set({
+              status: suggestedStatus as any,
+              autoScore: score,
+              suggestedStatus: suggestedStatus as any,
+              lastUpdated: new Date(),
+            })
+            .where(eq(facilitatorCompetencies.id, existing.id));
+        } else {
+          // Manual mode: just update suggested status
+          await db
+            .update(facilitatorCompetencies)
+            .set({
+              autoScore: score,
+              suggestedStatus: suggestedStatus as any,
+              lastUpdated: new Date(),
+            })
+            .where(eq(facilitatorCompetencies.id, existing.id));
+        }
+      } else {
+        // Create new competency in auto mode
+        await db
+          .insert(facilitatorCompetencies)
+          .values({
+            facilitatorId,
+            competencyId,
+            status: suggestedStatus as any,
+            autoScore: score,
+            statusSource: 'auto',
+            suggestedStatus: suggestedStatus as any,
+          });
+      }
+    }
   }
 
   // Qualification operations

@@ -481,6 +481,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat Chain routes
+  app.get('/api/chat-chains', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const chains = await storage.getUserChatChains(userId);
+      res.json(chains);
+    } catch (error) {
+      console.error("Error fetching chat chains:", error);
+      res.status(500).json({ message: "Failed to fetch chat chains" });
+    }
+  });
+
+  app.post('/api/chat-chains', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { title, summary } = req.body;
+      
+      const chain = await storage.createChatChain({
+        userId,
+        title,
+        summary: summary || null,
+        activeChatId: null,
+      });
+      
+      res.json(chain);
+    } catch (error) {
+      console.error("Error creating chat chain:", error);
+      res.status(500).json({ message: "Failed to create chat chain" });
+    }
+  });
+
+  app.get('/api/chat-chains/:chainId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chainId } = req.params;
+      
+      const chain = await storage.getChatChain(chainId, userId);
+      
+      if (!chain) {
+        return res.status(404).json({ message: "Chat chain not found" });
+      }
+      
+      res.json(chain);
+    } catch (error) {
+      console.error("Error fetching chat chain:", error);
+      res.status(500).json({ message: "Failed to fetch chat chain" });
+    }
+  });
+
+  app.patch('/api/chat-chains/:chainId', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chainId } = req.params;
+      const { title, summary, activeChatId } = req.body;
+      
+      // Verify chain exists and belongs to user
+      const existingChain = await storage.getChatChain(chainId, userId);
+      if (!existingChain) {
+        return res.status(404).json({ message: "Chat chain not found" });
+      }
+      
+      const updates: any = {};
+      if (title !== undefined) updates.title = title;
+      if (summary !== undefined) updates.summary = summary;
+      
+      // Validate activeChatId if provided
+      if (activeChatId !== undefined) {
+        if (activeChatId !== null) {
+          // Verify the chat belongs to this user and is in this chain
+          const chat = await storage.getChat(activeChatId, userId);
+          if (!chat) {
+            return res.status(403).json({ message: "Chat not found or unauthorized" });
+          }
+          if (chat.chainId !== chainId) {
+            return res.status(400).json({ message: "Chat is not part of this chain" });
+          }
+        }
+        updates.activeChatId = activeChatId;
+      }
+      
+      const chain = await storage.updateChatChain(chainId, updates, userId);
+      res.json(chain);
+    } catch (error) {
+      console.error("Error updating chat chain:", error);
+      res.status(500).json({ message: "Failed to update chat chain" });
+    }
+  });
+
+  app.delete('/api/chat-chains/:chainId', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chainId } = req.params;
+      
+      // Verify chain exists and belongs to user
+      const existingChain = await storage.getChatChain(chainId, userId);
+      if (!existingChain) {
+        return res.status(404).json({ message: "Chat chain not found" });
+      }
+      
+      await storage.deleteChatChain(chainId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting chat chain:", error);
+      res.status(500).json({ message: "Failed to delete chat chain" });
+    }
+  });
+
+  app.get('/api/chat-chains/:chainId/chats', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chainId } = req.params;
+      
+      const chats = await storage.getChainChats(chainId, userId);
+      res.json(chats);
+    } catch (error) {
+      console.error("Error fetching chain chats:", error);
+      res.status(500).json({ message: "Failed to fetch chain chats" });
+    }
+  });
+
+  app.post('/api/chats/:chatId/chain', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chatId } = req.params;
+      const { chainId } = req.body;
+      
+      if (chainId) {
+        // Add chat to chain
+        const chat = await storage.addChatToChain(chatId, chainId, userId);
+        res.json(chat);
+      } else {
+        // Remove from chain
+        const chat = await storage.removeChatFromChain(chatId, userId);
+        res.json(chat);
+      }
+    } catch (error) {
+      console.error("Error updating chat chain membership:", error);
+      res.status(500).json({ message: "Failed to update chat chain membership" });
+    }
+  });
+
   // Chat routes
   app.get('/api/chats', requireAuth, async (req: any, res) => {
     try {
@@ -1898,6 +2039,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description,
       });
       
+      // Recalculate competencies based on new qualification
+      await storage.recalculateCompetencies(facilitator.id);
+      
       res.json(qualification);
     } catch (error) {
       console.error("Error creating qualification:", error);
@@ -1909,7 +2053,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { qualificationId } = req.params;
       
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
       await storage.deleteQualification(qualificationId);
+      
+      // Recalculate competencies after deletion
+      if (facilitator) {
+        await storage.recalculateCompetencies(facilitator.id);
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting qualification:", error);
