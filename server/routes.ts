@@ -1974,16 +1974,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: q.description
         })),
         activities: periodActivities.map(a => ({
-          language: a.language,
-          chaptersMentored: a.chaptersMentored,
+          language: a.languageName,
+          chaptersMentored: a.chaptersCount,
           activityDate: a.activityDate,
           notes: a.notes
         })),
         summary: {
           totalCompetenciesProficient: competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length,
           totalQualifications: qualifications.length,
-          periodLanguages: new Set(periodActivities.map(a => a.language)).size,
-          periodChapters: periodActivities.reduce((sum, a) => sum + (a.chaptersMentored || 0), 0)
+          periodLanguages: new Set(periodActivities.map(a => a.languageName)).size,
+          periodChapters: periodActivities.reduce((sum, a) => sum + (a.chaptersCount || 0), 0)
         }
       };
       
