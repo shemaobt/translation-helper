@@ -322,7 +322,9 @@ export default function ChatInterface({
         userMessageId = messageData.id;
         
         // Upload the file
-        await uploadFileAttachment(userMessageId, file);
+        if (userMessageId) {
+          await uploadFileAttachment(userMessageId, file);
+        }
         setUploadProgress(0);
         
         // Update queries to show the message
