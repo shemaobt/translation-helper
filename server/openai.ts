@@ -194,8 +194,13 @@ export async function generateAssistantResponse(
     // Store the conversation ID for future messages
     if (!conversationId && response.conversation) {
       const newConversationId = typeof response.conversation === 'string' ? response.conversation : response.conversation.id;
-      await storage.updateUserConversationId(userId, newConversationId);
+      // Save conversation ID to both user (global) and chat (specific)
+      await Promise.all([
+        storage.updateUserConversationId(userId, newConversationId),
+        storage.updateChatConversationId(request.chatId, newConversationId, userId)
+      ]);
       conversationId = newConversationId;
+      console.log(`[OpenAI] Saved conversation ID: ${conversationId} for chat: ${request.chatId}`);
     }
 
     // Extract text content from response output
@@ -294,7 +299,12 @@ export async function* generateAssistantResponseStream(
           : chunk.response.conversation?.id;
         if (convId && !finalConversationId) {
           finalConversationId = convId;
-          await storage.updateUserConversationId(userId, convId);
+          // Save conversation ID to both user (global) and chat (specific)
+          await Promise.all([
+            storage.updateUserConversationId(userId, convId),
+            storage.updateChatConversationId(request.chatId, convId, userId)
+          ]);
+          console.log(`[Stream Generator] Saved conversation ID: ${convId} for chat: ${request.chatId}`);
         }
       }
 
