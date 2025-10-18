@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,10 @@ import {
   GraduationCap,
   Activity,
   FileText,
-  Download
+  Download,
+  User,
+  Edit,
+  Save
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
@@ -60,7 +63,7 @@ export default function Portfolio() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("competencies");
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Competency notes editing state
   const [editingCompetency, setEditingCompetency] = useState<CompetencyId | null>(null);
@@ -89,29 +92,40 @@ export default function Portfolio() {
 
   // Fetch competencies
   const { data: competencies = [], isLoading: loadingCompetencies } = useQuery<FacilitatorCompetency[]>({
-    queryKey: ['/api/competencies'],
+    queryKey: ['/api/facilitator/competencies'],
     enabled: isAuthenticated
   });
 
   // Fetch qualifications
   const { data: qualifications = [], isLoading: loadingQualifications } = useQuery<FacilitatorQualification[]>({
-    queryKey: ['/api/qualifications'],
+    queryKey: ['/api/facilitator/qualifications'],
     enabled: isAuthenticated
   });
 
   // Fetch activities
   const { data: activities = [], isLoading: loadingActivities } = useQuery<MentorshipActivity[]>({
-    queryKey: ['/api/activities'],
+    queryKey: ['/api/facilitator/activities'],
     enabled: isAuthenticated
   });
+
+  // Fetch facilitator profile
+  const { data: facilitatorProfile, isLoading: loadingProfile } = useQuery<{ region: string | null; mentorSupervisor: string | null }>({
+    queryKey: ['/api/facilitator/profile'],
+    enabled: isAuthenticated
+  });
+
+  // Profile editing state
+  const [profileRegion, setProfileRegion] = useState("");
+  const [profileSupervisor, setProfileSupervisor] = useState("");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Update competency status mutation
   const updateCompetencyMutation = useMutation({
     mutationFn: async ({ competencyId, status, notes }: { competencyId: CompetencyId; status: CompetencyStatus; notes?: string }) => {
-      await apiRequest("POST", "/api/competencies", { competencyId, status, notes });
+      await apiRequest("POST", "/api/facilitator/competencies", { competencyId, status, notes });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/competencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/competencies'] });
       toast({
         title: "Sucesso",
         description: "Status da competência atualizado",
@@ -129,10 +143,10 @@ export default function Portfolio() {
   // Create qualification mutation
   const createQualificationMutation = useMutation({
     mutationFn: async (data: { courseTitle: string; institution: string; completionDate: string; credential?: string; description?: string }) => {
-      await apiRequest("POST", "/api/qualifications", data);
+      await apiRequest("POST", "/api/facilitator/qualifications", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/qualifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/qualifications'] });
       setQualificationDialogOpen(false);
       setNewQualCourseTitle("");
       setNewQualInstitution("");
@@ -156,10 +170,10 @@ export default function Portfolio() {
   // Delete qualification mutation
   const deleteQualificationMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/qualifications/${id}`);
+      await apiRequest("DELETE", `/api/facilitator/qualifications/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/qualifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/qualifications'] });
       toast({
         title: "Sucesso",
         description: "Qualificação removida",
@@ -177,10 +191,10 @@ export default function Portfolio() {
   // Create activity mutation
   const createActivityMutation = useMutation({
     mutationFn: async (data: { languageName: string; chaptersCount: number; activityDate: string; notes?: string }) => {
-      await apiRequest("POST", "/api/activities", data);
+      await apiRequest("POST", "/api/facilitator/activities", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/activities'] });
       setActivityDialogOpen(false);
       setNewActivityLanguage("");
       setNewActivityChapters("1");
@@ -203,10 +217,10 @@ export default function Portfolio() {
   // Delete activity mutation
   const deleteActivityMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/activities/${id}`);
+      await apiRequest("DELETE", `/api/facilitator/activities/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/activities'] });
       toast({
         title: "Sucesso",
         description: "Atividade removida",
@@ -216,6 +230,28 @@ export default function Portfolio() {
       toast({
         title: "Erro",
         description: "Falha ao remover atividade",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update facilitator profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { region: string; mentorSupervisor: string }) => {
+      await apiRequest("POST", "/api/facilitator/profile", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/facilitator/profile'] });
+      setIsEditingProfile(false);
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar perfil",
         variant: "destructive",
       });
     },
@@ -272,6 +308,15 @@ export default function Portfolio() {
       });
     },
   });
+
+
+  // Populate profile form when profile data loads
+  useEffect(() => {
+    if (facilitatorProfile) {
+      setProfileRegion(facilitatorProfile.region || "");
+      setProfileSupervisor(facilitatorProfile.mentorSupervisor || "");
+    }
+  }, [facilitatorProfile]);
 
   // Calculate competency progress
   const competencyProgress = Object.keys(CORE_COMPETENCIES).length > 0
@@ -333,7 +378,11 @@ export default function Portfolio() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="profile" data-testid="tab-profile">
+                <User className="h-4 w-4 mr-2" />
+                {!isMobile && "Perfil"}
+              </TabsTrigger>
               <TabsTrigger value="competencies" data-testid="tab-competencies">
                 <Target className="h-4 w-4 mr-2" />
                 {!isMobile && "Competências"}
@@ -351,6 +400,98 @@ export default function Portfolio() {
                 {!isMobile && "Relatórios"}
               </TabsTrigger>
             </TabsList>
+
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="h-5 w-5" />
+                    <span>Perfil do Facilitador</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie suas informações de perfil
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingProfile ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="profile-region">Região (opcional)</Label>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Input
+                            id="profile-region"
+                            value={profileRegion}
+                            onChange={(e) => setProfileRegion(e.target.value)}
+                            placeholder="Ex: Nordeste do Brasil"
+                            disabled={!isEditingProfile}
+                            data-testid="input-profile-region"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="profile-supervisor">Supervisor (opcional)</Label>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Input
+                            id="profile-supervisor"
+                            value={profileSupervisor}
+                            onChange={(e) => setProfileSupervisor(e.target.value)}
+                            placeholder="Nome do supervisor"
+                            disabled={!isEditingProfile}
+                            data-testid="input-profile-supervisor"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {isEditingProfile ? (
+                          <>
+                            <Button
+                              onClick={() => {
+                                updateProfileMutation.mutate({
+                                  region: profileRegion,
+                                  mentorSupervisor: profileSupervisor
+                                });
+                              }}
+                              disabled={updateProfileMutation.isPending}
+                              data-testid="button-save-profile"
+                            >
+                              <Save className="h-4 w-4 mr-2" />
+                              Salvar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditingProfile(false);
+                                if (facilitatorProfile) {
+                                  setProfileRegion(facilitatorProfile.region || "");
+                                  setProfileSupervisor(facilitatorProfile.mentorSupervisor || "");
+                                }
+                              }}
+                              disabled={updateProfileMutation.isPending}
+                              data-testid="button-cancel-profile"
+                            >
+                              Cancelar
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            onClick={() => setIsEditingProfile(true)}
+                            data-testid="button-edit-profile"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar Perfil
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Competencies Tab */}
             <TabsContent value="competencies" className="mt-6">
