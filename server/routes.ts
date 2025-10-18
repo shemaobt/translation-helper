@@ -773,12 +773,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
                 
+                // Convert completion date string to Date object
+                let completionDate: Date;
+                if (args.completionDate) {
+                  completionDate = new Date(args.completionDate);
+                } else {
+                  completionDate = new Date();
+                }
+                
                 // Add qualification
                 const qualification = await storage.createQualification({
                   facilitatorId: facilitator.id,
                   courseTitle: args.courseName,
                   institution: args.institution,
-                  completionDate: args.completionDate,
+                  completionDate: completionDate,
                   credential: args.credentialType || null,
                   description: args.description || null,
                 });
