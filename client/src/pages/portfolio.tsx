@@ -56,11 +56,11 @@ const statusLabels: Record<CompetencyStatus, string> = {
 };
 
 const statusColors: Record<CompetencyStatus, string> = {
-  not_started: 'text-muted-foreground',
-  emerging: 'text-yellow-600',
-  growing: 'text-blue-600',
-  proficient: 'text-green-600',
-  advanced: 'text-purple-600'
+  not_started: '',
+  emerging: '',
+  growing: '',
+  proficient: '',
+  advanced: ''
 };
 
 export default function Portfolio() {
