@@ -270,32 +270,27 @@ export async function* generateAssistantResponseStream(
     for await (const chunk of stream) {
       chunkCount++;
       console.log(`[OpenAI] Chunk ${chunkCount}:`, JSON.stringify(chunk, null, 2).substring(0, 500));
-      // Track conversation ID from response
-      if (chunk.conversation && !finalConversationId) {
-        const newConversationId = typeof chunk.conversation === 'string' ? chunk.conversation : chunk.conversation?.id;
-        if (newConversationId) {
-          finalConversationId = newConversationId;
-          await storage.updateUserConversationId(userId, newConversationId);
+      
+      // Track conversation ID from response events
+      if (chunk.response?.conversation) {
+        const convId = typeof chunk.response.conversation === 'string' 
+          ? chunk.response.conversation 
+          : chunk.response.conversation?.id;
+        if (convId && !finalConversationId) {
+          finalConversationId = convId;
+          await storage.updateUserConversationId(userId, convId);
         }
       }
 
-      // Stream text output
-      if (chunk.output) {
-        for (const item of chunk.output) {
-          if (item.type === "message" && item.content) {
-            for (const content of item.content) {
-              if (content.type === "output_text" && content.text) {
-                fullContent += content.text;
-                yield { type: 'content', data: content.text };
-              }
-            }
-          }
-        }
+      // Handle text delta events
+      if (chunk.type === 'response.output_text.delta' && chunk.delta) {
+        fullContent += chunk.delta;
+        yield { type: 'content', data: chunk.delta };
       }
 
-      // Track token usage
-      if (chunk.usage) {
-        totalTokens = chunk.usage.total_tokens || 0;
+      // Track token usage from completed response
+      if (chunk.type === 'response.completed' && chunk.response?.usage) {
+        totalTokens = chunk.response.usage.total_tokens || 0;
       }
     }
 
