@@ -22,6 +22,8 @@ const signupSchema = z.object({
   confirmPassword: z.string(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  region: z.string().optional(),
+  mentorSupervisor: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -45,6 +47,8 @@ function Signup() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      region: "",
+      mentorSupervisor: "",
     },
   });
 
@@ -125,6 +129,44 @@ function Signup() {
                         <Input
                           placeholder="Last name"
                           data-testid="input-last-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Region (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Northeast Brazil"
+                          data-testid="input-region"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="mentorSupervisor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supervisor (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Supervisor's name"
+                          data-testid="input-supervisor"
                           {...field}
                         />
                       </FormControl>
