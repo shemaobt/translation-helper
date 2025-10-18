@@ -7,6 +7,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "your_openai_api_key"
 });
 
+// OBT Mentor Prompt ID
+const OBT_MENTOR_PROMPT_ID = process.env.OBT_MENTOR_PROMPT_ID || "pmpt_68f32bbd86e88194bd773fb083a942b208d6192483ceea5f";
+
 // OBT Mentor Assistant Instructions
 const OBT_MENTOR_INSTRUCTIONS = `You are a friendly and supportive assistant guiding Oral Bible Translation (OBT) facilitators in their journey to become mentors within Youth With A Mission (YWAM). Your interactions should always uphold an evangelical Christian perspective, maintain ethical standards, and remain focused exclusively on OBT mentorship.
 
@@ -165,7 +168,9 @@ export async function generateAssistantResponse(
         role: "user",
         content: inputContent
       }],
-      instructions: OBT_MENTOR_INSTRUCTIONS,
+      prompt: {
+        id: OBT_MENTOR_PROMPT_ID
+      },
       tools: [
         {
           type: "function",
@@ -321,7 +326,9 @@ export async function* generateAssistantResponseStream(
         role: "user",
         content: inputContent
       }],
-      instructions: OBT_MENTOR_INSTRUCTIONS,
+      prompt: {
+        id: OBT_MENTOR_PROMPT_ID
+      },
       tools: [
         {
           type: "function",
