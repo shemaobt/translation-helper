@@ -91,7 +91,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
       sections.push(
         new Paragraph({
           children: [
-            new TextRun({ text: `${comp.definition.namePt}: `, bold: true }),
+            new TextRun({ text: `${comp.definition.name}: `, bold: true }),
             new TextRun(translateStatus(comp.status)),
           ],
           spacing: { after: 100 },
