@@ -102,6 +102,19 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const messageAttachments = pgTable("message_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  filename: varchar("filename").notNull(), // Stored filename
+  originalName: varchar("original_name").notNull(), // User's original filename
+  mimeType: varchar("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(), // In bytes
+  fileType: varchar("file_type", { enum: ["image", "audio"] }).notNull(),
+  storagePath: varchar("storage_path").notNull(), // Relative path to file
+  transcription: text("transcription"), // For audio files (from Whisper)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const apiKeys = pgTable("api_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -211,10 +224,18 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   messages: many(messages),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
+export const messagesRelations = relations(messages, ({ one, many }) => ({
   chat: one(chats, {
     fields: [messages.chatId],
     references: [chats.id],
+  }),
+  attachments: many(messageAttachments),
+}));
+
+export const messageAttachmentsRelations = relations(messageAttachments, ({ one }) => ({
+  message: one(messages, {
+    fields: [messageAttachments.messageId],
+    references: [messages.id],
   }),
 }));
 
@@ -356,6 +377,11 @@ export const insertQuarterlyReportSchema = createInsertSchema(quarterlyReports).
   generatedAt: true,
 });
 
+export const insertMessageAttachmentSchema = createInsertSchema(messageAttachments).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -380,3 +406,5 @@ export type MentorshipActivity = typeof mentorshipActivities.$inferSelect;
 export type InsertMentorshipActivity = z.infer<typeof insertMentorshipActivitySchema>;
 export type QuarterlyReport = typeof quarterlyReports.$inferSelect;
 export type InsertQuarterlyReport = z.infer<typeof insertQuarterlyReportSchema>;
+export type MessageAttachment = typeof messageAttachments.$inferSelect;
+export type InsertMessageAttachment = z.infer<typeof insertMessageAttachmentSchema>;
