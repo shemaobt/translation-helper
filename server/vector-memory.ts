@@ -1,5 +1,7 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import OpenAI from 'openai';
+import { storage } from './storage';
+import type { Message } from '@shared/schema';
 
 // Initialize Qdrant client
 const qdrant = new QdrantClient({
@@ -326,6 +328,137 @@ export async function getContextForQuery(params: {
     return context;
   } catch (error) {
     console.error('Error getting context for query:', error);
+    return '';
+  }
+}
+
+/**
+ * Get comprehensive context including portfolio data, recent messages, and vector search
+ */
+export async function getComprehensiveContext(params: {
+  query: string;
+  chatId?: string;
+  facilitatorId?: string;
+  userId: string;
+  includeGlobal?: boolean;
+}): Promise<string> {
+  try {
+    console.log('[Comprehensive Context] Building full context for user:', params.userId);
+    
+    let context = '';
+
+    // 1. Portfolio Data - Always include current facilitator profile
+    if (params.facilitatorId) {
+      try {
+        const facilitator = await storage.getFacilitatorByUserId(params.userId);
+        
+        if (facilitator) {
+          const [competencies, qualifications, activities] = await Promise.all([
+            storage.getFacilitatorCompetencies(facilitator.id),
+            storage.getFacilitatorQualifications(facilitator.id),
+            storage.getFacilitatorActivities(facilitator.id),
+          ]);
+
+          context += '## Current Portfolio Information:\n\n';
+          
+          context += `**Profile:**\n`;
+          if (facilitator.region) context += `- Region: ${facilitator.region}\n`;
+          if (facilitator.mentorSupervisor) context += `- Supervisor: ${facilitator.mentorSupervisor}\n`;
+          context += `- Total Languages Mentored: ${facilitator.totalLanguagesMentored}\n`;
+          context += `- Total Chapters Mentored: ${facilitator.totalChaptersMentored}\n\n`;
+
+          if (competencies && competencies.length > 0) {
+            context += `**Competencies:**\n`;
+            competencies.forEach((comp: any) => {
+              context += `- ${comp.competencyId}: ${comp.status}`;
+              if (comp.notes) context += ` (${comp.notes})`;
+              context += '\n';
+            });
+            context += '\n';
+          }
+
+          if (qualifications && qualifications.length > 0) {
+            context += `**Qualifications:**\n`;
+            qualifications.forEach((qual: any, idx: number) => {
+              context += `${idx + 1}. ${qual.courseTitle}`;
+              if (qual.institution) context += ` - ${qual.institution}`;
+              if (qual.completionDate) {
+                const date = new Date(qual.completionDate);
+                context += ` (${date.getFullYear()})`;
+              }
+              if (qual.credentialType) context += ` [${qual.credentialType}]`;
+              context += '\n';
+            });
+            context += '\n';
+          }
+
+          if (activities && activities.length > 0) {
+            context += `**Recent Mentorship Activities:**\n`;
+            activities.slice(-5).forEach((act: any, idx: number) => {
+              context += `${idx + 1}. ${act.languageName}: ${act.chaptersCount} chapters`;
+              if (act.notes) context += ` - ${act.notes}`;
+              context += '\n';
+            });
+            context += '\n';
+          }
+
+          console.log('[Comprehensive Context] Added portfolio data');
+        }
+      } catch (error) {
+        console.error('[Comprehensive Context] Error fetching portfolio:', error);
+      }
+    }
+
+    // 2. Recent Messages from ALL User Chats
+    try {
+      const userChats = await storage.getUserChats(params.userId);
+      const allMessages: Message[] = [];
+      
+      // Fetch messages from all chats
+      for (const chat of userChats) {
+        const messages = await storage.getChatMessages(chat.id, params.userId);
+        allMessages.push(...messages);
+      }
+      
+      // Sort by creation date and take last 20
+      const recentMessages = allMessages
+        .filter(msg => msg.createdAt != null)
+        .sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime())
+        .slice(-20);
+
+      if (recentMessages.length > 0) {
+        context += '## Recent Conversation History:\n\n';
+        recentMessages.forEach((msg) => {
+          const truncated = msg.content.length > 150 
+            ? msg.content.substring(0, 150) + '...' 
+            : msg.content;
+          context += `[${msg.role}]: ${truncated}\n`;
+        });
+        context += '\n';
+        console.log(`[Comprehensive Context] Added ${recentMessages.length} recent messages`);
+      }
+    } catch (error) {
+      console.error('[Comprehensive Context] Error fetching recent messages:', error);
+    }
+
+    // 3. Vector Search Results (semantic search across past conversations)
+    const vectorContext = await getContextForQuery({
+      query: params.query,
+      chatId: params.chatId,
+      facilitatorId: params.facilitatorId,
+      userId: params.userId,
+      includeGlobal: params.includeGlobal,
+    });
+
+    if (vectorContext) {
+      context += vectorContext;
+    }
+
+    console.log(`[Comprehensive Context] Total context length: ${context.length} characters`);
+    
+    return context;
+  } catch (error) {
+    console.error('[Comprehensive Context] Error building comprehensive context:', error);
     return '';
   }
 }
