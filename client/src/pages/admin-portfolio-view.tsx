@@ -188,7 +188,6 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                       {(Object.keys(CORE_COMPETENCIES) as CompetencyId[]).map((competencyId) => {
                         const status = getCompetencyStatus(competencyId);
                         const competencyData = getCompetencyData(competencyId);
-                        const isAuto = competencyData?.statusSource === 'auto';
 
                         return (
                           <Card key={competencyId} data-testid={`card-competency-${competencyId}`}>
@@ -204,14 +203,6 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                     <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
                                       {getCompetencyName(competencyId)}
                                     </h3>
-                                    {isAuto ? (
-                                      <Badge variant="secondary" className="flex items-center space-x-1">
-                                        <Sparkles className="h-3 w-3" />
-                                        <span>Auto</span>
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline">Manual</Badge>
-                                    )}
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <Badge className={statusColors[status]}>

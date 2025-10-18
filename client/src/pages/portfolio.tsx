@@ -579,7 +579,6 @@ export default function Portfolio() {
                         const notes = getCompetencyNotes(competencyId);
                         const isEditing = editingCompetency === competencyId;
                         const competencyData = getCompetencyData(competencyId);
-                        const isAuto = competencyData?.statusSource === 'auto';
                         const showSuggestion = hasSuggestion(competencyId);
 
                         return (
@@ -596,14 +595,6 @@ export default function Portfolio() {
                                     <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
                                       {getCompetencyName(competencyId)}
                                     </h3>
-                                    {isAuto ? (
-                                      <Badge variant="secondary" className="flex items-center space-x-1" data-testid={`badge-auto-${competencyId}`}>
-                                        <Sparkles className="h-3 w-3" />
-                                        <span>Auto</span>
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" data-testid={`badge-manual-${competencyId}`}>Manual</Badge>
-                                    )}
                                   </div>
                                   <div className="flex items-center space-x-2 flex-wrap">
                                     <Select

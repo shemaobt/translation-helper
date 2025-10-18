@@ -895,29 +895,17 @@ export class DatabaseStorage implements IStorage {
       const existing = competencyMap.get(competencyId);
       
       if (existing) {
-        // Update existing competency
-        if (existing.statusSource === 'auto') {
-          // Auto mode: update status automatically
-          await db
-            .update(facilitatorCompetencies)
-            .set({
-              status: suggestedStatus as any,
-              autoScore: score,
-              suggestedStatus: suggestedStatus as any,
-              lastUpdated: new Date(),
-            })
-            .where(eq(facilitatorCompetencies.id, existing.id));
-        } else {
-          // Manual mode: just update suggested status
-          await db
-            .update(facilitatorCompetencies)
-            .set({
-              autoScore: score,
-              suggestedStatus: suggestedStatus as any,
-              lastUpdated: new Date(),
-            })
-            .where(eq(facilitatorCompetencies.id, existing.id));
-        }
+        // Update existing competency - always in auto mode
+        await db
+          .update(facilitatorCompetencies)
+          .set({
+            status: suggestedStatus as any,
+            autoScore: score,
+            statusSource: 'auto',
+            suggestedStatus: suggestedStatus as any,
+            lastUpdated: new Date(),
+          })
+          .where(eq(facilitatorCompetencies.id, existing.id));
       } else {
         // Create new competency in auto mode
         await db
