@@ -150,8 +150,23 @@ export async function generateAssistantResponse(
     // Use per-user conversation for intertwined chats (shared across all user's chats)
     let conversationId = request.threadId || await storage.getUserConversationId(userId);
     
-    // Prepare input content with text and images
-    const inputContent: any[] = [{ type: "input_text", text: request.userMessage }];
+    // CRITICAL: Inject permission-based workflow directly into user message
+    // This ensures the AI asks before using tools, even with dashboard-managed prompts
+    const enhancedMessage = `[SYSTEM DIRECTIVE - HIGH PRIORITY]
+Before calling ANY tools (add_qualification, add_activity, update_competency):
+- NEVER automatically call tools without explicit user permission
+- ALWAYS provide a warm, conversational text response FIRST
+- Acknowledge what the user shared naturally
+- Ask for clarification if needed
+- Summarize your understanding
+- Ask permission: "Gostaria que eu adicionasse essas qualificações ao seu portfólio?" (or "Would you like me to add these to your portfolio?")
+- ONLY call tools when user confirms with clear positive signals (sim, yes, pode adicionar, please add, etc.)
+
+[USER MESSAGE]
+${request.userMessage}`;
+    
+    // Prepare input content with enhanced message and images
+    const inputContent: any[] = [{ type: "input_text", text: enhancedMessage }];
     
     // Add images if provided
     if (request.imageFilePaths && request.imageFilePaths.length > 0) {
@@ -229,8 +244,23 @@ export async function* generateAssistantResponseStream(
     let conversationId = request.threadId || await storage.getUserConversationId(userId);
     console.log('[Stream Generator] Conversation ID:', conversationId);
     
-    // Prepare input content with text and images
-    const inputContent: any[] = [{ type: "input_text", text: request.userMessage }];
+    // CRITICAL: Inject permission-based workflow directly into user message
+    // This ensures the AI asks before using tools, even with dashboard-managed prompts
+    const enhancedMessage = `[SYSTEM DIRECTIVE - HIGH PRIORITY]
+Before calling ANY tools (add_qualification, add_activity, update_competency):
+- NEVER automatically call tools without explicit user permission
+- ALWAYS provide a warm, conversational text response FIRST
+- Acknowledge what the user shared naturally
+- Ask for clarification if needed
+- Summarize your understanding
+- Ask permission: "Gostaria que eu adicionasse essas qualificações ao seu portfólio?" (or "Would you like me to add these to your portfolio?")
+- ONLY call tools when user confirms with clear positive signals (sim, yes, pode adicionar, please add, etc.)
+
+[USER MESSAGE]
+${request.userMessage}`;
+    
+    // Prepare input content with enhanced message and images
+    const inputContent: any[] = [{ type: "input_text", text: enhancedMessage }];
     
     // Add images if provided
     if (request.imageFilePaths && request.imageFilePaths.length > 0) {
