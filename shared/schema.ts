@@ -84,12 +84,25 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Chat chains for linking related conversations
+export const chatChains = pgTable("chat_chains", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  summary: text("summary"), // Brief description of this chain's theme
+  activeChatId: varchar("active_chat_id"), // Current active chat in this chain
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   assistantId: varchar("assistant_id").notNull().default('obtMentor'),
   title: varchar("title").notNull(),
   threadId: varchar("thread_id"), // OpenAI thread ID for conversation context
+  chainId: varchar("chain_id").references(() => chatChains.id, { onDelete: "set null" }), // Optional: part of a chain
+  sequenceIndex: integer("sequence_index"), // Position in chain (0-based, NULL if not in chain)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -167,6 +180,12 @@ export const facilitatorCompetencies = pgTable("facilitator_competencies", {
     enum: ["not_started", "emerging", "growing", "proficient", "advanced"] 
   }).notNull().default("not_started"),
   notes: text("notes"), // Comments on progress
+  // Auto-competency fields
+  autoScore: integer("auto_score").default(0), // Calculated score based on qualifications (0-10)
+  statusSource: varchar("status_source", { enum: ["auto", "manual"] }).notNull().default("auto"), // How status was set
+  suggestedStatus: varchar("suggested_status", { 
+    enum: ["not_started", "emerging", "growing", "proficient", "advanced"] 
+  }), // System-suggested status (shown when manual)
   lastUpdated: timestamp("last_updated").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -216,10 +235,22 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   }),
 }));
 
+export const chatChainsRelations = relations(chatChains, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatChains.userId],
+    references: [users.id],
+  }),
+  chats: many(chats),
+}));
+
 export const chatsRelations = relations(chats, ({ one, many }) => ({
   user: one(users, {
     fields: [chats.userId],
     references: [users.id],
+  }),
+  chain: one(chatChains, {
+    fields: [chats.chainId],
+    references: [chatChains.id],
   }),
   messages: many(messages),
 }));
@@ -319,6 +350,12 @@ export const adminApprovalSchema = z.object({
   approvalStatus: z.enum(["approved", "rejected"]),
 });
 
+export const insertChatChainSchema = createInsertSchema(chatChains).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertChatSchema = createInsertSchema(chats).omit({
   id: true,
   createdAt: true,
@@ -386,6 +423,8 @@ export const insertMessageAttachmentSchema = createInsertSchema(messageAttachmen
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type ChatChain = typeof chatChains.$inferSelect;
+export type InsertChatChain = z.infer<typeof insertChatChainSchema>;
 export type Chat = typeof chats.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
 export type Message = typeof messages.$inferSelect;
