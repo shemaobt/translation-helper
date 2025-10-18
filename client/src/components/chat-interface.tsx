@@ -496,20 +496,14 @@ export default function ChatInterface({
     if (selectedFile) {
       setIsTyping(true);
       try {
-        const userMessage = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
+        const response = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
           content: message.trim() || `[Attachment: ${selectedFile.name}]`,
         }).then(res => res.json());
 
-        await uploadFileAttachment(userMessage.id, selectedFile);
+        await uploadFileAttachment(response.userMessage.id, selectedFile);
 
         queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
         queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
-
-        const assistantResponse = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
-          content: "process",
-        }).then(res => res.json());
-
-        queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
         
         setMessage("");
         setSelectedFile(null);
