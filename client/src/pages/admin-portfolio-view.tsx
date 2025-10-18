@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -15,7 +17,9 @@ import {
   Activity,
   FileText,
   User,
-  Sparkles
+  Sparkles,
+  Download,
+  Calendar
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
@@ -54,6 +58,7 @@ interface AdminPortfolioProps {
 
 export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("competencies");
   const userId = params.userId;
@@ -283,10 +288,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Activity className="h-5 w-5" />
-                    <span>Atividades de Mentoria</span>
+                    <span>Atividades e Experiências</span>
                   </CardTitle>
                   <CardDescription>
-                    Registro de trabalho de tradução e mentoria
+                    Registro de trabalho de tradução e experiências gerais
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -306,17 +311,62 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="font-medium text-foreground">{activity.languageName}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {activity.chaptersCount} capítulo{activity.chaptersCount !== 1 ? 's' : ''}
-                                </p>
-                                {activity.activityDate && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {new Date(activity.activityDate).toLocaleDateString()}
-                                  </p>
+                                {/* Translation Activity */}
+                                {(activity.activityType === 'translation' || !activity.activityType) && (
+                                  <>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Calendar className="h-5 w-5 text-primary" />
+                                      <h3 className="font-medium text-foreground">{activity.languageName}</h3>
+                                    </div>
+                                    <div className="flex items-center space-x-3 text-sm mb-2">
+                                      <Badge>{activity.chaptersCount} capítulo(s)</Badge>
+                                      {activity.activityDate && (
+                                        <span className="text-muted-foreground">
+                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {activity.notes && (
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{activity.notes}</p>
+                                    )}
+                                  </>
                                 )}
-                                {activity.notes && (
-                                  <p className="text-sm text-muted-foreground mt-2">{activity.notes}</p>
+
+                                {/* General Experience Activity */}
+                                {activity.activityType && activity.activityType !== 'translation' && (
+                                  <>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Calendar className="h-5 w-5 text-primary" />
+                                      <h3 className="font-medium text-foreground">
+                                        {activity.title || 'Experiência Profissional'}
+                                      </h3>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-sm mb-2">
+                                      <Badge variant="outline">
+                                        {activity.activityType === 'facilitation' ? 'Facilitação' :
+                                         activity.activityType === 'teaching' ? 'Ensino' :
+                                         activity.activityType === 'indigenous_work' ? 'Trabalho com Povos' :
+                                         activity.activityType === 'school_work' ? 'Trabalho Escolar' :
+                                         'Experiência Geral'}
+                                      </Badge>
+                                      {activity.organization && (
+                                        <span className="text-muted-foreground">{activity.organization}</span>
+                                      )}
+                                      {activity.yearsOfExperience && (
+                                        <span className="text-muted-foreground">
+                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'ano' : 'anos'}
+                                        </span>
+                                      )}
+                                      {activity.activityDate && (
+                                        <span className="text-muted-foreground">
+                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {activity.description && (
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{activity.description}</p>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -356,12 +406,53 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                       {reports.map((report) => (
                         <Card key={report.id}>
                           <CardContent className="p-4">
-                            <h3 className="font-medium text-foreground">
-                              Relatório {new Date(report.periodStart).toLocaleDateString()} - {new Date(report.periodEnd).toLocaleDateString()}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              Gerado em {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'Data desconhecida'}
-                            </p>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-medium text-foreground mb-1">
+                                  Relatório {new Date(report.periodStart).toLocaleDateString('pt-BR')} - {new Date(report.periodEnd).toLocaleDateString('pt-BR')}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Gerado em {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('pt-BR') : 'Data desconhecida'}
+                                </p>
+                                <div className="mt-3">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(`/api/facilitator/reports/${report.id}/download`, {
+                                          credentials: 'include',
+                                        });
+                                        
+                                        if (!response.ok) {
+                                          throw new Error('Falha ao baixar relatório');
+                                        }
+                                        
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `relatorio-${new Date(report.periodStart).toISOString().split('T')[0]}.docx`;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                      } catch (error) {
+                                        toast({
+                                          title: "Erro",
+                                          description: "Não foi possível baixar o relatório",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    data-testid={`button-download-report-${report.id}`}
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Baixar .docx
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           </CardContent>
                         </Card>
                       ))}
