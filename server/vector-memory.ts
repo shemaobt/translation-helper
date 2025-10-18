@@ -409,26 +409,15 @@ export async function getComprehensiveContext(params: {
       }
     }
 
-    // 2. Recent Messages from ALL User Chats
+    // 2. Recent Messages from ALL User Chats (efficiently via SQL)
     try {
-      const userChats = await storage.getUserChats(params.userId);
-      const allMessages: Message[] = [];
-      
-      // Fetch messages from all chats
-      for (const chat of userChats) {
-        const messages = await storage.getChatMessages(chat.id, params.userId);
-        allMessages.push(...messages);
-      }
-      
-      // Sort by creation date and take last 20
-      const recentMessages = allMessages
-        .filter(msg => msg.createdAt != null)
-        .sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime())
-        .slice(-20);
+      // Get last 20 messages across all user's chats in one efficient SQL query
+      const recentMessages = await storage.getRecentUserMessages(params.userId, 20);
 
       if (recentMessages.length > 0) {
         context += '## Recent Conversation History:\n\n';
-        recentMessages.forEach((msg) => {
+        // Reverse to show oldest first
+        recentMessages.reverse().forEach((msg) => {
           const truncated = msg.content.length > 150 
             ? msg.content.substring(0, 150) + '...' 
             : msg.content;
