@@ -167,7 +167,6 @@ export async function generateAssistantResponse(
       }],
       instructions: OBT_MENTOR_INSTRUCTIONS,
       tools: [
-        { type: "file_search" },
         {
           type: "function",
           function: {
@@ -324,7 +323,6 @@ export async function* generateAssistantResponseStream(
       }],
       instructions: OBT_MENTOR_INSTRUCTIONS,
       tools: [
-        { type: "file_search" },
         {
           type: "function",
           function: {
