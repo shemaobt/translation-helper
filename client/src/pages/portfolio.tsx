@@ -48,11 +48,11 @@ const competencyStatusOptions = ['not_started', 'emerging', 'growing', 'proficie
 type CompetencyStatus = typeof competencyStatusOptions[number];
 
 const statusLabels: Record<CompetencyStatus, string> = {
-  not_started: 'Não Iniciado',
-  emerging: 'Emergente',
-  growing: 'Em Crescimento',
-  proficient: 'Proficiente',
-  advanced: 'Avançado'
+  not_started: 'Not Started',
+  emerging: 'Emerging',
+  growing: 'Growing',
+  proficient: 'Proficient',
+  advanced: 'Advanced'
 };
 
 const statusColors: Record<CompetencyStatus, string> = {
@@ -139,14 +139,14 @@ export default function Portfolio() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/facilitator/competencies'] });
       toast({
-        title: "Sucesso",
-        description: "Status da competência atualizado",
+        title: "Success",
+        description: "Competency status updated",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar competência",
+        title: "Error",
+        description: "Failed to update competency",
         variant: "destructive",
       });
     },
@@ -166,14 +166,14 @@ export default function Portfolio() {
       setNewQualCredential("");
       setNewQualDescription("");
       toast({
-        title: "Sucesso",
-        description: "Qualificação adicionada",
+        title: "Success",
+        description: "Qualification added",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao adicionar qualificação",
+        title: "Error",
+        description: "Failed to add qualification",
         variant: "destructive",
       });
     },
@@ -187,14 +187,14 @@ export default function Portfolio() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/facilitator/qualifications'] });
       toast({
-        title: "Sucesso",
-        description: "Qualificação removida",
+        title: "Success",
+        description: "Qualification removed",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao remover qualificação",
+        title: "Error",
+        description: "Failed to remove qualification",
         variant: "destructive",
       });
     },
@@ -213,14 +213,14 @@ export default function Portfolio() {
       setNewActivityNotes("");
       setNewActivityDate(new Date().toISOString().split('T')[0]);
       toast({
-        title: "Sucesso",
-        description: "Atividade registrada",
+        title: "Success",
+        description: "Activity registered",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao registrar atividade",
+        title: "Error",
+        description: "Failed to register activity",
         variant: "destructive",
       });
     },
@@ -234,14 +234,14 @@ export default function Portfolio() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/facilitator/activities'] });
       toast({
-        title: "Sucesso",
-        description: "Atividade removida",
+        title: "Success",
+        description: "Activity removed",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao remover atividade",
+        title: "Error",
+        description: "Failed to remove activity",
         variant: "destructive",
       });
     },
@@ -256,14 +256,14 @@ export default function Portfolio() {
       queryClient.invalidateQueries({ queryKey: ['/api/facilitator/profile'] });
       setIsEditingProfile(false);
       toast({
-        title: "Sucesso",
-        description: "Perfil atualizado",
+        title: "Success",
+        description: "Profile updated",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar perfil",
+        title: "Error",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     },
@@ -286,14 +286,14 @@ export default function Portfolio() {
       setReportPeriodStart("");
       setReportPeriodEnd("");
       toast({
-        title: "Sucesso",
-        description: "Relatório gerado com sucesso",
+        title: "Success",
+        description: "Report generated successfully",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao gerar relatório",
+        title: "Error",
+        description: "Failed to generate report",
         variant: "destructive",
       });
     },
@@ -308,14 +308,14 @@ export default function Portfolio() {
       queryClient.invalidateQueries({ queryKey: ['/api/facilitator/reports'] });
       setSelectedReport(null);
       toast({
-        title: "Sucesso",
-        description: "Relatório removido",
+        title: "Success",
+        description: "Report removed",
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao remover relatório",
+        title: "Error",
+        description: "Failed to remove report",
         variant: "destructive",
       });
     },
@@ -418,10 +418,10 @@ export default function Portfolio() {
               )}
               <div className="flex-1">
                 <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
-                  Portfólio de Facilitador
+                  Facilitator Portfolio
                 </h1>
                 <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
-                  Acompanhe suas competências, qualificações e atividades de tradução
+                  Track your competencies, qualifications and translation activities
                 </p>
               </div>
             </div>
@@ -431,7 +431,7 @@ export default function Portfolio() {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Progresso Geral das Competências</span>
+                <span className="text-sm font-medium">Overall Competency Progress</span>
                 <span className="text-sm text-muted-foreground">{Math.round(competencyProgress)}%</span>
               </div>
               <Progress value={competencyProgress} className="h-2" />
@@ -443,23 +443,23 @@ export default function Portfolio() {
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="profile" data-testid="tab-profile">
                 <User className="h-4 w-4 mr-2" />
-                {!isMobile && "Perfil"}
+                {!isMobile && "Profile"}
               </TabsTrigger>
               <TabsTrigger value="competencies" data-testid="tab-competencies">
                 <Target className="h-4 w-4 mr-2" />
-                {!isMobile && "Competências"}
+                {!isMobile && "Competencies"}
               </TabsTrigger>
               <TabsTrigger value="qualifications" data-testid="tab-qualifications">
                 <GraduationCap className="h-4 w-4 mr-2" />
-                {!isMobile && "Qualificações"}
+                {!isMobile && "Qualifications"}
               </TabsTrigger>
               <TabsTrigger value="activities" data-testid="tab-activities">
                 <Activity className="h-4 w-4 mr-2" />
-                {!isMobile && "Atividades"}
+                {!isMobile && "Activities"}
               </TabsTrigger>
               <TabsTrigger value="reports" data-testid="tab-reports">
                 <FileText className="h-4 w-4 mr-2" />
-                {!isMobile && "Relatórios"}
+                {!isMobile && "Reports"}
               </TabsTrigger>
             </TabsList>
 
@@ -469,10 +469,10 @@ export default function Portfolio() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <User className="h-5 w-5" />
-                    <span>Perfil do Facilitador</span>
+                    <span>Facilitator Profile</span>
                   </CardTitle>
                   <CardDescription>
-                    Gerencie suas informações de perfil
+                    Manage your profile information
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -483,26 +483,26 @@ export default function Portfolio() {
                   ) : (
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="profile-region">Região (opcional)</Label>
+                        <Label htmlFor="profile-region">Region (optional)</Label>
                         <div className="flex items-center space-x-2 mt-2">
                           <Input
                             id="profile-region"
                             value={profileRegion}
                             onChange={(e) => setProfileRegion(e.target.value)}
-                            placeholder="Ex: Nordeste do Brasil"
+                            placeholder="e.g., Northeast Brazil"
                             disabled={!isEditingProfile}
                             data-testid="input-profile-region"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="profile-supervisor">Supervisor (opcional)</Label>
+                        <Label htmlFor="profile-supervisor">Supervisor (optional)</Label>
                         <div className="flex items-center space-x-2 mt-2">
                           <Input
                             id="profile-supervisor"
                             value={profileSupervisor}
                             onChange={(e) => setProfileSupervisor(e.target.value)}
-                            placeholder="Nome do supervisor"
+                            placeholder="Supervisor name"
                             disabled={!isEditingProfile}
                             data-testid="input-profile-supervisor"
                           />
@@ -522,7 +522,7 @@ export default function Portfolio() {
                               data-testid="button-save-profile"
                             >
                               <Save className="h-4 w-4 mr-2" />
-                              Salvar
+                              Save
                             </Button>
                             <Button
                               variant="outline"
@@ -536,7 +536,7 @@ export default function Portfolio() {
                               disabled={updateProfileMutation.isPending}
                               data-testid="button-cancel-profile"
                             >
-                              Cancelar
+                              Cancel
                             </Button>
                           </>
                         ) : (
@@ -545,7 +545,7 @@ export default function Portfolio() {
                             data-testid="button-edit-profile"
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Editar Perfil
+                            Edit Profile
                           </Button>
                         )}
                       </div>
@@ -561,10 +561,10 @@ export default function Portfolio() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Target className="h-5 w-5" />
-                    <span>Competências Principais</span>
+                    <span>Core Competencies</span>
                   </CardTitle>
                   <CardDescription>
-                    Acompanhe o desenvolvimento de suas competências de facilitação TBO
+                    Track the development of your OBT facilitation competencies
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -627,11 +627,11 @@ export default function Portfolio() {
                                           <div className="flex items-center space-x-2 mb-1">
                                             <Zap className="h-4 w-4 text-blue-600" />
                                             <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                              Sugestão do Sistema
+                                              System Suggestion
                                             </span>
                                           </div>
                                           <p className="text-sm text-blue-700 dark:text-blue-300">
-                                            Baseado em suas qualificações, sugerimos: <strong>{statusLabels[competencyData.suggestedStatus as CompetencyStatus]}</strong>
+                                            Based on your qualifications, we suggest: <strong>{statusLabels[competencyData.suggestedStatus as CompetencyStatus]}</strong>
                                           </p>
                                         </div>
                                         <Button
@@ -645,7 +645,7 @@ export default function Portfolio() {
                                           className="ml-2"
                                           data-testid={`button-accept-suggestion-${competencyId}`}
                                         >
-                                          Aceitar
+                                          Accept
                                         </Button>
                                       </div>
                                     </div>
@@ -660,7 +660,7 @@ export default function Portfolio() {
                                       <Textarea
                                         value={tempNotes}
                                         onChange={(e) => setTempNotes(e.target.value)}
-                                        placeholder="Adicione notas sobre seu progresso..."
+                                        placeholder="Add notes about your progress..."
                                         rows={2}
                                       />
                                       <div className="flex space-x-2">
@@ -675,7 +675,7 @@ export default function Portfolio() {
                                             setEditingCompetency(null);
                                           }}
                                         >
-                                          Salvar
+                                          Save
                                         </Button>
                                         <Button
                                           size="sm"
@@ -685,7 +685,7 @@ export default function Portfolio() {
                                             setTempNotes("");
                                           }}
                                         >
-                                          Cancelar
+                                          Cancel
                                         </Button>
                                       </div>
                                     </div>
@@ -700,7 +700,7 @@ export default function Portfolio() {
                                       }}
                                       className="mt-2"
                                     >
-                                      {notes ? 'Editar Notas' : 'Adicionar Notas'}
+                                      {notes ? 'Edit Notes' : 'Add Notes'}
                                     </Button>
                                   )}
                                 </div>
@@ -723,49 +723,49 @@ export default function Portfolio() {
                     <div>
                       <CardTitle className="flex items-center space-x-2">
                         <GraduationCap className="h-5 w-5" />
-                        <span>Qualificações</span>
+                        <span>Qualifications</span>
                       </CardTitle>
                       <CardDescription>
-                        Gerencie suas qualificações e certificações formais
+                        Manage your formal qualifications and certifications
                       </CardDescription>
                     </div>
                     <Dialog open={qualificationDialogOpen} onOpenChange={setQualificationDialogOpen}>
                       <DialogTrigger asChild>
                         <Button data-testid="button-add-qualification">
                           <Plus className="h-4 w-4 mr-2" />
-                          Adicionar
+                          Add
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Adicionar Qualificação</DialogTitle>
+                          <DialogTitle>Add Qualification</DialogTitle>
                           <DialogDescription>
-                            Registre uma nova qualificação ou certificação formal
+                            Register a new formal qualification or certification
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="qual-course">Título do Curso</Label>
+                            <Label htmlFor="qual-course">Course Title</Label>
                             <Input
                               id="qual-course"
                               value={newQualCourseTitle}
                               onChange={(e) => setNewQualCourseTitle(e.target.value)}
-                              placeholder="Ex: Certificação em TBO"
+                              placeholder="e.g., OBT Certification"
                               data-testid="input-course-title"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="qual-institution">Instituição</Label>
+                            <Label htmlFor="qual-institution">Institution</Label>
                             <Input
                               id="qual-institution"
                               value={newQualInstitution}
                               onChange={(e) => setNewQualInstitution(e.target.value)}
-                              placeholder="Ex: JOCUM/YWAM"
+                              placeholder="e.g., YWAM"
                               data-testid="input-institution"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="qual-completion">Data de Conclusão</Label>
+                            <Label htmlFor="qual-completion">Completion Date</Label>
                             <Input
                               id="qual-completion"
                               type="date"
@@ -775,22 +775,22 @@ export default function Portfolio() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="qual-credential">Credencial (opcional)</Label>
+                            <Label htmlFor="qual-credential">Credential (optional)</Label>
                             <Input
                               id="qual-credential"
                               value={newQualCredential}
                               onChange={(e) => setNewQualCredential(e.target.value)}
-                              placeholder="Ex: Certificado, Diploma"
+                              placeholder="e.g., Certificate, Diploma"
                               data-testid="input-credential"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="qual-description">Descrição (opcional)</Label>
+                            <Label htmlFor="qual-description">Description (optional)</Label>
                             <Textarea
                               id="qual-description"
                               value={newQualDescription}
                               onChange={(e) => setNewQualDescription(e.target.value)}
-                              placeholder="Breve descrição do conteúdo..."
+                              placeholder="Brief description of content..."
                               rows={3}
                               data-testid="input-description"
                             />
@@ -808,7 +808,7 @@ export default function Portfolio() {
                             disabled={!newQualCourseTitle.trim() || !newQualInstitution.trim() || !newQualCompletionDate || createQualificationMutation.isPending}
                             data-testid="button-confirm-add-qualification"
                           >
-                            {createQualificationMutation.isPending ? "Adicionando..." : "Adicionar Qualificação"}
+                            {createQualificationMutation.isPending ? "Adding..." : "Add Qualification"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -823,8 +823,8 @@ export default function Portfolio() {
                   ) : qualifications.length === 0 ? (
                     <div className="text-center py-8">
                       <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
-                      <p className="text-sm text-muted-foreground">Nenhuma qualificação ainda</p>
-                      <p className="text-xs text-muted-foreground">Adicione sua primeira qualificação</p>
+                      <p className="text-sm text-muted-foreground">No qualifications yet</p>
+                      <p className="text-xs text-muted-foreground">Add your first qualification</p>
                     </div>
                   ) : (
                     <div className="grid gap-4">
@@ -885,39 +885,39 @@ export default function Portfolio() {
                     <div>
                       <CardTitle className="flex items-center space-x-2">
                         <Activity className="h-5 w-5" />
-                        <span>Atividades e Experiências</span>
+                        <span>Activities and Experiences</span>
                       </CardTitle>
                       <CardDescription>
-                        Registre traduções e outras experiências de trabalho (a IA pode adicionar experiências gerais)
+                        Register translations and other work experiences (AI can add general experiences)
                       </CardDescription>
                     </div>
                     <Dialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen}>
                       <DialogTrigger asChild>
                         <Button data-testid="button-add-activity">
                           <Plus className="h-4 w-4 mr-2" />
-                          Registrar
+                          Register
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Registrar Atividade</DialogTitle>
+                          <DialogTitle>Register Activity</DialogTitle>
                           <DialogDescription>
-                            Registre uma nova atividade de tradução bíblica
+                            Register a new Bible translation activity
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="activity-language">Nome do Idioma</Label>
+                            <Label htmlFor="activity-language">Language Name</Label>
                             <Input
                               id="activity-language"
                               value={newActivityLanguage}
                               onChange={(e) => setNewActivityLanguage(e.target.value)}
-                              placeholder="Ex: Karajá, Yanomami"
+                              placeholder="e.g., Karajá, Yanomami"
                               data-testid="input-language-name"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="activity-chapters">Quantidade de Capítulos</Label>
+                            <Label htmlFor="activity-chapters">Number of Chapters</Label>
                             <Input
                               id="activity-chapters"
                               type="number"
@@ -928,7 +928,7 @@ export default function Portfolio() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="activity-date">Data da Atividade</Label>
+                            <Label htmlFor="activity-date">Activity Date</Label>
                             <Input
                               id="activity-date"
                               type="date"
@@ -938,12 +938,12 @@ export default function Portfolio() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="activity-notes">Notas (opcional)</Label>
+                            <Label htmlFor="activity-notes">Notes (optional)</Label>
                             <Textarea
                               id="activity-notes"
                               value={newActivityNotes}
                               onChange={(e) => setNewActivityNotes(e.target.value)}
-                              placeholder="Contexto adicional sobre a atividade..."
+                              placeholder="Additional context about the activity..."
                               rows={4}
                               data-testid="input-activity-notes"
                             />
@@ -960,7 +960,7 @@ export default function Portfolio() {
                             disabled={!newActivityLanguage.trim() || !newActivityDate || !newActivityChapters || createActivityMutation.isPending}
                             data-testid="button-confirm-add-activity"
                           >
-                            {createActivityMutation.isPending ? "Registrando..." : "Registrar Atividade"}
+                            {createActivityMutation.isPending ? "Registering..." : "Register Activity"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -975,8 +975,8 @@ export default function Portfolio() {
                   ) : activities.length === 0 ? (
                     <div className="text-center py-8">
                       <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
-                      <p className="text-sm text-muted-foreground">Nenhuma atividade ainda</p>
-                      <p className="text-xs text-muted-foreground">Registre sua primeira atividade de tradução</p>
+                      <p className="text-sm text-muted-foreground">No activities yet</p>
+                      <p className="text-xs text-muted-foreground">Register your first translation activity</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -995,7 +995,7 @@ export default function Portfolio() {
                                       </h3>
                                     </div>
                                     <div className="flex items-center space-x-3 text-sm mb-2">
-                                      <Badge>{activity.chaptersCount} capítulo(s)</Badge>
+                                      <Badge>{activity.chaptersCount} chapter(s)</Badge>
                                       {activity.activityDate && (
                                         <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
                                           {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
@@ -1016,16 +1016,16 @@ export default function Portfolio() {
                                     <div className="flex items-center space-x-2 mb-2">
                                       <Calendar className="h-5 w-5 text-primary" />
                                       <h3 className="font-medium" data-testid={`text-activity-title-${activity.id}`}>
-                                        {activity.title || 'Experiência Profissional'}
+                                        {activity.title || 'Professional Experience'}
                                       </h3>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 text-sm mb-2">
                                       <Badge variant="outline">
-                                        {activity.activityType === 'facilitation' ? 'Facilitação' :
-                                         activity.activityType === 'teaching' ? 'Ensino' :
-                                         activity.activityType === 'indigenous_work' ? 'Trabalho com Povos' :
-                                         activity.activityType === 'school_work' ? 'Trabalho Escolar' :
-                                         'Experiência Geral'}
+                                        {activity.activityType === 'facilitation' ? 'Facilitation' :
+                                         activity.activityType === 'teaching' ? 'Teaching' :
+                                         activity.activityType === 'indigenous_work' ? 'Work with People Groups' :
+                                         activity.activityType === 'school_work' ? 'School Work' :
+                                         'General Experience'}
                                       </Badge>
                                       {activity.organization && (
                                         <span className="text-muted-foreground" data-testid={`text-organization-${activity.id}`}>
@@ -1034,7 +1034,7 @@ export default function Portfolio() {
                                       )}
                                       {activity.yearsOfExperience && (
                                         <span className="text-muted-foreground">
-                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'ano' : 'anos'}
+                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'year' : 'years'}
                                         </span>
                                       )}
                                       {activity.activityDate && (
@@ -1078,29 +1078,29 @@ export default function Portfolio() {
                     <div>
                       <CardTitle className="flex items-center space-x-2">
                         <FileText className="h-5 w-5" />
-                        <span>Relatórios Trimestrais</span>
+                        <span>Quarterly Reports</span>
                       </CardTitle>
                       <CardDescription>
-                        Gere e visualize relatórios trimestrais de progresso
+                        Generate and view quarterly progress reports
                       </CardDescription>
                     </div>
                     <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
                       <DialogTrigger asChild>
                         <Button data-testid="button-generate-report">
                           <Plus className="h-4 w-4 mr-2" />
-                          Gerar Relatório
+                          Generate Report
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Gerar Relatório Trimestral</DialogTitle>
+                          <DialogTitle>Generate Quarterly Report</DialogTitle>
                           <DialogDescription>
-                            Selecione o período para o relatório
+                            Select the period for the report
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="report-start">Início do Período</Label>
+                            <Label htmlFor="report-start">Period Start</Label>
                             <Input
                               id="report-start"
                               type="date"
@@ -1110,7 +1110,7 @@ export default function Portfolio() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="report-end">Fim do Período</Label>
+                            <Label htmlFor="report-end">Period End</Label>
                             <Input
                               id="report-end"
                               type="date"
@@ -1129,7 +1129,7 @@ export default function Portfolio() {
                             disabled={!reportPeriodStart || !reportPeriodEnd || generateReportMutation.isPending}
                             data-testid="button-confirm-generate-report"
                           >
-                            {generateReportMutation.isPending ? "Gerando..." : "Gerar Relatório"}
+                            {generateReportMutation.isPending ? "Generating..." : "Generate Report"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1144,8 +1144,8 @@ export default function Portfolio() {
                   ) : reports.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
-                      <p className="text-sm text-muted-foreground">Nenhum relatório ainda</p>
-                      <p className="text-xs text-muted-foreground">Gere seu primeiro relatório trimestral</p>
+                      <p className="text-sm text-muted-foreground">No reports yet</p>
+                      <p className="text-xs text-muted-foreground">Generate your first quarterly report</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1159,39 +1159,39 @@ export default function Portfolio() {
                                   <div className="flex items-center space-x-2 mb-2">
                                     <FileText className="h-5 w-5 text-primary" />
                                     <h3 className="font-medium" data-testid={`text-report-period-${report.id}`}>
-                                      Relatório: {new Date(report.periodStart).toLocaleDateString('pt-BR')} - {new Date(report.periodEnd).toLocaleDateString('pt-BR')}
+                                      Report: {new Date(report.periodStart).toLocaleDateString('en-US')} - {new Date(report.periodEnd).toLocaleDateString('en-US')}
                                     </h3>
                                   </div>
                                   <div className="text-sm text-muted-foreground mb-3">
-                                    Gerado em: {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('pt-BR') : 'N/A'}
+                                    Generated on: {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('en-US') : 'N/A'}
                                   </div>
                                   
                                   {selectedReport?.id === report.id && reportData && (
                                     <div className="mt-4 space-y-4 border-t pt-4">
                                       {/* Summary */}
                                       <div>
-                                        <h4 className="font-medium mb-2">Resumo</h4>
+                                        <h4 className="font-medium mb-2">Summary</h4>
                                         <div className="grid grid-cols-2 gap-2 text-sm">
                                           <div>
-                                            <span className="text-muted-foreground">Competências Concluídas:</span>{' '}
+                                            <span className="text-muted-foreground">Completed Competencies:</span>{' '}
                                             <span className="font-medium">{reportData.summary?.completedCompetencies || 0} / {reportData.summary?.totalCompetencies || 0}</span>
                                           </div>
                                           <div>
-                                            <span className="text-muted-foreground">Qualificações:</span>{' '}
+                                            <span className="text-muted-foreground">Qualifications:</span>{' '}
                                             <span className="font-medium">{reportData.summary?.totalQualifications || 0}</span>
                                           </div>
                                           <div>
-                                            <span className="text-muted-foreground">Atividades:</span>{' '}
+                                            <span className="text-muted-foreground">Activities:</span>{' '}
                                             <span className="font-medium">{reportData.summary?.totalActivities || 0}</span>
                                           </div>
                                           <div>
-                                            <span className="text-muted-foreground">Capítulos Traduzidos:</span>{' '}
+                                            <span className="text-muted-foreground">Translated Chapters:</span>{' '}
                                             <span className="font-medium">{reportData.summary?.totalChapters || 0}</span>
                                           </div>
                                         </div>
                                         {reportData.summary?.languages && reportData.summary.languages.length > 0 && (
                                           <div className="mt-2">
-                                            <span className="text-sm text-muted-foreground">Idiomas:</span>{' '}
+                                            <span className="text-sm text-muted-foreground">Languages:</span>{' '}
                                             <div className="flex flex-wrap gap-1 mt-1">
                                               {reportData.summary.languages.map((lang: string, idx: number) => (
                                                 <Badge key={idx} variant="secondary">{lang}</Badge>
@@ -1204,7 +1204,7 @@ export default function Portfolio() {
                                       {/* Competencies */}
                                       {reportData.competencies && reportData.competencies.length > 0 && (
                                         <div>
-                                          <h4 className="font-medium mb-2">Competências ({reportData.competencies.length})</h4>
+                                          <h4 className="font-medium mb-2">Competencies ({reportData.competencies.length})</h4>
                                           <div className="space-y-1 text-sm">
                                             {reportData.competencies.slice(0, 5).map((comp: any, idx: number) => (
                                               <div key={idx} className="flex justify-between">
@@ -1216,7 +1216,7 @@ export default function Portfolio() {
                                             ))}
                                             {reportData.competencies.length > 5 && (
                                               <p className="text-xs text-muted-foreground italic">
-                                                +{reportData.competencies.length - 5} mais...
+                                                +{reportData.competencies.length - 5} more...
                                               </p>
                                             )}
                                           </div>
@@ -1226,17 +1226,17 @@ export default function Portfolio() {
                                       {/* Activities */}
                                       {reportData.activities && reportData.activities.length > 0 && (
                                         <div>
-                                          <h4 className="font-medium mb-2">Atividades do Período ({reportData.activities.length})</h4>
+                                          <h4 className="font-medium mb-2">Period Activities ({reportData.activities.length})</h4>
                                           <div className="space-y-1 text-sm">
                                             {reportData.activities.slice(0, 3).map((act: any, idx: number) => (
                                               <div key={idx} className="flex justify-between">
                                                 <span>{act.languageName}</span>
-                                                <span className="text-muted-foreground">{act.chaptersCount} cap.</span>
+                                                <span className="text-muted-foreground">{act.chaptersCount} ch.</span>
                                               </div>
                                             ))}
                                             {reportData.activities.length > 3 && (
                                               <p className="text-xs text-muted-foreground italic">
-                                                +{reportData.activities.length - 3} mais...
+                                                +{reportData.activities.length - 3} more...
                                               </p>
                                             )}
                                           </div>
@@ -1252,7 +1252,7 @@ export default function Portfolio() {
                                       onClick={() => setSelectedReport(selectedReport?.id === report.id ? null : report)}
                                       data-testid={`button-toggle-report-${report.id}`}
                                     >
-                                      {selectedReport?.id === report.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                      {selectedReport?.id === report.id ? 'Hide Details' : 'View Details'}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1264,7 +1264,7 @@ export default function Portfolio() {
                                           });
                                           
                                           if (!response.ok) {
-                                            throw new Error('Falha ao baixar relatório');
+                                            throw new Error('Failed to download report');
                                           }
                                           
                                           const blob = await response.blob();
@@ -1278,8 +1278,8 @@ export default function Portfolio() {
                                           document.body.removeChild(a);
                                         } catch (error) {
                                           toast({
-                                            title: "Erro",
-                                            description: "Não foi possível baixar o relatório",
+                                            title: "Error",
+                                            description: "Could not download the report",
                                             variant: "destructive",
                                           });
                                         }
@@ -1287,7 +1287,7 @@ export default function Portfolio() {
                                       data-testid={`button-download-report-${report.id}`}
                                     >
                                       <Download className="h-4 w-4 mr-2" />
-                                      Baixar .docx
+                                      Download .docx
                                     </Button>
                                   </div>
                                 </div>
