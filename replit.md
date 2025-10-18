@@ -1,11 +1,11 @@
 # Overview
 
-The OBT Mentor Companion is an AI-powered full-stack web application designed for YWAM Oral Bible Translation (OBT) facilitators. It provides mentorship tracking and assessment capabilities through an AI assistant, utilizing OpenAI's Assistant API. Key features include user authentication with admin approval, comprehensive facilitator portfolio management (competencies, qualifications, activities), quarterly report generation with Portuguese UI, and global memory search using Qdrant Cloud for semantic search across all facilitator conversations. The project aims to enhance mentorship effectiveness and facilitate cross-learning among facilitators.
+The OBT Mentor Companion is an AI-powered full-stack web application designed for YWAM Oral Bible Translation (OBT) facilitators. It provides mentorship tracking and assessment capabilities through an AI assistant, utilizing OpenAI's Assistant API. Key features include user authentication with admin approval, comprehensive facilitator portfolio management (competencies, qualifications, activities), quarterly report generation with English UI, and global memory search using Qdrant Cloud for semantic search across all facilitator conversations. The project aims to enhance mentorship effectiveness and facilitate cross-learning among facilitators.
 
 ## Design System
 - **Brand Color**: #86884C (olive-green tone) - RGB(134, 136, 76) - HSL(62, 28%, 42%)
 - **UI Framework**: Consistent olive-green palette throughout light and dark modes
-- **Typography**: Inter font family with Portuguese UI labels
+- **Typography**: Inter font family with English UI labels
 
 # User Preferences
 
@@ -78,7 +78,7 @@ Preferred communication style: Simple, everyday language.
 - **Competencies**: Track progress and update status.
 - **Qualifications**: Record formal courses and credentials.
 - **Activities**: Log language translation mentorship work.
-- **Reports**: Generate, view, and delete quarterly reports. All portfolio sections include Portuguese labels.
+- **Reports**: Generate, view, and delete quarterly reports. All portfolio sections include English labels.
 
 ## Security Features
 - Session-based authentication with HTTP-only cookies.
