@@ -248,6 +248,8 @@ const signupValidationSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long"),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+  region: z.string().optional(),
+  mentorSupervisor: z.string().optional(),
 });
 
 const loginValidationSchema = z.object({
@@ -297,11 +299,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 12);
       
+      // Extract facilitator profile data
+      const { region, mentorSupervisor, ...userDataOnly } = userData;
+      
       // Create user
       const user = await storage.createUser({
-        ...userData,
+        ...userDataOnly,
         password: hashedPassword
       });
+      
+      // Automatically create facilitator profile for new users
+      try {
+        await storage.createFacilitator({
+          userId: user.id,
+          region: region || null,
+          mentorSupervisor: mentorSupervisor || null,
+        });
+      } catch (facilitatorError) {
+        console.error('Failed to create facilitator profile:', facilitatorError);
+        // Don't fail signup if facilitator profile creation fails
+      }
       
       // Auto-approve and log in all new users
       // Regenerate session to prevent session fixation
