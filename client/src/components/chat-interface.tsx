@@ -392,7 +392,6 @@ export default function ChatInterface({
                   
                 case 'assistant_message_start':
                   // Start of assistant message
-                  console.log('[Frontend SSE] assistant_message_start', data.data.id);
                   setIsTyping(false); // Stop typing indicator when streaming starts
                   setStreamingMessage({
                     id: data.data.id,
@@ -403,7 +402,6 @@ export default function ChatInterface({
                   
                 case 'content':
                   // Streaming content chunk
-                  console.log('[Frontend SSE] content chunk:', data.data);
                   setStreamingMessage(prev => prev ? {
                     ...prev,
                     content: prev.content + data.data,
