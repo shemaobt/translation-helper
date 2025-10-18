@@ -78,6 +78,8 @@ export interface IStorage {
   updateChat(chatId: string, updates: Partial<Pick<InsertChat, 'assistantId' | 'title'>>, userId: string): Promise<Chat>;
   updateChatThreadId(chatId: string, threadId: string, userId: string): Promise<void>;
   getChatThreadId(chatId: string, userId: string): Promise<string | null>;
+  getUserThreadId(userId: string): Promise<string | null>;
+  updateUserThreadId(userId: string, threadId: string): Promise<void>;
   deleteChat(chatId: string, userId: string): Promise<void>;
   
   // Message operations

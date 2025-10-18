@@ -62,9 +62,10 @@ Status levels: not_started, developing, proficient, advanced
 ## AI Integration
 - **Provider**: OpenAI API with dedicated OBT Mentor Assistant
 - **Model**: GPT-4o via OpenAI's Assistant API (with vision and audio capabilities)
-- **Thread Management**: Persistent conversation threads for context retention
+- **Thread Management**: Per-user threads for intertwined chats - all user conversations share the same OpenAI thread
+- **Intertwined Chats**: Every chat accesses the full conversation history across all user chats through shared thread
 - **Global Memory**: Qdrant vector database stores all conversation embeddings
-- **Semantic Search**: Retrieves relevant past conversations for contextual responses
+- **Semantic Search**: Retrieves relevant past conversations for contextual responses across all chats
 - **Cross-Learning**: Access insights from other facilitators globally
 - **Embedding Model**: text-embedding-3-small (1536 dimensions)
 - **Image Analysis**: GPT-4o vision for analyzing uploaded images
@@ -186,13 +187,18 @@ Status levels: not_started, developing, proficient, advanced
 - Added quarterly_reports for assessment period snapshots
 - Added message_attachments table for image and audio file storage
 - Added approval workflow fields to users table
+- Added `userThreadId` field to users table for intertwined chats (per-user OpenAI threads)
 
 ## AI System Enhancements
 - Replaced multiple assistants with single OBT Mentor assistant
+- **Intertwined Chat Architecture**: Migrated from per-chat threads to per-user threads
+  - Added `userThreadId` field to users table for shared conversation context
+  - All user chats now share the same OpenAI thread for seamless context flow
+  - AI assistant automatically has access to entire conversation history across all chats
 - Integrated Qdrant vector database for conversation embeddings
-- Implemented semantic search for contextual AI responses
+- Implemented semantic search for contextual AI responses across all user chats
 - Added cross-facilitator learning with global memory search
-- Automatic context injection from relevant past conversations
+- Automatic context injection from relevant past conversations via semantic search
 - Lowered vector similarity thresholds (0.5 user/0.6 global) for improved recall
 - Enhanced assistant instructions with explicit memory usage directives
 
