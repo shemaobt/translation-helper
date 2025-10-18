@@ -184,23 +184,23 @@ export async function generateAssistantResponse(
         : inputContent
     };
 
-    // Include conversation ID if it exists for continuing the conversation
+    // Include previous response ID if it exists for conversation continuity
     if (conversationId) {
-      responseConfig.conversation = conversationId;
+      responseConfig.previous_response_id = conversationId;
     }
 
     const response = await openai.responses.create(responseConfig);
 
-    // Store the conversation ID for future messages
-    if (!conversationId && response.conversation) {
-      const newConversationId = typeof response.conversation === 'string' ? response.conversation : response.conversation.id;
-      // Save conversation ID to both user (global) and chat (specific)
+    // Store the response ID for future messages to maintain conversation continuity
+    const responseId = response.id;
+    if (responseId) {
+      // Save response ID to both user (global) and chat (specific)
       await Promise.all([
-        storage.updateUserConversationId(userId, newConversationId),
-        storage.updateChatConversationId(request.chatId, newConversationId, userId)
+        storage.updateUserConversationId(userId, responseId),
+        storage.updateChatConversationId(request.chatId, responseId, userId)
       ]);
-      conversationId = newConversationId;
-      console.log(`[OpenAI] Saved conversation ID: ${conversationId} for chat: ${request.chatId}`);
+      conversationId = responseId;
+      console.log(`[OpenAI] Saved response ID: ${responseId} for chat: ${request.chatId}`);
     }
 
     // Extract text content from response output
@@ -269,9 +269,10 @@ export async function* generateAssistantResponseStream(
       stream: true
     };
 
-    // Include conversation ID if it exists
+    // Include previous response ID if it exists (for conversation continuity)
+    // Note: Responses API with streaming uses previous_response_id instead of conversation
     if (conversationId) {
-      responseConfig.conversation = conversationId;
+      responseConfig.previous_response_id = conversationId;
     }
 
     // Use streaming via create with stream: true
@@ -292,19 +293,18 @@ export async function* generateAssistantResponseStream(
       chunkCount++;
       console.log(`[OpenAI] Chunk ${chunkCount}:`, JSON.stringify(chunk, null, 2).substring(0, 500));
       
-      // Track conversation ID from response events
-      if (chunk.response?.conversation) {
-        const convId = typeof chunk.response.conversation === 'string' 
-          ? chunk.response.conversation 
-          : chunk.response.conversation?.id;
-        if (convId && !finalConversationId) {
-          finalConversationId = convId;
-          // Save conversation ID to both user (global) and chat (specific)
+      // Track response ID from response.created event (first event in stream)
+      // This ID is used as previous_response_id to maintain conversation continuity
+      if (chunk.type === 'response.created' && chunk.response?.id) {
+        const responseId = chunk.response.id;
+        if (!finalConversationId) {
+          finalConversationId = responseId;
+          // Save response ID to both user (global) and chat (specific) for conversation continuity
           await Promise.all([
-            storage.updateUserConversationId(userId, convId),
-            storage.updateChatConversationId(request.chatId, convId, userId)
+            storage.updateUserConversationId(userId, responseId),
+            storage.updateChatConversationId(request.chatId, responseId, userId)
           ]);
-          console.log(`[Stream Generator] Saved conversation ID: ${convId} for chat: ${request.chatId}`);
+          console.log(`[Stream Generator] Saved response ID: ${responseId} for chat: ${request.chatId}`);
         }
       }
 
