@@ -885,10 +885,10 @@ export default function Portfolio() {
                     <div>
                       <CardTitle className="flex items-center space-x-2">
                         <Activity className="h-5 w-5" />
-                        <span>Atividades de Tradução</span>
+                        <span>Atividades e Experiências</span>
                       </CardTitle>
                       <CardDescription>
-                        Registre suas atividades de tradução bíblica oral
+                        Registre traduções e outras experiências de trabalho (a IA pode adicionar experiências gerais)
                       </CardDescription>
                     </div>
                     <Dialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen}>
@@ -985,24 +985,70 @@ export default function Portfolio() {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <Calendar className="h-5 w-5 text-primary" />
-                                  <h3 className="font-medium" data-testid={`text-language-name-${activity.id}`}>
-                                    {activity.languageName}
-                                  </h3>
-                                </div>
-                                <div className="flex items-center space-x-3 text-sm mb-2">
-                                  <Badge>{activity.chaptersCount} capítulo(s)</Badge>
-                                  {activity.activityDate && (
-                                    <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
-                                      {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
-                                    </span>
-                                  )}
-                                </div>
-                                {activity.notes && (
-                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid={`text-activity-notes-${activity.id}`}>
-                                    {activity.notes}
-                                  </p>
+                                {/* Translation Activity */}
+                                {(activity.activityType === 'translation' || !activity.activityType) && (
+                                  <>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Calendar className="h-5 w-5 text-primary" />
+                                      <h3 className="font-medium" data-testid={`text-language-name-${activity.id}`}>
+                                        {activity.languageName}
+                                      </h3>
+                                    </div>
+                                    <div className="flex items-center space-x-3 text-sm mb-2">
+                                      <Badge>{activity.chaptersCount} capítulo(s)</Badge>
+                                      {activity.activityDate && (
+                                        <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
+                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {activity.notes && (
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid={`text-activity-notes-${activity.id}`}>
+                                        {activity.notes}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* General Experience Activity */}
+                                {activity.activityType && activity.activityType !== 'translation' && (
+                                  <>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Calendar className="h-5 w-5 text-primary" />
+                                      <h3 className="font-medium" data-testid={`text-activity-title-${activity.id}`}>
+                                        {activity.title || 'Experiência Profissional'}
+                                      </h3>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-sm mb-2">
+                                      <Badge variant="outline">
+                                        {activity.activityType === 'facilitation' ? 'Facilitação' :
+                                         activity.activityType === 'teaching' ? 'Ensino' :
+                                         activity.activityType === 'indigenous_work' ? 'Trabalho com Povos' :
+                                         activity.activityType === 'school_work' ? 'Trabalho Escolar' :
+                                         'Experiência Geral'}
+                                      </Badge>
+                                      {activity.organization && (
+                                        <span className="text-muted-foreground" data-testid={`text-organization-${activity.id}`}>
+                                          {activity.organization}
+                                        </span>
+                                      )}
+                                      {activity.yearsOfExperience && (
+                                        <span className="text-muted-foreground">
+                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'ano' : 'anos'}
+                                        </span>
+                                      )}
+                                      {activity.activityDate && (
+                                        <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
+                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {activity.description && (
+                                      <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid={`text-activity-description-${activity.id}`}>
+                                        {activity.description}
+                                      </p>
+                                    )}
+                                  </>
                                 )}
                               </div>
                               <Button
@@ -1207,6 +1253,41 @@ export default function Portfolio() {
                                       data-testid={`button-toggle-report-${report.id}`}
                                     >
                                       {selectedReport?.id === report.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch(`/api/facilitator/reports/${report.id}/download`, {
+                                            credentials: 'include',
+                                          });
+                                          
+                                          if (!response.ok) {
+                                            throw new Error('Falha ao baixar relatório');
+                                          }
+                                          
+                                          const blob = await response.blob();
+                                          const url = window.URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = url;
+                                          a.download = `relatorio-${new Date(report.periodStart).toISOString().split('T')[0]}.docx`;
+                                          document.body.appendChild(a);
+                                          a.click();
+                                          window.URL.revokeObjectURL(url);
+                                          document.body.removeChild(a);
+                                        } catch (error) {
+                                          toast({
+                                            title: "Erro",
+                                            description: "Não foi possível baixar o relatório",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                      data-testid={`button-download-report-${report.id}`}
+                                    >
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Baixar .docx
                                     </Button>
                                   </div>
                                 </div>
