@@ -162,96 +162,16 @@ export async function generateAssistantResponse(
     }
 
     // Create response using Responses API
+    // Note: Tools are defined in the dashboard prompt, not in the API call
     const responseConfig: any = {
       model: "gpt-4o",
-      input: [{
-        role: "user",
-        content: inputContent
-      }],
       prompt: {
         id: OBT_MENTOR_PROMPT_ID
       },
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "add_qualification",
-            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
-            parameters: {
-              type: "object",
-              properties: {
-                courseName: { type: "string", description: "The name of the course, workshop, or qualification" },
-                institution: { type: "string", description: "The institution or organization that provided the training" },
-                completionDate: { type: "string", description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')" },
-                credentialType: { type: "string", description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)" },
-                description: { type: "string", description: "A brief description of what was learned" }
-              },
-              required: ["courseName", "institution", "completionDate"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "add_activity",
-            description: "Add a work experience or mentorship activity to the facilitator's portfolio. Use this for: translation work, facilitation experience, teaching, work with indigenous peoples, work in schools, or any other relevant professional experience.",
-            parameters: {
-              type: "object",
-              properties: {
-                activityType: {
-                  type: "string",
-                  enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"],
-                  description: "Type of activity"
-                },
-                languageName: { type: "string", description: "Language name (for translation)" },
-                chaptersCount: { type: "number", description: "Chapters count (for translation)" },
-                title: { type: "string", description: "Title/role of the experience" },
-                description: { type: "string", description: "Description of the experience" },
-                yearsOfExperience: { type: "number", description: "Years of experience" },
-                organization: { type: "string", description: "Organization name" },
-                notes: { type: "string", description: "Additional notes" }
-              },
-              required: ["activityType"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_competency",
-            description: "Update the status of a core OBT competency when facilitator demonstrates progress.",
-            parameters: {
-              type: "object",
-              properties: {
-                competencyId: {
-                  type: "string",
-                  enum: [
-                    "interpersonal_skills",
-                    "intercultural_communication",
-                    "multimodal_skills",
-                    "translation_theory",
-                    "languages_communication",
-                    "biblical_languages",
-                    "biblical_studies",
-                    "planning_quality",
-                    "consulting_mentoring",
-                    "applied_technology",
-                    "reflective_practice"
-                  ],
-                  description: "The ID of the competency to update"
-                },
-                status: {
-                  type: "string",
-                  enum: ["not_started", "emerging", "growing", "proficient", "advanced"],
-                  description: "The new status level"
-                },
-                notes: { type: "string", description: "Notes explaining the progress or update" }
-              },
-              required: ["competencyId", "status"]
-            }
-          }
-        }
-      ]
+      // Input can be a simple string or array of content items
+      input: inputContent.length === 1 && inputContent[0].type === "input_text" 
+        ? inputContent[0].text 
+        : inputContent
     };
 
     // Include conversation ID if it exists for continuing the conversation
@@ -320,78 +240,16 @@ export async function* generateAssistantResponseStream(
     }
 
     // Create streaming response using Responses API
+    // Note: Tools are defined in the dashboard prompt, not in the API call
     const responseConfig: any = {
       model: "gpt-4o",
-      input: [{
-        role: "user",
-        content: inputContent
-      }],
       prompt: {
         id: OBT_MENTOR_PROMPT_ID
       },
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "add_qualification",
-            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio.",
-            parameters: {
-              type: "object",
-              properties: {
-                courseName: { type: "string", description: "The name of the course, workshop, or qualification" },
-                institution: { type: "string", description: "The institution or organization" },
-                completionDate: { type: "string", description: "Date of completion" },
-                credentialType: { type: "string", description: "Type of credential" },
-                description: { type: "string", description: "Brief description" }
-              },
-              required: ["courseName", "institution", "completionDate"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "add_activity",
-            description: "Add a work experience or mentorship activity.",
-            parameters: {
-              type: "object",
-              properties: {
-                activityType: {
-                  type: "string",
-                  enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"]
-                },
-                languageName: { type: "string" },
-                chaptersCount: { type: "number" },
-                title: { type: "string" },
-                description: { type: "string" },
-                yearsOfExperience: { type: "number" },
-                organization: { type: "string" },
-                notes: { type: "string" }
-              },
-              required: ["activityType"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_competency",
-            description: "Update OBT competency status.",
-            parameters: {
-              type: "object",
-              properties: {
-                competencyId: {
-                  type: "string",
-                  enum: ["interpersonal_skills", "intercultural_communication", "multimodal_skills", "translation_theory", "languages_communication", "biblical_languages", "biblical_studies", "planning_quality", "consulting_mentoring", "applied_technology", "reflective_practice"]
-                },
-                status: { type: "string", enum: ["not_started", "emerging", "growing", "proficient", "advanced"] },
-                notes: { type: "string" }
-              },
-              required: ["competencyId", "status"]
-            }
-          }
-        }
-      ],
+      // Input can be a simple string or array of content items
+      input: inputContent.length === 1 && inputContent[0].type === "input_text" 
+        ? inputContent[0].text 
+        : inputContent,
       stream: true
     };
 
@@ -471,19 +329,16 @@ export async function generateChatCompletion(
       content: [{ type: msg.role === "user" ? "input_text" : "output_text", text: msg.content }]
     }));
 
-    // Build instructions (system messages + base instructions)
-    let instructions = OBT_MENTOR_INSTRUCTIONS;
-    if (systemMessages.length > 0) {
-      const systemInstructions = systemMessages.map(msg => msg.content).join("\n\n");
-      instructions = systemInstructions + "\n\n" + instructions;
-    }
-
     // Create response using Responses API
+    // Note: Tools and instructions are defined in the dashboard prompt
     const responseConfig: any = {
       model: "gpt-4o",
-      input,
-      instructions,
-      tools: [{ type: "file_search" }]
+      prompt: {
+        id: OBT_MENTOR_PROMPT_ID
+      },
+      input: input.length === 1 && input[0].content.length === 1 && typeof input[0].content[0].text === 'string'
+        ? input[0].content[0].text
+        : input
     };
 
     // Include conversation ID if it exists
