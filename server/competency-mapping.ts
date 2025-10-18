@@ -1,7 +1,7 @@
 /**
  * Qualification-Competency Mapping System
  * 
- * This file defines how qualifications (courses) impact OBT competencies.
+ * This file defines how qualifications (courses) impact the 11 OBT competencies.
  * Each mapping includes keywords to match in course titles and the competency impact weights.
  */
 
@@ -16,88 +16,106 @@ export interface QualificationPattern {
 }
 
 /**
- * Qualification patterns that affect competencies
+ * Qualification patterns that affect the new 11-competency framework
  * When a qualification matches multiple patterns, weights are summed
  */
 export const QUALIFICATION_PATTERNS: QualificationPattern[] = [
-  // Biblical Languages (Hebrew, Greek, Aramaic)
+  // Interpersonal & Team Leadership Skills
   {
-    keywords: ['hebrew', 'greek', 'aramaic', 'biblical language'],
+    keywords: ['leadership', 'team building', 'conflict resolution', 'active listening', 'empathy', 'facilitation', 'group dynamics'],
     impacts: [
-      { competencyId: 'biblical_knowledge', weight: 5 },
-      { competencyId: 'translation_theory', weight: 3 },
-    ]
-  },
-  
-  // Bible Studies & Theology
-  {
-    keywords: ['bible', 'biblical', 'theology', 'theological', 'scripture'],
-    impacts: [
-      { competencyId: 'biblical_knowledge', weight: 4 },
-      { competencyId: 'spiritual_formation', weight: 3 },
-    ]
-  },
-  
-  // Linguistics & Translation Theory
-  {
-    keywords: ['linguistic', 'translation', 'phonetic', 'phonology', 'morphology', 'syntax', 'semantics'],
-    impacts: [
-      { competencyId: 'translation_theory', weight: 5 },
-      { competencyId: 'oral_methods', weight: 2 },
-    ]
-  },
-  
-  // Oral Communication & OBT Methods
-  {
-    keywords: ['oral', 'obt', 'oral bible translation', 'storytelling', 'narrative'],
-    impacts: [
-      { competencyId: 'oral_methods', weight: 5 },
-      { competencyId: 'translation_theory', weight: 3 },
-    ]
-  },
-  
-  // Teaching & Facilitation
-  {
-    keywords: ['teaching', 'facilitation', 'training', 'pedagogy', 'education', 'trainer'],
-    impacts: [
-      { competencyId: 'facilitation_skills', weight: 5 },
-      { competencyId: 'mentorship_practice', weight: 3 },
+      { competencyId: 'interpersonal_skills', weight: 5 },
+      { competencyId: 'consulting_mentoring', weight: 3 },
     ]
   },
   
   // Cross-cultural & Intercultural Communication
   {
-    keywords: ['cross-cultural', 'intercultural', 'cultural sensitivity', 'anthropology', 'ethnography'],
+    keywords: ['cross-cultural', 'intercultural', 'cultural sensitivity', 'anthropology', 'ethnography', 'cultural adaptation'],
     impacts: [
       { competencyId: 'intercultural_communication', weight: 5 },
-      { competencyId: 'facilitation_skills', weight: 2 },
+      { competencyId: 'interpersonal_skills', weight: 2 },
     ]
   },
   
-  // Project Management & Leadership
+  // Oral Communication & Multimodal Methods
   {
-    keywords: ['project management', 'leadership', 'management', 'administration', 'planning'],
+    keywords: ['oral', 'obt', 'oral bible translation', 'storytelling', 'narrative', 'multimodal', 'embodied learning', 'gestures', 'visual communication'],
     impacts: [
-      { competencyId: 'project_management', weight: 5 },
-      { competencyId: 'facilitation_skills', weight: 2 },
+      { competencyId: 'multimodal_skills', weight: 5 },
+      { competencyId: 'translation_theory', weight: 3 },
     ]
   },
   
-  // Mentorship & Coaching
+  // Translation Theory & Linguistics
   {
-    keywords: ['mentor', 'mentoring', 'mentorship', 'coaching', 'discipleship'],
+    keywords: ['translation', 'linguistics', 'translation theory', 'phonetics', 'phonology', 'morphology', 'syntax', 'semantics', 'discourse analysis'],
     impacts: [
-      { competencyId: 'mentorship_practice', weight: 5 },
-      { competencyId: 'spiritual_formation', weight: 3 },
+      { competencyId: 'translation_theory', weight: 5 },
+      { competencyId: 'languages_communication', weight: 4 },
     ]
   },
   
-  // Spiritual Formation & Ministry
+  // Languages & Communication (Semantics, Pragmatics, Metaphor)
   {
-    keywords: ['spiritual formation', 'discipleship', 'ministry', 'pastoral', 'mission', 'missionary'],
+    keywords: ['semantics', 'pragmatics', 'metaphor', 'discourse', 'communication theory', 'linguistic analysis', 'language structure'],
     impacts: [
-      { competencyId: 'spiritual_formation', weight: 5 },
-      { competencyId: 'biblical_knowledge', weight: 2 },
+      { competencyId: 'languages_communication', weight: 5 },
+      { competencyId: 'translation_theory', weight: 3 },
+    ]
+  },
+  
+  // Biblical Languages (Hebrew, Greek, Aramaic)
+  {
+    keywords: ['hebrew', 'greek', 'aramaic', 'biblical language', 'exegesis', 'original languages'],
+    impacts: [
+      { competencyId: 'biblical_languages', weight: 5 },
+      { competencyId: 'biblical_studies', weight: 3 },
+    ]
+  },
+  
+  // Biblical Studies & Theology
+  {
+    keywords: ['bible', 'biblical', 'theology', 'theological', 'scripture', 'hermeneutics', 'biblical interpretation'],
+    impacts: [
+      { competencyId: 'biblical_studies', weight: 5 },
+      { competencyId: 'biblical_languages', weight: 2 },
+    ]
+  },
+  
+  // Planning & Quality Assurance
+  {
+    keywords: ['project management', 'planning', 'quality assurance', 'qa', 'quality control', 'project planning', 'scheduling', 'budgeting'],
+    impacts: [
+      { competencyId: 'planning_quality', weight: 5 },
+      { competencyId: 'consulting_mentoring', weight: 2 },
+    ]
+  },
+  
+  // Consulting & Mentoring
+  {
+    keywords: ['mentor', 'mentoring', 'mentorship', 'coaching', 'consulting', 'training', 'teaching', 'discipleship', 'servant leadership'],
+    impacts: [
+      { competencyId: 'consulting_mentoring', weight: 5 },
+      { competencyId: 'interpersonal_skills', weight: 3 },
+    ]
+  },
+  
+  // Applied Technology
+  {
+    keywords: ['technology', 'audio recording', 'editing', 'digital tools', 'software', 'ai', 'artificial intelligence', 'remote collaboration', 'digital literacy'],
+    impacts: [
+      { competencyId: 'applied_technology', weight: 5 },
+      { competencyId: 'multimodal_skills', weight: 2 },
+    ]
+  },
+  
+  // Reflective Practice & Self-awareness
+  {
+    keywords: ['reflective practice', 'self-awareness', 'emotional intelligence', 'self-regulation', 'personal growth', 'feedback', 'introspection'],
+    impacts: [
+      { competencyId: 'reflective_practice', weight: 5 },
+      { competencyId: 'interpersonal_skills', weight: 3 },
     ]
   },
   
@@ -105,9 +123,9 @@ export const QUALIFICATION_PATTERNS: QualificationPattern[] = [
   {
     keywords: ['dts', 'discipleship training school', 'ywam', 'youth with a mission'],
     impacts: [
-      { competencyId: 'spiritual_formation', weight: 4 },
+      { competencyId: 'biblical_studies', weight: 4 },
       { competencyId: 'intercultural_communication', weight: 3 },
-      { competencyId: 'biblical_knowledge', weight: 3 },
+      { competencyId: 'consulting_mentoring', weight: 3 },
     ]
   },
 ];

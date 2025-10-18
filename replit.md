@@ -32,7 +32,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Models
 - **Core Entities**: Users, Facilitators, Facilitator Competencies, Facilitator Qualifications, Mentorship Activities, Quarterly Reports, Chats, Messages, Message Attachments.
-- **Competencies**: Tracks 8 OBT core competencies with status levels (not_started, developing, proficient, advanced).
+- **Competencies**: Tracks 11 OBT core competencies with bilingual names and status levels (not_started, emerging, growing, proficient, advanced).
+
+### 11 Core Competencies (Bilingual Framework)
+1. **Habilidades Interpessoais / Interpersonal Skills** - Lead team with active listening, empathy, facilitation
+2. **Comunicação Intercultural / Intercultural Communication** - Honor cultural codes, adjust communication naturally
+3. **Habilidades Multimodais / Multimodal Skills** - Lead oral, embodied process with stories, gestures, objects
+4. **Teorias e Processos de Tradução / Translation Theory & Process** - Understand translation methods, prioritize meaning in oral contexts
+5. **Línguas e Comunicação / Languages & Communication** - Understand language mechanics, semantics, metaphor, discourse
+6. **Línguas Bíblicas / Biblical Languages** - Consult Hebrew/Greek using exegetical tools when needed
+7. **Estudos Bíblicos e Teologia / Biblical Studies & Theology** - Bring historical-cultural background and hermeneutics
+8. **Planejamento e Garantia de Qualidade / Planning & Quality Assurance** - Transform vision into simple plans with ongoing QA
+9. **Consultoria e Mentoria / Consulting & Mentoring** - Serve as servant-leader who teaches by doing
+10. **Tecnologia Aplicada / Applied Technology** - Choose and operate tools for orality (recording, AI, collaboration)
+11. **Prática Reflexiva / Reflective Practice** - Exercise self-awareness, align actions with values, welcome feedback
 
 ## AI Integration
 - **Provider**: OpenAI API (GPT-4o via Assistant API, Whisper API for audio)
