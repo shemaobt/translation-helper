@@ -30,11 +30,13 @@ import {
   X,
   Trash,
   UserCheck,
-  Shield
+  Shield,
+  Link2,
+  Play
 } from "lucide-react";
 // Use logo from public directory
 const logoImage = "/logo.png";
-import type { Chat, AssistantId } from "@shared/schema";
+import type { Chat, AssistantId, ChatChain } from "@shared/schema";
 import { ASSISTANTS } from "@shared/schema";
 
 interface SidebarProps {
@@ -54,6 +56,7 @@ export default function Sidebar({
 }: SidebarProps = {}) {
   const [location, setLocation] = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [chainsExpanded, setChainsExpanded] = useState(true);
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,6 +73,11 @@ export default function Sidebar({
 
   const { data: chats = [] } = useQuery<Chat[]>({
     queryKey: ["/api/chats"],
+    retry: false,
+  });
+
+  const { data: chatChains = [] } = useQuery<ChatChain[]>({
+    queryKey: ["/api/chat-chains"],
     retry: false,
   });
 
@@ -172,6 +180,89 @@ export default function Sidebar({
     },
   });
 
+  const createChainMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const response = await apiRequest("POST", "/api/chat-chains", {
+        title,
+        summary: null,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat-chains"] });
+      toast({
+        title: "Success",
+        description: "Chat chain created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create chat chain",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChainMutation = useMutation({
+    mutationFn: async (chainId: string) => {
+      const response = await apiRequest("DELETE", `/api/chat-chains/${chainId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat-chains"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      toast({
+        title: "Success",
+        description: "Chat chain deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete chat chain",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const continueChainMutation = useMutation({
+    mutationFn: async (chainId: string) => {
+      // Get the chain to find the active chat
+      const chain = chatChains.find(c => c.id === chainId);
+      if (chain?.activeChatId) {
+        // Navigate to active chat
+        return { chatId: chain.activeChatId };
+      } else {
+        // Create a new chat in this chain
+        const response = await apiRequest("POST", "/api/chats", {
+          title: "New Chat",
+          assistantId: 'obtMentor',
+        });
+        const newChat = await response.json();
+        
+        // Link the chat to the chain
+        await apiRequest("POST", `/api/chats/${newChat.id}/chain`, {
+          chainId,
+        });
+        
+        return { chatId: newChat.id };
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat-chains"] });
+      setLocation(`/chat/${data.chatId}`);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to continue chat chain",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatTimestamp = (timestamp: string | Date | null | undefined) => {
     if (!timestamp) return "Unknown";
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
@@ -227,6 +318,97 @@ export default function Sidebar({
           <span>New Chat</span>
         </Button>
       </div>
+
+      {/* Chat Chains */}
+      {chatChains.length > 0 && (
+        <div className="p-3 md:p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-muted-foreground">Chat Chains</h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setChainsExpanded(!chainsExpanded)}
+              className="h-6 w-6 p-0"
+              data-testid="button-toggle-chains"
+            >
+              {chainsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
+          </div>
+          
+          {chainsExpanded && (
+            <div className="space-y-2">
+              {chatChains.map((chain) => {
+                const chainChats = chats.filter(c => c.chainId === chain.id);
+                return (
+                  <div key={chain.id} className="relative group p-2 rounded-md border border-border hover:border-primary/50 transition-colors" data-testid={`chain-${chain.id}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate" data-testid={`text-chain-title-${chain.id}`}>
+                          {chain.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {chainChats.length} chat{chainChats.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-1 ml-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => continueChainMutation.mutate(chain.id)}
+                          className="h-7 px-2"
+                          disabled={continueChainMutation.isPending}
+                          data-testid={`button-continue-chain-${chain.id}`}
+                        >
+                          <Play className="h-3 w-3" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={isMobile ? 'opacity-100 h-7 w-7 p-0' : 'opacity-0 group-hover:opacity-100 h-7 w-7 p-0'}
+                              data-testid={`button-chain-menu-${chain.id}`}
+                            >
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => deleteChainMutation.mutate(chain.id)}
+                              data-testid={`button-delete-chain-${chain.id}`}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete chain
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const title = prompt("Enter chain title:");
+                  if (title) createChainMutation.mutate(title);
+                }}
+                className="w-full"
+                disabled={createChainMutation.isPending}
+                data-testid="button-new-chain"
+              >
+                <Plus className="h-3 w-3 mr-2" />
+                New Chain
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Chat History */}
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-1 md:space-y-2">
