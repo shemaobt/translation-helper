@@ -1,5 +1,10 @@
-import { User, Volume2, VolumeX, Pause, Loader2, Music, FileAudio } from "lucide-react";
+import { User, Volume2, VolumeX, Pause, Loader2, Music, FileAudio, Maximize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
@@ -69,12 +74,34 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
                 {attachments.map((attachment) => (
                   <div key={attachment.id} data-testid={`attachment-${attachment.id}`}>
                     {attachment.fileType === 'image' ? (
-                      <img
-                        src={`/${attachment.storagePath}`}
-                        alt={attachment.originalName}
-                        className="max-w-full rounded border border-primary-foreground/20"
-                        data-testid={`img-attachment-${attachment.id}`}
-                      />
+                      <Dialog>
+                        <div className="relative group">
+                          <img
+                            src={`/${attachment.storagePath}`}
+                            alt={attachment.originalName}
+                            className="max-w-sm max-h-64 object-contain rounded border border-primary-foreground/20 cursor-pointer hover:opacity-90 transition-opacity"
+                            data-testid={`img-attachment-${attachment.id}`}
+                          />
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                              data-testid={`button-expand-image-${attachment.id}`}
+                            >
+                              <Maximize2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                        </div>
+                        <DialogContent className="max-w-4xl">
+                          <img
+                            src={`/${attachment.storagePath}`}
+                            alt={attachment.originalName}
+                            className="w-full h-auto max-h-[80vh] object-contain"
+                            data-testid={`img-attachment-expanded-${attachment.id}`}
+                          />
+                        </DialogContent>
+                      </Dialog>
                     ) : (
                       <div className="bg-primary-foreground/10 rounded p-2">
                         <div className="flex items-center space-x-2 mb-2">
@@ -136,12 +163,34 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
                 {attachments.map((attachment) => (
                   <div key={attachment.id} data-testid={`attachment-${attachment.id}`}>
                     {attachment.fileType === 'image' ? (
-                      <img
-                        src={`/${attachment.storagePath}`}
-                        alt={attachment.originalName}
-                        className="max-w-full rounded border border-border"
-                        data-testid={`img-attachment-${attachment.id}`}
-                      />
+                      <Dialog>
+                        <div className="relative group">
+                          <img
+                            src={`/${attachment.storagePath}`}
+                            alt={attachment.originalName}
+                            className="max-w-sm max-h-64 object-contain rounded border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                            data-testid={`img-attachment-${attachment.id}`}
+                          />
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                              data-testid={`button-expand-image-${attachment.id}`}
+                            >
+                              <Maximize2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                        </div>
+                        <DialogContent className="max-w-4xl">
+                          <img
+                            src={`/${attachment.storagePath}`}
+                            alt={attachment.originalName}
+                            className="w-full h-auto max-h-[80vh] object-contain"
+                            data-testid={`img-attachment-expanded-${attachment.id}`}
+                          />
+                        </DialogContent>
+                      </Dialog>
                     ) : (
                       <div className="bg-muted rounded p-2">
                         <div className="flex items-center space-x-2 mb-2">
