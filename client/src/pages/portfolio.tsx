@@ -693,7 +693,7 @@ export default function Portfolio() {
                                   {!isEditing && (
                                     <Button
                                       size="sm"
-                                      variant="ghost"
+                                      variant="default"
                                       onClick={() => {
                                         setTempNotes(notes);
                                         setEditingCompetency(competencyId);
