@@ -2147,6 +2147,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
+      // Automatically initialize/update all 11 competencies based on qualifications
+      await storage.recalculateCompetencies(facilitator.id);
+      
       const competencies = await storage.getFacilitatorCompetencies(facilitator.id);
       res.json(competencies);
     } catch (error) {
