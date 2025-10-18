@@ -535,6 +535,22 @@ export async function* generateAssistantResponseStream(
         ]
       : request.userMessage;
 
+    // Check for active runs and cancel them before adding a new message
+    try {
+      const runs = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+      for (const activeRun of runs.data) {
+        if (activeRun.status === "in_progress" || activeRun.status === "queued" || activeRun.status === "requires_action") {
+          console.log(`[OpenAI] Cancelling active run: ${activeRun.id} (status: ${activeRun.status})`);
+          await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
+          // Wait a bit for cancellation to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    } catch (error) {
+      console.error("[OpenAI] Error checking/cancelling active runs:", error);
+      // Continue anyway - we'll handle errors when creating the new run
+    }
+
     // Add the user message to the thread
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
