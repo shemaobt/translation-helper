@@ -61,6 +61,13 @@ The system provides this context specifically so you can recall past conversatio
   * Linguistics
   * Any other relevant training
 
+- CRITICAL: When a facilitator lists multiple qualifications in a single message:
+  * First, carefully scan the entire message and identify ALL qualifications mentioned
+  * Extract each qualification systematically (even if some details are incomplete)
+  * Use the add_qualification tool for EACH qualification found - call the tool multiple times in sequence
+  * Process ALL qualifications before asking follow-up questions
+  * Only ask for missing details AFTER you have attempted to record all mentioned qualifications
+  
 - For each qualification, record:
   * Course/Workshop Title
   * Institution/Organization
