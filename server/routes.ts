@@ -1151,6 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
               assistantMessageId = assistantMessage.id;
               
+              console.log('[SSE] Sending assistant_message_start');
               // Send assistant message created event
               res.write(`data: ${JSON.stringify({ 
                 type: 'assistant_message_start',
@@ -1159,6 +1160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Send content chunk
+            console.log('[SSE] Sending content chunk:', chunk.data);
             res.write(`data: ${JSON.stringify({ 
               type: 'content', 
               data: chunk.data 
