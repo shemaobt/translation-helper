@@ -41,7 +41,7 @@ import {
   type InsertQuarterlyReport,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -84,6 +84,7 @@ export interface IStorage {
   
   // Message operations
   getChatMessages(chatId: string, userId: string): Promise<Message[]>;
+  getRecentUserMessages(userId: string, limit: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message>;
   
@@ -417,6 +418,25 @@ export class DatabaseStorage implements IStorage {
       .from(messages)
       .where(eq(messages.chatId, chatId))
       .orderBy(messages.createdAt);
+  }
+
+  async getRecentUserMessages(userId: string, limit: number): Promise<Message[]> {
+    // Get recent messages from all user's chats efficiently with SQL
+    const userChatIds = await db
+      .select({ id: chats.id })
+      .from(chats)
+      .where(eq(chats.userId, userId));
+    
+    const chatIds = userChatIds.map(chat => chat.id);
+    
+    if (chatIds.length === 0) return [];
+    
+    return await db
+      .select()
+      .from(messages)
+      .where(inArray(messages.chatId, chatIds))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
