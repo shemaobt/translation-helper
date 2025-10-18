@@ -398,14 +398,15 @@ export async function generateAssistantResponse(
   userId: string
 ): Promise<AssistantResponse> {
   try {
-    // Use per-user thread for intertwined chats (shared across all user's chats)
-    let threadId = request.threadId || await storage.getUserThreadId(userId);
+    // Use per-user conversation for intertwined chats (shared across all user's chats)
+    // Note: Using conversationId naming but still using Assistants API (threads) until SDK supports Responses API
+    let conversationId = request.threadId || await storage.getUserConversationId(userId);
     
     // Create a new thread if none exists
-    if (!threadId) {
+    if (!conversationId) {
       const thread = await openai.beta.threads.create();
-      threadId = thread.id;
-      await storage.updateUserThreadId(userId, threadId);
+      conversationId = thread.id;
+      await storage.updateUserConversationId(userId, conversationId);
     }
 
     // Upload images to OpenAI if provided
@@ -437,7 +438,7 @@ export async function generateAssistantResponse(
       : request.userMessage;
 
     // Add the user message to the thread
-    await openai.beta.threads.messages.create(threadId, {
+    await openai.beta.threads.messages.create(conversationId, {
       role: "user",
       content: messageContent,
     });
@@ -446,19 +447,19 @@ export async function generateAssistantResponse(
     const assistantId = await getObtMentorAssistant();
 
     // Run the assistant
-    const run = await openai.beta.threads.runs.create(threadId, {
+    const run = await openai.beta.threads.runs.create(conversationId, {
       assistant_id: assistantId,
     });
 
     // Wait for the run to complete
     let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-      thread_id: threadId,
+      thread_id: conversationId,
     });
     
     while (runStatus.status === "in_progress" || runStatus.status === "queued") {
       await new Promise(resolve => setTimeout(resolve, 1000));
       runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-        thread_id: threadId,
+        thread_id: conversationId,
       });
     }
 
@@ -467,7 +468,7 @@ export async function generateAssistantResponse(
     }
 
     // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(threadId);
+    const messages = await openai.beta.threads.messages.list(conversationId);
     const lastMessage = messages.data[0];
     
     if (!lastMessage || lastMessage.role !== "assistant") {
@@ -481,12 +482,12 @@ export async function generateAssistantResponse(
 
     return {
       content,
-      threadId,
+      threadId: conversationId, // Keep field name for backwards compatibility
       tokens: runStatus.usage?.total_tokens || 0,
     };
   } catch (error) {
     console.error("OpenAI Assistant API error:", error);
-    throw new Error("Failed to generate response from StoryTeller assistant. Please try again.");
+    throw new Error("Failed to generate response from OBT Mentor assistant. Please try again.");
   }
 }
 
@@ -497,14 +498,14 @@ export async function* generateAssistantResponseStream(
   toolCallExecutor?: ToolCallExecutor
 ): AsyncGenerator<{ type: 'content' | 'done' | 'tool_call', data: string | AssistantResponse | any }> {
   try {
-    // Use per-user thread for intertwined chats (shared across all user's chats)
-    let threadId = request.threadId || await storage.getUserThreadId(userId);
+    // Use per-user conversation for intertwined chats (shared across all user's chats)
+    let conversationId = request.threadId || await storage.getUserConversationId(userId);
     
-    // Create a new thread if none exists
-    if (!threadId) {
+    // Create a new conversation if none exists
+    if (!conversationId) {
       const thread = await openai.beta.threads.create();
-      threadId = thread.id;
-      await storage.updateUserThreadId(userId, threadId);
+      conversationId = thread.id;
+      await storage.updateUserConversationId(userId, conversationId);
     }
 
     // Upload images to OpenAI if provided
@@ -537,18 +538,18 @@ export async function* generateAssistantResponseStream(
 
     // Check for active runs and cancel them before adding a new message
     try {
-      const runs = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+      const runs = await openai.beta.threads.runs.list(conversationId, { limit: 5 });
       for (const activeRun of runs.data) {
         if (activeRun.status === "in_progress" || activeRun.status === "queued" || activeRun.status === "requires_action") {
           console.log(`[OpenAI] Cancelling active run: ${activeRun.id} (status: ${activeRun.status})`);
-          await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
+          await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: conversationId });
           
           // Wait for cancellation to complete - poll the status
-          let cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: threadId });
+          let cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: conversationId });
           let attempts = 0;
           while (cancelledRun.status !== "cancelled" && cancelledRun.status !== "failed" && attempts < 10) {
             await new Promise(resolve => setTimeout(resolve, 500));
-            cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: threadId });
+            cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: conversationId });
             attempts++;
             console.log(`[OpenAI] Waiting for run cancellation... status: ${cancelledRun.status} (attempt ${attempts})`);
           }
@@ -561,7 +562,7 @@ export async function* generateAssistantResponseStream(
     }
 
     // Add the user message to the thread
-    await openai.beta.threads.messages.create(threadId, {
+    await openai.beta.threads.messages.create(conversationId, {
       role: "user",
       content: messageContent,
     });
@@ -570,7 +571,7 @@ export async function* generateAssistantResponseStream(
     const assistantId = await getObtMentorAssistant();
 
     // Create run
-    let run = await openai.beta.threads.runs.create(threadId, {
+    let run = await openai.beta.threads.runs.create(conversationId, {
       assistant_id: assistantId,
     });
 
@@ -611,7 +612,7 @@ export async function* generateAssistantResponseStream(
           run = await openai.beta.threads.runs.submitToolOutputs(
             run.id,
             {
-              thread_id: threadId,
+              thread_id: conversationId,
               tool_outputs: toolOutputs,
             }
           );
@@ -622,7 +623,7 @@ export async function* generateAssistantResponseStream(
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get updated run status
-      run = await openai.beta.threads.runs.retrieve(run.id, { thread_id: threadId });
+      run = await openai.beta.threads.runs.retrieve(run.id, { thread_id: conversationId });
     }
 
     // Check for failure
@@ -637,7 +638,7 @@ export async function* generateAssistantResponseStream(
     totalTokens = run.usage?.total_tokens || 0;
 
     // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(threadId);
+    const messages = await openai.beta.threads.messages.list(conversationId);
     const lastMessage = messages.data[0];
     
     if (lastMessage && lastMessage.role === "assistant") {
@@ -660,7 +661,7 @@ export async function* generateAssistantResponseStream(
       type: 'done', 
       data: {
         content: fullContent,
-        threadId,
+        threadId: conversationId,
         tokens: totalTokens,
       } as AssistantResponse 
     };
@@ -676,13 +677,13 @@ export async function generateChatCompletion(
   userId: string
 ): Promise<AssistantResponse> {
   try {
-    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
+    let conversationId = request.threadId || await storage.getChatConversationId(request.chatId, userId);
     
-    // Create a new thread if none exists
-    if (!threadId) {
+    // Create a new conversation if none exists
+    if (!conversationId) {
       const thread = await openai.beta.threads.create();
-      threadId = thread.id;
-      await storage.updateChatThreadId(request.chatId, threadId, userId);
+      conversationId = thread.id;
+      await storage.updateChatConversationId(request.chatId, conversationId, userId);
     }
 
     // Extract system messages for run instructions
@@ -691,7 +692,7 @@ export async function generateChatCompletion(
 
     // Add all conversation messages to the thread in order
     for (const message of conversationMessages) {
-      await openai.beta.threads.messages.create(threadId, {
+      await openai.beta.threads.messages.create(conversationId, {
         role: message.role as "user" | "assistant",
         content: message.content,
       });
@@ -710,17 +711,17 @@ export async function generateChatCompletion(
       runConfig.additional_instructions = systemInstructions;
     }
 
-    const run = await openai.beta.threads.runs.create(threadId, runConfig);
+    const run = await openai.beta.threads.runs.create(conversationId, runConfig);
 
     // Wait for the run to complete
     let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-      thread_id: threadId,
+      thread_id: conversationId,
     });
     
     while (runStatus.status === "in_progress" || runStatus.status === "queued") {
       await new Promise(resolve => setTimeout(resolve, 1000));
       runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-        thread_id: threadId,
+        thread_id: conversationId,
       });
     }
 
@@ -729,7 +730,7 @@ export async function generateChatCompletion(
     }
 
     // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(threadId);
+    const messages = await openai.beta.threads.messages.list(conversationId);
     const lastMessage = messages.data[0];
     
     if (!lastMessage || lastMessage.role !== "assistant") {
@@ -743,7 +744,7 @@ export async function generateChatCompletion(
 
     return {
       content,
-      threadId,
+      threadId: conversationId,
       tokens: runStatus.usage?.total_tokens || 0,
     };
   } catch (error) {
@@ -753,11 +754,11 @@ export async function generateChatCompletion(
 }
 
 export async function clearChatThread(chatId: string, userId: string): Promise<void> {
-  await storage.updateChatThreadId(chatId, '', userId);
+  await storage.updateChatConversationId(chatId, '', userId);
 }
 
 export async function getChatThreadId(chatId: string, userId: string): Promise<string | null> {
-  return await storage.getChatThreadId(chatId, userId);
+  return await storage.getChatConversationId(chatId, userId);
 }
 
 // Audio processing functions for Whisper and TTS
