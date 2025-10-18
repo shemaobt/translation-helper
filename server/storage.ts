@@ -383,6 +383,21 @@ export class DatabaseStorage implements IStorage {
     return chat?.threadId || null;
   }
 
+  async getUserThreadId(userId: string): Promise<string | null> {
+    const [user] = await db
+      .select({ userThreadId: users.userThreadId })
+      .from(users)
+      .where(eq(users.id, userId));
+    return user?.userThreadId || null;
+  }
+
+  async updateUserThreadId(userId: string, threadId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ userThreadId: threadId, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
   async deleteChat(chatId: string, userId: string): Promise<void> {
     await db
       .delete(chats)
