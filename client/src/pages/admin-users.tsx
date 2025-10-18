@@ -42,8 +42,11 @@ import {
   CheckCircle,
   XCircle,
   UserCheck,
-  UserX
+  UserX,
+  FileText,
+  FileBarChart2
 } from "lucide-react";
+import { Link } from "wouter";
 
 interface UserWithStats {
   id: string;
@@ -341,6 +344,42 @@ export default function AdminUsers() {
       toast({
         title: "Error",
         description: "Failed to reject user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Generate report mutation
+  const generateReportMutation = useMutation({
+    mutationFn: async ({ userId, periodStart, periodEnd }: { userId: string; periodStart: string; periodEnd: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/generate-report`, {
+        periodStart,
+        periodEnd,
+      }, { "X-Requested-With": "XMLHttpRequest" });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      const user = users.find((u: UserWithStats) => u.id === variables.userId);
+      toast({
+        title: "Success",
+        description: `Report generated successfully for ${formatName(user as UserWithStats)}`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to generate report",
         variant: "destructive",
       });
     },
@@ -752,6 +791,28 @@ export default function AdminUsers() {
                                 >
                                   <KeyRound className="mr-2 h-4 w-4" />
                                   Reset Password
+                                </DropdownMenuItem>
+
+                                {/* Portfolio and Report Actions */}
+                                <Link href={`/admin/portfolio/${user.id}`}>
+                                  <DropdownMenuItem data-testid={`button-view-portfolio-${user.id}`}>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    View Portfolio
+                                  </DropdownMenuItem>
+                                </Link>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const today = new Date();
+                                    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
+                                    const periodStart = threeMonthsAgo.toISOString().split('T')[0];
+                                    const periodEnd = today.toISOString().split('T')[0];
+                                    generateReportMutation.mutate({ userId: user.id, periodStart, periodEnd });
+                                  }}
+                                  disabled={generateReportMutation.isPending}
+                                  data-testid={`button-generate-report-${user.id}`}
+                                >
+                                  <FileBarChart2 className="mr-2 h-4 w-4" />
+                                  Generate Report
                                 </DropdownMenuItem>
                                 
                                 {/* Approval Actions - Only show for pending users */}

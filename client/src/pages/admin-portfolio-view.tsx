@@ -1,0 +1,386 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import Sidebar from "@/components/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  CheckCircle2,
+  Circle,
+  Target,
+  GraduationCap,
+  Activity,
+  FileText,
+  User,
+  Sparkles
+} from "lucide-react";
+import { 
+  CORE_COMPETENCIES,
+  type CompetencyId,
+  type FacilitatorCompetency, 
+  type FacilitatorQualification, 
+  type MentorshipActivity,
+  type QuarterlyReport
+} from "@shared/schema";
+
+const competencyStatusOptions = ['not_started', 'emerging', 'growing', 'proficient', 'advanced'] as const;
+type CompetencyStatus = typeof competencyStatusOptions[number];
+
+const statusLabels: Record<CompetencyStatus, string> = {
+  not_started: 'Não Iniciado',
+  emerging: 'Emergente',
+  growing: 'Em Crescimento',
+  proficient: 'Proficiente',
+  advanced: 'Avançado'
+};
+
+const statusColors: Record<CompetencyStatus, string> = {
+  not_started: 'text-muted-foreground',
+  emerging: 'text-yellow-600',
+  growing: 'text-blue-600',
+  proficient: 'text-green-600',
+  advanced: 'text-purple-600'
+};
+
+interface AdminPortfolioProps {
+  params: {
+    userId: string;
+  };
+}
+
+export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("competencies");
+  const userId = params.userId;
+
+  // Fetch competencies for the user
+  const { data: competencies = [], isLoading: loadingCompetencies } = useQuery<FacilitatorCompetency[]>({
+    queryKey: ['/api/admin/users', userId, 'competencies'],
+    enabled: isAuthenticated && !!userId
+  });
+
+  // Fetch qualifications for the user
+  const { data: qualifications = [], isLoading: loadingQualifications } = useQuery<FacilitatorQualification[]>({
+    queryKey: ['/api/admin/users', userId, 'qualifications'],
+    enabled: isAuthenticated && !!userId
+  });
+
+  // Fetch activities for the user
+  const { data: activities = [], isLoading: loadingActivities } = useQuery<MentorshipActivity[]>({
+    queryKey: ['/api/admin/users', userId, 'activities'],
+    enabled: isAuthenticated && !!userId
+  });
+
+  // Fetch reports for the user
+  const { data: reports = [], isLoading: loadingReports } = useQuery<QuarterlyReport[]>({
+    queryKey: ['/api/admin/users', userId, 'reports'],
+    enabled: isAuthenticated && !!userId
+  });
+
+  // Fetch facilitator profile for the user
+  const { data: facilitatorProfile, isLoading: loadingProfile } = useQuery<{ region: string | null; mentorSupervisor: string | null; totalLanguagesMentored?: number; totalChaptersMentored?: number }>({
+    queryKey: ['/api/admin/users', userId, 'profile'],
+    enabled: isAuthenticated && !!userId
+  });
+
+  // Calculate competency progress
+  const competencyProgress = Object.keys(CORE_COMPETENCIES).length > 0
+    ? (competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length / Object.keys(CORE_COMPETENCIES).length) * 100
+    : 0;
+
+  // Get status for a competency
+  const getCompetencyStatus = (competencyId: CompetencyId): CompetencyStatus => {
+    const competency = competencies.find(c => c.competencyId === competencyId);
+    return (competency?.status as CompetencyStatus) || 'not_started';
+  };
+
+  // Get competency data object
+  const getCompetencyData = (competencyId: CompetencyId) => {
+    return competencies.find(c => c.competencyId === competencyId);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex relative" data-testid="page-admin-portfolio">
+      <div className="relative h-full">
+        <Sidebar isMobile={isMobile} isOpen={true} />
+      </div>
+      
+      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+        <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
+          {/* Header */}
+          <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
+              Portfólio do Facilitador (Admin View)
+            </h1>
+            <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
+              Visualização somente leitura do portfólio do facilitador
+            </p>
+          </div>
+
+          {/* Competency Overview */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Progresso Geral das Competências</span>
+                <span className="text-sm text-muted-foreground">{Math.round(competencyProgress)}%</span>
+              </div>
+              <Progress value={competencyProgress} className="h-2" />
+            </CardContent>
+          </Card>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="competencies" data-testid="tab-competencies">
+                <Target className="h-4 w-4 mr-2" />
+                {!isMobile && "Competências"}
+              </TabsTrigger>
+              <TabsTrigger value="qualifications" data-testid="tab-qualifications">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                {!isMobile && "Qualificações"}
+              </TabsTrigger>
+              <TabsTrigger value="activities" data-testid="tab-activities">
+                <Activity className="h-4 w-4 mr-2" />
+                {!isMobile && "Atividades"}
+              </TabsTrigger>
+              <TabsTrigger value="reports" data-testid="tab-reports">
+                <FileText className="h-4 w-4 mr-2" />
+                {!isMobile && "Relatórios"}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Competencies Tab */}
+            <TabsContent value="competencies" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Target className="h-5 w-5" />
+                    <span>Competências Principais</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Competências de facilitação TBO
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingCompetencies ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {(Object.keys(CORE_COMPETENCIES) as CompetencyId[]).map((competencyId) => {
+                        const status = getCompetencyStatus(competencyId);
+                        const competencyData = getCompetencyData(competencyId);
+                        const isAuto = competencyData?.statusSource === 'auto';
+
+                        return (
+                          <Card key={competencyId} data-testid={`card-competency-${competencyId}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    {status === 'proficient' || status === 'advanced' ? (
+                                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                      <Circle className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                    <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
+                                      {CORE_COMPETENCIES[competencyId]}
+                                    </h3>
+                                    {isAuto ? (
+                                      <Badge variant="secondary" className="flex items-center space-x-1">
+                                        <Sparkles className="h-3 w-3" />
+                                        <span>Auto</span>
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline">Manual</Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Badge className={statusColors[status]}>
+                                      {statusLabels[status]}
+                                    </Badge>
+                                  </div>
+                                  {competencyData?.notes && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      {competencyData.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Qualifications Tab */}
+            <TabsContent value="qualifications" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <GraduationCap className="h-5 w-5" />
+                    <span>Qualificações</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Qualificações e certificações formais
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingQualifications ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : qualifications.length === 0 ? (
+                    <div className="text-center py-8">
+                      <GraduationCap className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhuma qualificação registrada</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {qualifications.map((qualification) => (
+                        <Card key={qualification.id}>
+                          <CardContent className="p-4">
+                            <h3 className="font-medium text-foreground">{qualification.courseTitle}</h3>
+                            <p className="text-sm text-muted-foreground">{qualification.institution}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              {qualification.completionDate && (
+                                <Badge variant="outline">
+                                  {new Date(qualification.completionDate).toLocaleDateString()}
+                                </Badge>
+                              )}
+                              {qualification.credential && (
+                                <Badge>{qualification.credential}</Badge>
+                              )}
+                            </div>
+                            {qualification.description && (
+                              <p className="text-sm text-muted-foreground mt-2">{qualification.description}</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Activities Tab */}
+            <TabsContent value="activities" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5" />
+                    <span>Atividades de Mentoria</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Registro de trabalho de tradução e mentoria
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingActivities ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhuma atividade registrada</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {activities.map((activity) => (
+                        <Card key={activity.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-medium text-foreground">{activity.language}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {activity.chaptersMentored} capítulo{activity.chaptersMentored !== 1 ? 's' : ''}
+                                </p>
+                                {activity.activityDate && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(activity.activityDate).toLocaleDateString()}
+                                  </p>
+                                )}
+                                {activity.notes && (
+                                  <p className="text-sm text-muted-foreground mt-2">{activity.notes}</p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Reports Tab */}
+            <TabsContent value="reports" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" />
+                    <span>Relatórios Trimestrais</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Relatórios de avaliação gerados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingReports ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : reports.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhum relatório gerado</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reports.map((report) => (
+                        <Card key={report.id}>
+                          <CardContent className="p-4">
+                            <h3 className="font-medium text-foreground">
+                              Relatório {new Date(report.periodStart).toLocaleDateString()} - {new Date(report.periodEnd).toLocaleDateString()}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              Gerado em {new Date(report.createdAt).toLocaleDateString()}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+}
