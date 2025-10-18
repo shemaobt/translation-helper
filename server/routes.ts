@@ -740,14 +740,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `${relevantContext}\n\n---\n\nUser Question:\n${content}`
           : content;
 
+        // Tool call executor for portfolio functions
+        const toolCallExecutor = {
+          executeToolCall: async (toolName: string, args: any): Promise<string> => {
+            console.log(`[Tool Call] ${toolName}`, args);
+            
+            try {
+              if (toolName === 'add_qualification') {
+                // Validate facilitator exists
+                const facilitator = await storage.getFacilitatorByUserId(userId);
+                if (!facilitator) {
+                  return JSON.stringify({ 
+                    success: false, 
+                    message: "Facilitator profile not found. Please create your profile first." 
+                  });
+                }
+                
+                // Add qualification
+                const qualification = await storage.createQualification({
+                  facilitatorId: facilitator.id,
+                  courseTitle: args.courseName,
+                  institution: args.institution,
+                  completionDate: args.completionDate,
+                  credential: args.credentialType || null,
+                  description: args.description || null,
+                });
+                
+                return JSON.stringify({ 
+                  success: true, 
+                  message: `✓ Qualificação "${args.courseName}" adicionada ao seu portfólio!`,
+                  qualification 
+                });
+                
+              } else if (toolName === 'add_activity') {
+                // Validate facilitator exists
+                const facilitator = await storage.getFacilitatorByUserId(userId);
+                if (!facilitator) {
+                  return JSON.stringify({ 
+                    success: false, 
+                    message: "Facilitator profile not found. Please create your profile first." 
+                  });
+                }
+                
+                // Add activity
+                const activity = await storage.createActivity({
+                  facilitatorId: facilitator.id,
+                  languageName: args.languageName,
+                  chaptersCount: args.chaptersCount,
+                  notes: args.notes || null,
+                });
+                
+                // Update facilitator totals (calculates automatically from all activities)
+                await storage.updateFacilitatorTotals(facilitator.id);
+                
+                return JSON.stringify({ 
+                  success: true, 
+                  message: `✓ Atividade de mentoria adicionada: ${args.languageName} (${args.chaptersCount} capítulos)!`,
+                  activity 
+                });
+                
+              } else if (toolName === 'update_competency') {
+                // Validate facilitator exists
+                const facilitator = await storage.getFacilitatorByUserId(userId);
+                if (!facilitator) {
+                  return JSON.stringify({ 
+                    success: false, 
+                    message: "Facilitator profile not found. Please create your profile first." 
+                  });
+                }
+                
+                // Update competency
+                const competency = await storage.upsertCompetency({
+                  facilitatorId: facilitator.id,
+                  competencyId: args.competencyId,
+                  status: args.status,
+                  notes: args.notes || null,
+                });
+                
+                return JSON.stringify({ 
+                  success: true, 
+                  message: `✓ Competência atualizada para "${args.status}"!`,
+                  competency 
+                });
+                
+              } else {
+                return JSON.stringify({ 
+                  success: false, 
+                  message: `Unknown tool: ${toolName}` 
+                });
+              }
+            } catch (error: any) {
+              console.error(`[Tool Call Error] ${toolName}:`, error);
+              return JSON.stringify({ 
+                success: false, 
+                message: error.message || "Failed to execute tool" 
+              });
+            }
+          }
+        };
+
         for await (const chunk of generateAssistantResponseStream({
           chatId,
           userMessage: messageWithContext,
           assistantId: chat.assistantId as any,
           threadId: threadId || undefined,
-        }, userId)) {
+        }, userId, toolCallExecutor)) {
           
-          if (chunk.type === 'content') {
+          if (chunk.type === 'tool_call') {
+            // Send tool call notification to client
+            res.write(`data: ${JSON.stringify({ 
+              type: 'tool_call', 
+              data: chunk.data 
+            })}\n\n`);
+            
+          } else if (chunk.type === 'content') {
             fullContent += chunk.data;
             
             // Create assistant message on first chunk
