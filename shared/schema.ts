@@ -28,48 +28,48 @@ export type AssistantId = keyof typeof ASSISTANTS;
 // OBT Core Competencies - New 11-competency framework
 export const CORE_COMPETENCIES = {
   interpersonal_skills: {
-    name: 'Habilidades Interpessoais / Interpersonal Skills',
-    description: 'Conduzir a equipe através de escuta ativa e empatia, facilitando grupos, mediando tensões e levando o time a decisões consensuais com feedback claro. Lead the team with active listening and empathy, facilitate groups, mediate tensions, and guide the team to consensus decisions with clear feedback.'
+    name: 'Interpersonal Skills',
+    description: 'Lead the team with active listening and empathy, facilitate groups, mediate tensions, and guide the team to consensus decisions with clear feedback.'
   },
   intercultural_communication: {
-    name: 'Comunicação Intercultural / Intercultural Communication',
-    description: 'Ler e honrar códigos culturais e linguísticos locais, ajustando linguagem, ambiente, ritmos e estratégias para que a comunicação seja natural e respeitosa. Read and honor local cultural and linguistic codes, adjusting language, setting, pace, and strategies so communication is natural and respectful.'
+    name: 'Intercultural Communication',
+    description: 'Read and honor local cultural and linguistic codes, adjusting language, setting, pace, and strategies so communication is natural and respectful.'
   },
   multimodal_skills: {
-    name: 'Habilidades Multimodais / Multimodal Skills',
-    description: 'Conduzir todo o processo de forma oral e encarnada – histórias, gestos, objetos, imagens e música – sem necessidade de "trocar a chave" para o modo letrado e linear. Lead the whole process in an oral, embodied way—stories, gestures, objects, images, and music—without needing to "switch" to a literate, linear mode.'
+    name: 'Multimodal Skills',
+    description: 'Lead the whole process in an oral, embodied way—stories, gestures, objects, images, and music—without needing to "switch" to a literate, linear mode.'
   },
   translation_theory: {
-    name: 'Teorias e Processos de Tradução / Translation Theory & Process',
-    description: 'Entender diferentes métodos e tipos de tradução. Priorizar o sentido e entender como ele se molda ao contexto da oralidade, com as adaptações adequadas, garantindo fidelidade, coesão e naturalidade. Understand different methods and types of translation. Prioritize meaning and how it adapts to oral contexts, making appropriate adaptations to ensure fidelity, cohesion, and naturalness.'
+    name: 'Translation Theory & Process',
+    description: 'Understand different methods and types of translation. Prioritize meaning and how it adapts to oral contexts, making appropriate adaptations to ensure fidelity, cohesion, and naturalness.'
   },
   languages_communication: {
-    name: 'Línguas e Comunicação / Languages & Communication',
-    description: 'Entender como as línguas funcionam, incluindo semântica, metáforas, análise do discurso e pragmática. O objetivo é ajudar tradutores a lidar com ambiguidades e interferências. O mentor deve ajudar tradutores a encontrar formas autênticas da língua alvo, evitando calques ou "translianês". Understand how languages work—semantics, metaphor, discourse analysis, and pragmatics—to help translators handle ambiguities and interference, finding authentic target language forms and avoiding calques or "translationese".'
+    name: 'Languages & Communication',
+    description: 'Understand how languages work—semantics, metaphor, discourse analysis, and pragmatics—to help translators handle ambiguities and interference, finding authentic target language forms and avoiding calques or "translationese".'
   },
   biblical_languages: {
-    name: 'Línguas Bíblicas / Biblical Languages',
-    description: 'Saber recorrer, quando necessário, ao hebraico e/ou grego usando os recursos exegéticos disponíveis para checar nuances, distinguir sentido literal de sentido figurado e explicar escolhas em linguagem acessível. Consult Hebrew and/or Greek when needed, using available exegetical tools to check nuances, distinguish literal from figurative meaning, and explain choices in accessible language.'
+    name: 'Biblical Languages',
+    description: 'Consult Hebrew and/or Greek when needed, using available exegetical tools to check nuances, distinguish literal from figurative meaning, and explain choices in accessible language.'
   },
   biblical_studies: {
-    name: 'Estudos Bíblicos e Teologia / Biblical Studies & Theology',
-    description: 'Trazer o pano de fundo histórico-cultural e a boa hermenêutica para a conversa, dialogando com diferentes tradições sem partidarismo. Saber como conduzir exegese conversacional e multimodal. Bring historical-cultural background and sound hermeneutics into the conversation, engaging different traditions without partisanship. Know how to conduct conversational, multimodal exegesis.'
+    name: 'Biblical Studies & Theology',
+    description: 'Bring historical-cultural background and sound hermeneutics into the conversation, engaging different traditions without partisanship. Know how to conduct conversational, multimodal exegesis.'
   },
   planning_quality: {
-    name: 'Planejamento e Garantia de Qualidade / Planning & Quality Assurance',
-    description: 'Transformar visão em planos simples (brief, cronograma, orçamento e indicadores) e sustentar GQ contínua com checagens internas e externas, documentando decisões em áudio. Turn vision into simple plans (brief, schedule, budget, indicators) and sustain ongoing QA with internal and external checks, documenting decisions in audio.'
+    name: 'Planning & Quality Assurance',
+    description: 'Turn vision into simple plans (brief, schedule, budget, indicators) and sustain ongoing QA with internal and external checks, documenting decisions in audio.'
   },
   consulting_mentoring: {
-    name: 'Consultoria e Mentoria / Consulting & Mentoring',
-    description: 'Servir como líder-servo que ensina fazendo, faz perguntas abertas, delega com segurança e forma a equipe em ritmo progressivo. Sabe conduzir sem dominar e garante a formação continuada da equipe. Serve as a servant-leader who teaches by doing, asks open questions, delegates safely, and develops the team at a progressive pace. Guide without dominating and ensure the team\'s ongoing formation.'
+    name: 'Consulting & Mentoring',
+    description: 'Serve as a servant-leader who teaches by doing, asks open questions, delegates safely, and develops the team at a progressive pace. Guide without dominating and ensure the team\'s ongoing formation.'
   },
   applied_technology: {
-    name: 'Tecnologia Aplicada / Applied Technology',
-    description: 'Escolher e operar ferramentas que servem à oralidade – gravação, edição, colaboração remota e IA de apoio – com autonomia e backup confiável. Saber fazer uso do Translation Helper e outros recursos disponíveis. Choose and operate tools that serve orality—recording, editing, remote collaboration, and supportive AI—with autonomy and reliable backup. Use the Translation Helper and other available resources.'
+    name: 'Applied Technology',
+    description: 'Choose and operate tools that serve orality—recording, editing, remote collaboration, and supportive AI—with autonomy and reliable backup. Use the Translation Helper and other available resources.'
   },
   reflective_practice: {
-    name: 'Prática Reflexiva / Reflective Practice',
-    description: 'Exercer autoconsciência real: notar padrões de pensamento e sentimento, alinhar ações aos valores, regular-se, acolher feedback para crescer e entender seu impacto nos outros, convertendo isso em ajustes concretos. Exercise genuine self-awareness: notice own patterns of thought and feeling, align actions with values, self-regulate, welcome feedback, understand your impact on others, and turn insights into concrete adjustments.'
+    name: 'Reflective Practice',
+    description: 'Exercise genuine self-awareness: notice own patterns of thought and feeling, align actions with values, self-regulate, welcome feedback, understand your impact on others, and turn insights into concrete adjustments.'
   }
 } as const;
 
