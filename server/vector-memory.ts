@@ -409,26 +409,8 @@ export async function getComprehensiveContext(params: {
       }
     }
 
-    // 2. Recent Messages from ALL User Chats (efficiently via SQL)
-    try {
-      // Get last 20 messages across all user's chats in one efficient SQL query
-      const recentMessages = await storage.getRecentUserMessages(params.userId, 20);
-
-      if (recentMessages.length > 0) {
-        context += '## Recent Conversation History:\n\n';
-        // Reverse to show oldest first
-        recentMessages.reverse().forEach((msg) => {
-          const truncated = msg.content.length > 150 
-            ? msg.content.substring(0, 150) + '...' 
-            : msg.content;
-          context += `[${msg.role}]: ${truncated}\n`;
-        });
-        context += '\n';
-        console.log(`[Comprehensive Context] Added ${recentMessages.length} recent messages`);
-      }
-    } catch (error) {
-      console.error('[Comprehensive Context] Error fetching recent messages:', error);
-    }
+    // 2. Recent Messages - REMOVED because OpenAI Responses API automatically manages
+    // conversation history via conversation ID. No need to send duplicate history!
 
     // 3. Vector Search Results (semantic search across past conversations)
     const vectorContext = await getContextForQuery({
