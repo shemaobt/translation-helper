@@ -999,11 +999,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 
                 // Convert completion date string to Date object
-                let completionDate: Date;
-                if (args.completionDate) {
-                  completionDate = new Date(args.completionDate);
-                } else {
-                  completionDate = new Date();
+                let completionDate: Date | null = null;
+                if (args.completionDate && args.completionDate !== 'Unknown') {
+                  const parsedDate = new Date(args.completionDate);
+                  // Validate the date is actually valid
+                  if (!isNaN(parsedDate.getTime())) {
+                    completionDate = parsedDate;
+                  }
+                }
+                
+                // If no valid date, use null (optional field)
+                if (!completionDate) {
+                  completionDate = null;
                 }
                 
                 // Add qualification
