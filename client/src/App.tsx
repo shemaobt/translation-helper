@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
 import AdminFeedback from "@/pages/admin-feedback";
 import AdminUsers from "@/pages/admin-users";
+import AdminPortfolioView from "@/pages/admin-portfolio-view";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import NotFound from "@/pages/not-found";
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/settings" component={Dashboard} />
           <Route path="/admin/feedback" component={AdminFeedback} />
           <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/portfolio/:userId" component={AdminPortfolioView} />
           <Route path="*" component={NotFound} />
         </>
       )}

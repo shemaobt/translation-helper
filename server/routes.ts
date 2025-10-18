@@ -1914,6 +1914,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to generate report for any user
+  app.post('/api/admin/users/:userId/generate-report', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { periodStart, periodEnd } = req.body;
+      
+      // Validation
+      const userIdSchema = z.string().uuid();
+      const validatedUserId = userIdSchema.parse(userId);
+      
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ message: "Period start and end dates are required" });
+      }
+      
+      const facilitator = await storage.getFacilitatorByUserId(validatedUserId);
+      
+      if (!facilitator) {
+        return res.status(404).json({ message: "Facilitator profile not found for this user" });
+      }
+      
+      // Fetch all data for the report period
+      const competencies = await storage.getFacilitatorCompetencies(facilitator.id);
+      const qualifications = await storage.getFacilitatorQualifications(facilitator.id);
+      const activities = await storage.getFacilitatorActivities(facilitator.id);
+      
+      // Filter activities by date range
+      const startDate = new Date(periodStart);
+      const endDate = new Date(periodEnd);
+      const periodActivities = activities.filter(activity => {
+        if (!activity.activityDate) return false;
+        const activityDate = new Date(activity.activityDate);
+        return activityDate >= startDate && activityDate <= endDate;
+      });
+      
+      // Compile report data
+      const reportData = {
+        facilitator: {
+          region: facilitator.region,
+          mentorSupervisor: facilitator.mentorSupervisor,
+          totalLanguagesMentored: facilitator.totalLanguagesMentored,
+          totalChaptersMentored: facilitator.totalChaptersMentored
+        },
+        period: {
+          start: periodStart,
+          end: periodEnd
+        },
+        competencies: competencies.map(c => ({
+          competencyId: c.competencyId,
+          status: c.status,
+          notes: c.notes,
+          lastUpdated: c.lastUpdated
+        })),
+        qualifications: qualifications.map(q => ({
+          courseTitle: q.courseTitle,
+          institution: q.institution,
+          completionDate: q.completionDate,
+          credential: q.credential,
+          description: q.description
+        })),
+        activities: periodActivities.map(a => ({
+          language: a.language,
+          chaptersMentored: a.chaptersMentored,
+          activityDate: a.activityDate,
+          notes: a.notes
+        })),
+        summary: {
+          totalCompetenciesProficient: competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length,
+          totalQualifications: qualifications.length,
+          periodLanguages: new Set(periodActivities.map(a => a.language)).size,
+          periodChapters: periodActivities.reduce((sum, a) => sum + (a.chaptersMentored || 0), 0)
+        }
+      };
+      
+      // Create the report
+      const report = await storage.createQuarterlyReport({
+        facilitatorId: facilitator.id,
+        periodStart: startDate,
+        periodEnd: endDate,
+        reportData
+      });
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating report for user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user ID format", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Admin endpoints to view user portfolio data
+  app.get('/api/admin/users/:userId/profile', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      if (!facilitator) {
+        return res.json({ region: null, mentorSupervisor: null, totalLanguagesMentored: 0, totalChaptersMentored: 0 });
+      }
+      
+      res.json(facilitator);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
+  app.get('/api/admin/users/:userId/competencies', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const competencies = await storage.getFacilitatorCompetencies(facilitator.id);
+      res.json(competencies);
+    } catch (error) {
+      console.error("Error fetching user competencies:", error);
+      res.status(500).json({ message: "Failed to fetch user competencies" });
+    }
+  });
+
+  app.get('/api/admin/users/:userId/qualifications', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const qualifications = await storage.getFacilitatorQualifications(facilitator.id);
+      res.json(qualifications);
+    } catch (error) {
+      console.error("Error fetching user qualifications:", error);
+      res.status(500).json({ message: "Failed to fetch user qualifications" });
+    }
+  });
+
+  app.get('/api/admin/users/:userId/activities', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const activities = await storage.getFacilitatorActivities(facilitator.id);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching user activities:", error);
+      res.status(500).json({ message: "Failed to fetch user activities" });
+    }
+  });
+
+  app.get('/api/admin/users/:userId/reports', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      if (!facilitator) {
+        return res.json([]);
+      }
+      
+      const reports = await storage.getFacilitatorReports(facilitator.id);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching user reports:", error);
+      res.status(500).json({ message: "Failed to fetch user reports" });
+    }
+  });
+
   // OBT Mentor - Facilitator Profile Routes
   app.get('/api/facilitator/profile', requireAuth, async (req: any, res) => {
     try {
