@@ -150,16 +150,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative" data-testid="page-dashboard">
+    <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-dashboard">
       {/* Sidebar - Always visible */}
-      <div className="relative h-full">
+      <div className="h-screen w-80">
         <Sidebar 
           isMobile={isMobile}
           isOpen={true}
         />
       </div>
       
-      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+      <div className={`flex-1 h-screen overflow-y-auto ${isMobile ? 'p-4' : 'p-8'}`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
           {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
