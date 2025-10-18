@@ -55,7 +55,7 @@ Preferred communication style: Simple, everyday language.
 ## AI Integration
 - **Provider**: OpenAI API (GPT-4o via Assistant API, Whisper API for audio)
 - **Assistant**: Dedicated OBT Mentor Assistant
-- **Thread Management**: Per-user threads for shared conversation history across all chats.
+- **Conversation Management**: Per-user conversations for shared conversation history across all chats (uses conversationId naming, still on Assistants API until SDK supports Responses API).
 - **Global Memory**: Qdrant Cloud vector database for storing conversation embeddings.
 - **Semantic Search**: Retrieves relevant past conversations for contextual AI responses.
 - **Context Injection**: Three-layer system for AI prompts:
@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
     2.  **Recent Message History**: Last 20 messages across all user chats.
     3.  **Semantic Vector Search**: Relevant past conversations (user-specific and optional global).
 - **Multimodal**: GPT-4o Vision for image analysis, OpenAI Whisper for audio transcription.
+- **Migration Status (Oct 2025)**: Database schema and code migrated from threadId to conversationId naming for future Responses API compatibility. Currently using Assistants API with OpenAI SDK v5.20.2.
 
 ## Vector Memory System
 - **Provider**: Qdrant Cloud
