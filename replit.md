@@ -44,6 +44,7 @@ Preferred communication style: Simple, everyday language.
 - **Quarterly Reports**: Compiled facilitator data snapshots for assessment periods
 - **Chats**: Conversation containers with titles and user associations
 - **Messages**: Individual chat messages with role-based typing (user/assistant)
+- **Message Attachments**: File metadata for images and audio attached to messages (includes transcriptions for audio)
 - **Sessions**: Authentication session storage (required for Replit Auth)
 
 ## Core Competencies Tracked
@@ -60,12 +61,14 @@ Status levels: not_started, developing, proficient, advanced
 
 ## AI Integration
 - **Provider**: OpenAI API with dedicated OBT Mentor Assistant
-- **Model**: GPT-4 via OpenAI's Assistant API
+- **Model**: GPT-4o via OpenAI's Assistant API (with vision and audio capabilities)
 - **Thread Management**: Persistent conversation threads for context retention
 - **Global Memory**: Qdrant vector database stores all conversation embeddings
 - **Semantic Search**: Retrieves relevant past conversations for contextual responses
 - **Cross-Learning**: Access insights from other facilitators globally
 - **Embedding Model**: text-embedding-3-small (1536 dimensions)
+- **Image Analysis**: GPT-4o vision for analyzing uploaded images
+- **Audio Transcription**: OpenAI Whisper API for transcribing audio files (Portuguese optimized)
 
 ## Vector Memory System (Qdrant)
 - **Provider**: Qdrant Cloud vector database
@@ -181,6 +184,7 @@ Status levels: not_started, developing, proficient, advanced
 - Added facilitator_qualifications for course/credential records
 - Added mentorship_activities for language work logging
 - Added quarterly_reports for assessment period snapshots
+- Added message_attachments table for image and audio file storage
 - Added approval workflow fields to users table
 
 ## AI System Enhancements
@@ -189,6 +193,21 @@ Status levels: not_started, developing, proficient, advanced
 - Implemented semantic search for contextual AI responses
 - Added cross-facilitator learning with global memory search
 - Automatic context injection from relevant past conversations
+- Lowered vector similarity thresholds (0.5 user/0.6 global) for improved recall
+- Enhanced assistant instructions with explicit memory usage directives
+
+## Multimodal Capabilities (October 2024)
+- **Image Upload & Analysis**: Users can upload images (jpg, png, gif, webp - max 10MB)
+  - GPT-4o vision analyzes images in context of conversations
+  - Inline image display in chat messages
+  - Secure file storage in uploads directory
+- **Audio Upload & Transcription**: Users can upload audio files (mp3, wav, m4a, ogg - max 25MB for 5min)
+  - OpenAI Whisper API transcribes audio (Portuguese optimized)
+  - Audio player with playback controls in chat
+  - Transcriptions stored and displayed with audio files
+  - AI assistant receives transcriptions for contextual responses
+- **File Upload UI**: Paperclip attachment button with file picker, previews, and progress indicators
+- **API Endpoints**: POST /api/messages/:messageId/attachments, GET /api/messages/:messageId/attachments
 
 ## UI/UX Improvements
 - Built portfolio management page with 4 tabs (Portuguese labels)
@@ -197,3 +216,5 @@ Status levels: not_started, developing, proficient, advanced
 - Implemented activity logger with automatic totals calculation
 - Added quarterly report generation with date range picker
 - Improved sidebar navigation with facilitator-focused items
+- Simplified "New Chat" button (removed dropdown menu)
+- Added file attachment UI with previews and upload progress
