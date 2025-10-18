@@ -212,9 +212,11 @@ export async function* generateAssistantResponseStream(
   userId: string,
   toolCallExecutor?: ToolCallExecutor
 ): AsyncGenerator<{ type: 'content' | 'done' | 'tool_call', data: string | AssistantResponse | any }> {
+  console.log('[Stream Generator] Started for userId:', userId);
   try {
     // Use per-user conversation for intertwined chats (shared across all user's chats)
     let conversationId = request.threadId || await storage.getUserConversationId(userId);
+    console.log('[Stream Generator] Conversation ID:', conversationId);
     
     // Prepare input content with text and images
     const inputContent: any[] = [{ type: "input_text", text: request.userMessage }];
@@ -285,7 +287,9 @@ export async function* generateAssistantResponseStream(
       // Handle text delta events
       if (chunk.type === 'response.output_text.delta' && chunk.delta) {
         fullContent += chunk.delta;
+        console.log('[Stream Generator] Yielding delta:', chunk.delta);
         yield { type: 'content', data: chunk.delta };
+        console.log('[Stream Generator] Yielded delta successfully');
       }
 
       // Track token usage from completed response
