@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
+  getCompetencyName,
   type CompetencyId,
   type FacilitatorCompetency, 
   type FacilitatorQualification, 
@@ -201,7 +202,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                       <Circle className="h-5 w-5 text-muted-foreground" />
                                     )}
                                     <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
-                                      {CORE_COMPETENCIES[competencyId]}
+                                      {getCompetencyName(competencyId)}
                                     </h3>
                                     {isAuto ? (
                                       <Badge variant="secondary" className="flex items-center space-x-1">

@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
+  getCompetencyName,
   type CompetencyId,
   type FacilitatorCompetency, 
   type FacilitatorQualification, 
@@ -593,7 +594,7 @@ export default function Portfolio() {
                                       <Circle className="h-5 w-5 text-muted-foreground" />
                                     )}
                                     <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
-                                      {CORE_COMPETENCIES[competencyId]}
+                                      {getCompetencyName(competencyId)}
                                     </h3>
                                     {isAuto ? (
                                       <Badge variant="secondary" className="flex items-center space-x-1" data-testid={`badge-auto-${competencyId}`}>
@@ -1170,7 +1171,7 @@ export default function Portfolio() {
                                           <div className="space-y-1 text-sm">
                                             {reportData.competencies.slice(0, 5).map((comp: any, idx: number) => (
                                               <div key={idx} className="flex justify-between">
-                                                <span>{CORE_COMPETENCIES[comp.competencyId as CompetencyId]}</span>
+                                                <span>{getCompetencyName(comp.competencyId as CompetencyId)}</span>
                                                 <Badge variant="outline" className="text-xs">
                                                   {statusLabels[comp.status as CompetencyStatus]}
                                                 </Badge>
