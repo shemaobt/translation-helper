@@ -887,8 +887,11 @@ export class DatabaseStorage implements IStorage {
     // Get all qualifications for this facilitator
     const qualifications = await this.getFacilitatorQualifications(facilitatorId);
     
-    // Calculate scores
-    const scores = calculateCompetencyScores(qualifications);
+    // Get all activities for this facilitator
+    const activities = await this.getFacilitatorActivities(facilitatorId);
+    
+    // Calculate scores from both qualifications and activities
+    const scores = calculateCompetencyScores(qualifications, activities);
     
     // Get existing competencies
     const existingCompetencies = await this.getFacilitatorCompetencies(facilitatorId);

@@ -1058,6 +1058,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Update facilitator totals (calculates automatically from all translation activities)
                 await storage.updateFacilitatorTotals(facilitator.id);
                 
+                // Recalculate competencies based on new activity
+                await storage.recalculateCompetencies(facilitator.id);
+                
                 // Generate success message based on type
                 let successMessage = '';
                 if (args.activityType === 'translation') {
@@ -2399,10 +2402,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes,
       });
       
+      // Recalculate competencies based on new activity
+      await storage.recalculateCompetencies(facilitator.id);
+      
       res.json(activity);
     } catch (error) {
       console.error("Error creating activity:", error);
       res.status(500).json({ message: "Failed to create activity" });
+    }
+  });
+
+  app.delete('/api/facilitator/activities/:activityId', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { activityId } = req.params;
+      
+      const facilitator = await storage.getFacilitatorByUserId(req.userId);
+      
+      await storage.deleteActivity(activityId);
+      
+      // Recalculate competencies after deletion
+      if (facilitator) {
+        await storage.recalculateCompetencies(facilitator.id);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+      res.status(500).json({ message: "Failed to delete activity" });
     }
   });
 
