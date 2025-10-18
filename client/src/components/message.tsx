@@ -1,5 +1,7 @@
 import { User, Volume2, VolumeX, Pause, Loader2, Music, FileAudio, Maximize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Dialog,
   DialogContent,
@@ -154,8 +156,10 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
             />
           </div>
           <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
-            <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid={`text-message-content-${message.id}`}>
-              {message.content}
+            <div className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none" data-testid={`text-message-content-${message.id}`}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
             </div>
             {/* Display attachments */}
             {attachments.length > 0 && (
