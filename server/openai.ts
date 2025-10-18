@@ -94,271 +94,6 @@ Example Conversation Starters:
 - "Are there any challenges you've faced that you'd like to discuss?"
 - "If you have documents, audio recordings, or images related to your OBT facilitation, please share them here for feedback and support in your mentorship journey."`;
 
-// Cache for the OBT Mentor Assistant ID
-let obtMentorAssistantId: string | null = null;
-
-/**
- * Get or create the OBT Mentor Assistant
- */
-export async function getObtMentorAssistant(): Promise<string> {
-  if (obtMentorAssistantId) {
-    return obtMentorAssistantId;
-  }
-
-  try {
-    // Try to get assistant ID from environment variable first
-    if (process.env.OBT_MENTOR_ASSISTANT_ID) {
-      obtMentorAssistantId = process.env.OBT_MENTOR_ASSISTANT_ID;
-      console.log('Using OBT Mentor Assistant from environment:', obtMentorAssistantId);
-      
-      // Update the assistant's instructions and tools to ensure they're current
-      try {
-        await openai.beta.assistants.update(obtMentorAssistantId, {
-          instructions: OBT_MENTOR_INSTRUCTIONS,
-          tools: [
-            { type: "file_search" },
-            {
-              type: "function",
-              function: {
-                name: "add_qualification",
-                description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    courseName: {
-                      type: "string",
-                      description: "The name of the course, workshop, or qualification"
-                    },
-                    institution: {
-                      type: "string",
-                      description: "The institution or organization that provided the training"
-                    },
-                    completionDate: {
-                      type: "string",
-                      description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')"
-                    },
-                    credentialType: {
-                      type: "string",
-                      description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)"
-                    },
-                    description: {
-                      type: "string",
-                      description: "A brief description of what was learned"
-                    }
-                  },
-                  required: ["courseName", "institution", "completionDate"]
-                }
-              }
-            },
-            {
-              type: "function",
-              function: {
-                name: "add_activity",
-                description: "Add a work experience or mentorship activity to the facilitator's portfolio. Use this for: translation work, facilitation experience, teaching, work with indigenous peoples, work in schools, or any other relevant professional experience.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    activityType: {
-                      type: "string",
-                      enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"],
-                      description: "Type of activity: 'translation' for translation/mentorship work, 'facilitation' for OBT facilitation, 'teaching' for teaching roles, 'indigenous_work' for work with indigenous peoples, 'school_work' for work in schools, 'general_experience' for other relevant experiences"
-                    },
-                    // For translation activities
-                    languageName: {
-                      type: "string",
-                      description: "The name of the language (required for translation type)"
-                    },
-                    chaptersCount: {
-                      type: "number",
-                      description: "The number of chapters mentored (required for translation type)"
-                    },
-                    // For general experiences
-                    title: {
-                      type: "string",
-                      description: "Title/role of the experience (e.g., 'Facilitador OBT', 'Professor')"
-                    },
-                    description: {
-                      type: "string",
-                      description: "Detailed description of the experience and what was accomplished"
-                    },
-                    yearsOfExperience: {
-                      type: "number",
-                      description: "Number of years in this role/experience (e.g., 10 for '10 years as facilitator')"
-                    },
-                    organization: {
-                      type: "string",
-                      description: "Organization or institution where the work was done"
-                    },
-                    notes: {
-                      type: "string",
-                      description: "Additional notes about the activity"
-                    }
-                  },
-                  required: ["activityType"]
-                }
-              }
-            },
-            {
-              type: "function",
-              function: {
-                name: "update_competency",
-                description: "Update the status of a core OBT competency. Use this when the facilitator demonstrates progress in a competency area.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    competencyId: {
-                      type: "string",
-                      enum: [
-                        "scripture_engagement",
-                        "obt_methods",
-                        "cultural_sensitivity",
-                        "community_development",
-                        "team_leadership",
-                        "training_facilitation",
-                        "technology_integration",
-                        "program_assessment"
-                      ],
-                      description: "The ID of the competency to update"
-                    },
-                    status: {
-                      type: "string",
-                      enum: ["not_started", "developing", "proficient", "advanced"],
-                      description: "The new status level for this competency"
-                    },
-                    notes: {
-                      type: "string",
-                      description: "Notes about the progress or evidence of this competency level"
-                    }
-                  },
-                  required: ["competencyId", "status"]
-                }
-              }
-            }
-          ],
-        });
-        console.log('Updated OBT Mentor Assistant instructions and tools');
-      } catch (updateError) {
-        console.error('Error updating assistant instructions:', updateError);
-      }
-      
-      return obtMentorAssistantId;
-    }
-
-    // Otherwise, create a new assistant
-    const assistant = await openai.beta.assistants.create({
-      name: "OBT Mentor Assistant",
-      instructions: OBT_MENTOR_INSTRUCTIONS,
-      model: "gpt-4o",
-      tools: [
-        { type: "file_search" },
-        {
-          type: "function",
-          function: {
-            name: "add_qualification",
-            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
-            parameters: {
-              type: "object",
-              properties: {
-                courseName: {
-                  type: "string",
-                  description: "The name of the course, workshop, or qualification"
-                },
-                institution: {
-                  type: "string",
-                  description: "The institution or organization that provided the training"
-                },
-                completionDate: {
-                  type: "string",
-                  description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')"
-                },
-                credentialType: {
-                  type: "string",
-                  description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)"
-                },
-                description: {
-                  type: "string",
-                  description: "A brief description of what was learned"
-                }
-              },
-              required: ["courseName", "institution", "completionDate"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "add_activity",
-            description: "Add a mentorship activity to the facilitator's portfolio. Use this when the facilitator mentions working with a language or translating chapters.",
-            parameters: {
-              type: "object",
-              properties: {
-                languageName: {
-                  type: "string",
-                  description: "The name of the language being translated/mentored"
-                },
-                chaptersCount: {
-                  type: "number",
-                  description: "The number of chapters mentored or helped to mentor"
-                },
-                notes: {
-                  type: "string",
-                  description: "Optional notes about the mentorship activity"
-                }
-              },
-              required: ["languageName", "chaptersCount"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_competency",
-            description: "Update the status of a core OBT competency. Use this when the facilitator demonstrates progress in a competency area.",
-            parameters: {
-              type: "object",
-              properties: {
-                competencyId: {
-                  type: "string",
-                  enum: [
-                    "scripture_engagement",
-                    "obt_methods",
-                    "cultural_sensitivity",
-                    "community_development",
-                    "team_leadership",
-                    "training_facilitation",
-                    "technology_integration",
-                    "program_assessment"
-                  ],
-                  description: "The ID of the competency to update"
-                },
-                status: {
-                  type: "string",
-                  enum: ["not_started", "developing", "proficient", "advanced"],
-                  description: "The new status level for this competency"
-                },
-                notes: {
-                  type: "string",
-                  description: "Notes about the progress or evidence of this competency level"
-                }
-              },
-              required: ["competencyId", "status"]
-            }
-          }
-        }
-      ],
-    });
-
-    obtMentorAssistantId = assistant.id;
-    console.log('Created new OBT Mentor Assistant:', obtMentorAssistantId);
-    console.log('Tip: Set OBT_MENTOR_ASSISTANT_ID environment variable to reuse this assistant:', obtMentorAssistantId);
-    
-    return obtMentorAssistantId;
-  } catch (error) {
-    console.error('Error getting/creating OBT Mentor Assistant:', error);
-    throw error;
-  }
-}
-
 export interface AssistantRequest {
   chatId: string;
   userMessage: string;
@@ -399,18 +134,12 @@ export async function generateAssistantResponse(
 ): Promise<AssistantResponse> {
   try {
     // Use per-user conversation for intertwined chats (shared across all user's chats)
-    // Note: Using conversationId naming but still using Assistants API (threads) until SDK supports Responses API
     let conversationId = request.threadId || await storage.getUserConversationId(userId);
     
-    // Create a new thread if none exists
-    if (!conversationId) {
-      const thread = await openai.beta.threads.create();
-      conversationId = thread.id;
-      await storage.updateUserConversationId(userId, conversationId);
-    }
-
-    // Upload images to OpenAI if provided
-    const imageFileIds: string[] = [];
+    // Prepare input content with text and images
+    const inputContent: any[] = [{ type: "input_text", text: request.userMessage }];
+    
+    // Add images if provided
     if (request.imageFilePaths && request.imageFilePaths.length > 0) {
       for (const filePath of request.imageFilePaths) {
         try {
@@ -418,7 +147,10 @@ export async function generateAssistantResponse(
             file: fs.createReadStream(filePath),
             purpose: "vision",
           });
-          imageFileIds.push(file.id);
+          inputContent.push({
+            type: "input_image",
+            image_file: { file_id: file.id }
+          });
           console.log(`[OpenAI] Uploaded image file: ${file.id}`);
         } catch (error) {
           console.error(`[OpenAI] Failed to upload image ${filePath}:`, error);
@@ -426,72 +158,132 @@ export async function generateAssistantResponse(
       }
     }
 
-    // Prepare message content with images if provided
-    const messageContent: any = imageFileIds.length > 0
-      ? [
-          { type: "text", text: request.userMessage },
-          ...imageFileIds.map(fileId => ({
-            type: "image_file",
-            image_file: { file_id: fileId }
-          }))
-        ]
-      : request.userMessage;
+    // Create response using Responses API
+    const responseConfig: any = {
+      model: "gpt-4o",
+      input: [{
+        role: "user",
+        content: inputContent
+      }],
+      instructions: OBT_MENTOR_INSTRUCTIONS,
+      tools: [
+        { type: "file_search" },
+        {
+          type: "function",
+          function: {
+            name: "add_qualification",
+            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
+            parameters: {
+              type: "object",
+              properties: {
+                courseName: { type: "string", description: "The name of the course, workshop, or qualification" },
+                institution: { type: "string", description: "The institution or organization that provided the training" },
+                completionDate: { type: "string", description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')" },
+                credentialType: { type: "string", description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)" },
+                description: { type: "string", description: "A brief description of what was learned" }
+              },
+              required: ["courseName", "institution", "completionDate"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "add_activity",
+            description: "Add a work experience or mentorship activity to the facilitator's portfolio. Use this for: translation work, facilitation experience, teaching, work with indigenous peoples, work in schools, or any other relevant professional experience.",
+            parameters: {
+              type: "object",
+              properties: {
+                activityType: {
+                  type: "string",
+                  enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"],
+                  description: "Type of activity"
+                },
+                languageName: { type: "string", description: "Language name (for translation)" },
+                chaptersCount: { type: "number", description: "Chapters count (for translation)" },
+                title: { type: "string", description: "Title/role of the experience" },
+                description: { type: "string", description: "Description of the experience" },
+                yearsOfExperience: { type: "number", description: "Years of experience" },
+                organization: { type: "string", description: "Organization name" },
+                notes: { type: "string", description: "Additional notes" }
+              },
+              required: ["activityType"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "update_competency",
+            description: "Update the status of a core OBT competency when facilitator demonstrates progress.",
+            parameters: {
+              type: "object",
+              properties: {
+                competencyId: {
+                  type: "string",
+                  enum: [
+                    "interpersonal_skills",
+                    "intercultural_communication",
+                    "multimodal_skills",
+                    "translation_theory",
+                    "languages_communication",
+                    "biblical_languages",
+                    "biblical_studies",
+                    "planning_quality",
+                    "consulting_mentoring",
+                    "applied_technology",
+                    "reflective_practice"
+                  ],
+                  description: "The ID of the competency to update"
+                },
+                status: {
+                  type: "string",
+                  enum: ["not_started", "emerging", "growing", "proficient", "advanced"],
+                  description: "The new status level"
+                },
+                notes: { type: "string", description: "Notes explaining the progress or update" }
+              },
+              required: ["competencyId", "status"]
+            }
+          }
+        }
+      ]
+    };
 
-    // Add the user message to the thread
-    await openai.beta.threads.messages.create(conversationId, {
-      role: "user",
-      content: messageContent,
-    });
-
-    // Get the OBT Mentor Assistant ID
-    const assistantId = await getObtMentorAssistant();
-
-    // Run the assistant
-    const run = await openai.beta.threads.runs.create(conversationId, {
-      assistant_id: assistantId,
-    });
-
-    // Wait for the run to complete
-    let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-      thread_id: conversationId,
-    });
-    
-    while (runStatus.status === "in_progress" || runStatus.status === "queued") {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-        thread_id: conversationId,
-      });
+    // Include conversation ID if it exists for continuing the conversation
+    if (conversationId) {
+      responseConfig.conversation = conversationId;
     }
 
-    if (runStatus.status === "failed") {
-      throw new Error("Assistant run failed");
+    const response = await openai.responses.create(responseConfig);
+
+    // Store the conversation ID for future messages
+    if (!conversationId && response.conversation) {
+      const newConversationId = typeof response.conversation === 'string' ? response.conversation : response.conversation.id;
+      await storage.updateUserConversationId(userId, newConversationId);
+      conversationId = newConversationId;
     }
 
-    // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(conversationId);
-    const lastMessage = messages.data[0];
-    
-    if (!lastMessage || lastMessage.role !== "assistant") {
-      throw new Error("No assistant response found");
-    }
-
-    const content = lastMessage.content
-      .filter(block => block.type === "text")
-      .map(block => (block as any).text.value)
-      .join("\n");
+    // Extract text content from response output
+    const outputText = response.output
+      ?.filter((item: any) => item.type === "message")
+      .flatMap((item: any) => item.content || [])
+      .filter((content: any) => content.type === "output_text")
+      .map((content: any) => content.text)
+      .join("\n") || "";
 
     return {
-      content,
-      threadId: conversationId, // Keep field name for backwards compatibility
-      tokens: runStatus.usage?.total_tokens || 0,
+      content: outputText,
+      threadId: conversationId || "", // Keep field name for backwards compatibility
+      tokens: response.usage?.total_tokens || 0,
     };
   } catch (error) {
-    console.error("OpenAI Assistant API error:", error);
+    console.error("OpenAI Responses API error:", error);
     throw new Error("Failed to generate response from OBT Mentor assistant. Please try again.");
   }
 }
 
-// New streaming version for real-time responses with tool call support
+// Streaming version using Responses API for real-time responses
 export async function* generateAssistantResponseStream(
   request: AssistantRequest,
   userId: string,
@@ -501,15 +293,10 @@ export async function* generateAssistantResponseStream(
     // Use per-user conversation for intertwined chats (shared across all user's chats)
     let conversationId = request.threadId || await storage.getUserConversationId(userId);
     
-    // Create a new conversation if none exists
-    if (!conversationId) {
-      const thread = await openai.beta.threads.create();
-      conversationId = thread.id;
-      await storage.updateUserConversationId(userId, conversationId);
-    }
-
-    // Upload images to OpenAI if provided
-    const imageFileIds: string[] = [];
+    // Prepare input content with text and images
+    const inputContent: any[] = [{ type: "input_text", text: request.userMessage }];
+    
+    // Add images if provided
     if (request.imageFilePaths && request.imageFilePaths.length > 0) {
       for (const filePath of request.imageFilePaths) {
         try {
@@ -517,7 +304,10 @@ export async function* generateAssistantResponseStream(
             file: fs.createReadStream(filePath),
             purpose: "vision",
           });
-          imageFileIds.push(file.id);
+          inputContent.push({
+            type: "input_image",
+            image_file: { file_id: file.id }
+          });
           console.log(`[OpenAI] Uploaded image file: ${file.id}`);
         } catch (error) {
           console.error(`[OpenAI] Failed to upload image ${filePath}:`, error);
@@ -525,134 +315,121 @@ export async function* generateAssistantResponseStream(
       }
     }
 
-    // Prepare message content with images if provided
-    const messageContent: any = imageFileIds.length > 0
-      ? [
-          { type: "text", text: request.userMessage },
-          ...imageFileIds.map(fileId => ({
-            type: "image_file",
-            image_file: { file_id: fileId }
-          }))
-        ]
-      : request.userMessage;
-
-    // Check for active runs and cancel them before adding a new message
-    try {
-      const runs = await openai.beta.threads.runs.list(conversationId, { limit: 5 });
-      for (const activeRun of runs.data) {
-        if (activeRun.status === "in_progress" || activeRun.status === "queued" || activeRun.status === "requires_action") {
-          console.log(`[OpenAI] Cancelling active run: ${activeRun.id} (status: ${activeRun.status})`);
-          await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: conversationId });
-          
-          // Wait for cancellation to complete - poll the status
-          let cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: conversationId });
-          let attempts = 0;
-          while (cancelledRun.status !== "cancelled" && cancelledRun.status !== "failed" && attempts < 10) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: conversationId });
-            attempts++;
-            console.log(`[OpenAI] Waiting for run cancellation... status: ${cancelledRun.status} (attempt ${attempts})`);
+    // Create streaming response using Responses API
+    const responseConfig: any = {
+      model: "gpt-4o",
+      input: [{
+        role: "user",
+        content: inputContent
+      }],
+      instructions: OBT_MENTOR_INSTRUCTIONS,
+      tools: [
+        { type: "file_search" },
+        {
+          type: "function",
+          function: {
+            name: "add_qualification",
+            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio.",
+            parameters: {
+              type: "object",
+              properties: {
+                courseName: { type: "string", description: "The name of the course, workshop, or qualification" },
+                institution: { type: "string", description: "The institution or organization" },
+                completionDate: { type: "string", description: "Date of completion" },
+                credentialType: { type: "string", description: "Type of credential" },
+                description: { type: "string", description: "Brief description" }
+              },
+              required: ["courseName", "institution", "completionDate"]
+            }
           }
-          console.log(`[OpenAI] Run ${activeRun.id} cancelled successfully`);
+        },
+        {
+          type: "function",
+          function: {
+            name: "add_activity",
+            description: "Add a work experience or mentorship activity.",
+            parameters: {
+              type: "object",
+              properties: {
+                activityType: {
+                  type: "string",
+                  enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"]
+                },
+                languageName: { type: "string" },
+                chaptersCount: { type: "number" },
+                title: { type: "string" },
+                description: { type: "string" },
+                yearsOfExperience: { type: "number" },
+                organization: { type: "string" },
+                notes: { type: "string" }
+              },
+              required: ["activityType"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "update_competency",
+            description: "Update OBT competency status.",
+            parameters: {
+              type: "object",
+              properties: {
+                competencyId: {
+                  type: "string",
+                  enum: ["interpersonal_skills", "intercultural_communication", "multimodal_skills", "translation_theory", "languages_communication", "biblical_languages", "biblical_studies", "planning_quality", "consulting_mentoring", "applied_technology", "reflective_practice"]
+                },
+                status: { type: "string", enum: ["not_started", "emerging", "growing", "proficient", "advanced"] },
+                notes: { type: "string" }
+              },
+              required: ["competencyId", "status"]
+            }
+          }
         }
-      }
-    } catch (error) {
-      console.error("[OpenAI] Error checking/cancelling active runs:", error);
-      // Continue anyway - we'll handle errors when creating the new run
+      ],
+      stream: true
+    };
+
+    // Include conversation ID if it exists
+    if (conversationId) {
+      responseConfig.conversation = conversationId;
     }
 
-    // Add the user message to the thread
-    await openai.beta.threads.messages.create(conversationId, {
-      role: "user",
-      content: messageContent,
-    });
-
-    // Get the OBT Mentor Assistant ID
-    const assistantId = await getObtMentorAssistant();
-
-    // Create run
-    let run = await openai.beta.threads.runs.create(conversationId, {
-      assistant_id: assistantId,
-    });
+    // Use streaming via create with stream: true
+    const stream = await openai.responses.create(responseConfig) as any;
 
     let fullContent = "";
     let totalTokens = 0;
+    let finalConversationId = conversationId;
 
-    // Poll for completion or required action
-    while (run.status === "queued" || run.status === "in_progress" || run.status === "requires_action") {
-      
-      // Handle tool calls if required
-      if (run.status === "requires_action" && run.required_action?.type === "submit_tool_outputs") {
-        const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
-        
-        if (toolCallExecutor) {
-          // Execute all tool calls
-          const toolOutputs = [];
-          for (const toolCall of toolCalls) {
-            try {
-              const args = JSON.parse(toolCall.function.arguments);
-              yield { type: 'tool_call', data: { name: toolCall.function.name, args } };
-              
-              const result = await toolCallExecutor.executeToolCall(toolCall.function.name, args);
-              
-              toolOutputs.push({
-                tool_call_id: toolCall.id,
-                output: result
-              });
-            } catch (error: any) {
-              console.error(`Error executing tool ${toolCall.function.name}:`, error);
-              toolOutputs.push({
-                tool_call_id: toolCall.id,
-                output: JSON.stringify({ error: error.message || "Failed to execute tool" })
-              });
-            }
-          }
-
-          // Submit tool outputs
-          run = await openai.beta.threads.runs.submitToolOutputs(
-            run.id,
-            {
-              thread_id: conversationId,
-              tool_outputs: toolOutputs,
-            }
-          );
+    // Process streaming events
+    for await (const chunk of stream) {
+      // Track conversation ID from response
+      if (chunk.conversation && !finalConversationId) {
+        const newConversationId = typeof chunk.conversation === 'string' ? chunk.conversation : chunk.conversation?.id;
+        if (newConversationId) {
+          finalConversationId = newConversationId;
+          await storage.updateUserConversationId(userId, newConversationId);
         }
       }
 
-      // Wait before polling again
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get updated run status
-      run = await openai.beta.threads.runs.retrieve(run.id, { thread_id: conversationId });
-    }
+      // Stream text output
+      if (chunk.output) {
+        for (const item of chunk.output) {
+          if (item.type === "message" && item.content) {
+            for (const content of item.content) {
+              if (content.type === "output_text" && content.text) {
+                fullContent += content.text;
+                yield { type: 'content', data: content.text };
+              }
+            }
+          }
+        }
+      }
 
-    // Check for failure
-    if (run.status === "failed") {
-      console.error("Assistant run failed. Status:", run.status);
-      console.error("Run details:", JSON.stringify(run, null, 2));
-      console.error("Last error:", run.last_error);
-      throw new Error(`Assistant run failed: ${run.last_error?.message || 'Unknown error'}`);
-    }
-
-    // Get total tokens
-    totalTokens = run.usage?.total_tokens || 0;
-
-    // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(conversationId);
-    const lastMessage = messages.data[0];
-    
-    if (lastMessage && lastMessage.role === "assistant") {
-      fullContent = lastMessage.content
-        .filter(block => block.type === "text")
-        .map(block => (block as any).text.value)
-        .join("\n");
-      
-      // Yield content in chunks for streaming effect
-      const chunkSize = 50;
-      for (let i = 0; i < fullContent.length; i += chunkSize) {
-        const chunk = fullContent.slice(i, i + chunkSize);
-        yield { type: 'content', data: chunk };
-        await new Promise(resolve => setTimeout(resolve, 20)); // Small delay for streaming effect
+      // Track token usage
+      if (chunk.usage) {
+        totalTokens = chunk.usage.total_tokens || 0;
       }
     }
 
@@ -661,13 +438,13 @@ export async function* generateAssistantResponseStream(
       type: 'done', 
       data: {
         content: fullContent,
-        threadId: conversationId,
+        threadId: finalConversationId || "",
         tokens: totalTokens,
       } as AssistantResponse 
     };
 
   } catch (error) {
-    console.error("OpenAI Assistant API streaming error:", error);
+    console.error("OpenAI Responses API streaming error:", error);
     throw new Error("Failed to generate streaming response from assistant. Please try again.");
   }
 }
@@ -679,77 +456,61 @@ export async function generateChatCompletion(
   try {
     let conversationId = request.threadId || await storage.getChatConversationId(request.chatId, userId);
     
-    // Create a new conversation if none exists
-    if (!conversationId) {
-      const thread = await openai.beta.threads.create();
-      conversationId = thread.id;
-      await storage.updateChatConversationId(request.chatId, conversationId, userId);
-    }
-
-    // Extract system messages for run instructions
+    // Extract system messages for custom instructions
     const systemMessages = request.messages.filter(msg => msg.role === "system");
     const conversationMessages = request.messages.filter(msg => msg.role !== "system");
 
-    // Add all conversation messages to the thread in order
-    for (const message of conversationMessages) {
-      await openai.beta.threads.messages.create(conversationId, {
-        role: message.role as "user" | "assistant",
-        content: message.content,
-      });
-    }
+    // Prepare input from conversation history
+    const input = conversationMessages.map(msg => ({
+      role: msg.role as "user" | "assistant",
+      content: [{ type: msg.role === "user" ? "input_text" : "output_text", text: msg.content }]
+    }));
 
-    // Get the OBT Mentor Assistant ID
-    const assistantId = await getObtMentorAssistant();
-
-    // Create run with system messages as additional instructions
-    const runConfig: any = {
-      assistant_id: assistantId,
-    };
-
+    // Build instructions (system messages + base instructions)
+    let instructions = OBT_MENTOR_INSTRUCTIONS;
     if (systemMessages.length > 0) {
       const systemInstructions = systemMessages.map(msg => msg.content).join("\n\n");
-      runConfig.additional_instructions = systemInstructions;
+      instructions = systemInstructions + "\n\n" + instructions;
     }
 
-    const run = await openai.beta.threads.runs.create(conversationId, runConfig);
+    // Create response using Responses API
+    const responseConfig: any = {
+      model: "gpt-4o",
+      input,
+      instructions,
+      tools: [{ type: "file_search" }]
+    };
 
-    // Wait for the run to complete
-    let runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-      thread_id: conversationId,
-    });
-    
-    while (runStatus.status === "in_progress" || runStatus.status === "queued") {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(run.id, {
-        thread_id: conversationId,
-      });
+    // Include conversation ID if it exists
+    if (conversationId) {
+      responseConfig.conversation = conversationId;
     }
 
-    if (runStatus.status === "failed") {
-      throw new Error("Assistant run failed");
+    const response = await openai.responses.create(responseConfig);
+
+    // Store the conversation ID for future messages
+    if (!conversationId && response.conversation) {
+      const newConversationId = typeof response.conversation === 'string' ? response.conversation : response.conversation.id;
+      await storage.updateChatConversationId(request.chatId, newConversationId, userId);
+      conversationId = newConversationId;
     }
 
-    // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(conversationId);
-    const lastMessage = messages.data[0];
-    
-    if (!lastMessage || lastMessage.role !== "assistant") {
-      throw new Error("No assistant response found");
-    }
-
-    const content = lastMessage.content
-      .filter(block => block.type === "text")
-      .map(block => (block as any).text.value)
-      .join("\n");
+    // Extract text content from response output
+    const outputText = response.output
+      ?.filter((item: any) => item.type === "message")
+      .flatMap((item: any) => item.content || [])
+      .filter((content: any) => content.type === "output_text")
+      .map((content: any) => content.text)
+      .join("\n") || "";
 
     return {
-      content,
-      threadId: conversationId,
-      tokens: runStatus.usage?.total_tokens || 0,
+      content: outputText,
+      threadId: conversationId || "",
+      tokens: response.usage?.total_tokens || 0,
     };
   } catch (error) {
-    console.error("OpenAI Assistant API error:", error);
-    throw new Error("Failed to generate response from StoryTeller assistant. Please try again.");
+    console.error("OpenAI Responses API error:", error);
+    throw new Error("Failed to generate chat completion. Please try again.");
   }
 }
 
