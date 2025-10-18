@@ -276,7 +276,7 @@ export default function Sidebar({
   };
 
   return (
-    <div className={`w-full ${isMobile ? 'max-w-xs phone-xs:max-w-full phone-sm:max-w-sm' : ''} bg-card ${!isMobile ? 'border-r border-border' : ''} flex flex-col h-full`}>
+    <div className={`w-full h-full ${isMobile ? 'max-w-xs phone-xs:max-w-full phone-sm:max-w-sm' : ''} bg-card ${!isMobile ? 'border-r border-border' : ''} flex flex-col overflow-hidden`}>
       {/* Header */}
       <div className={`${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pt-[max(1rem,env(safe-area-inset-top))]' : 'p-4'} border-b border-border`}>
         <div className="flex items-center justify-between h-10">

@@ -374,7 +374,7 @@ export default function Portfolio() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative" data-testid="page-portfolio">
+    <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-portfolio">
       {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
         <div 
@@ -390,7 +390,7 @@ export default function Portfolio() {
           ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
             } w-4/5 max-w-sm`
-          : 'relative h-full w-80'
+          : 'h-screen w-80'
         }
       `}>
         <Sidebar 
@@ -400,7 +400,7 @@ export default function Portfolio() {
         />
       </div>
       
-      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+      <div className={`flex-1 h-screen overflow-y-auto ${isMobile ? 'p-4' : 'p-8'}`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
           {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
