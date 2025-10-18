@@ -10,6 +10,8 @@ import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import multer from "multer";
+import path from "path";
+import { transcribeAudio as whisperTranscribe } from "./whisper";
 
 // Server-side audio cache for faster TTS responses
 interface CachedAudio {
@@ -84,7 +86,35 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR 
 });
 
-// Multer configuration for audio uploads
+// Multer configuration for file uploads (images and audio)
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const fileUpload = multer({
+  storage: fileStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit
+  },
+  fileFilter: (req: any, file: any, cb: any) => {
+    const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedAudioTypes = ['audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/m4a', 'audio/ogg', 'audio/webm', 'video/webm'];
+    
+    if (allowedImageTypes.includes(file.mimetype) || allowedAudioTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and audio files are allowed'));
+    }
+  }
+});
+
+// Original multer configuration for audio uploads (for backward compatibility)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -486,6 +516,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post('/api/messages/:messageId/attachments', requireAuth, fileUpload.single('file'), async (req: any, res) => {
+    try {
+      const { messageId } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const fileType = file.mimetype.startsWith('image/') ? 'image' : 'audio';
+      let transcription: string | undefined;
+
+      if (fileType === 'audio') {
+        try {
+          transcription = await whisperTranscribe(file.path);
+        } catch (error) {
+          console.error('Error transcribing audio:', error);
+        }
+      }
+
+      const attachment = await storage.createMessageAttachment({
+        messageId,
+        filename: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        fileType,
+        storagePath: `uploads/${file.filename}`,
+        transcription,
+      });
+
+      res.json(attachment);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
+  app.get('/api/messages/:messageId/attachments', requireAuth, async (req: any, res) => {
+    try {
+      const { messageId } = req.params;
+      const attachments = await storage.getMessageAttachments(messageId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching attachments:", error);
+      res.status(500).json({ message: "Failed to fetch attachments" });
     }
   });
 
@@ -1877,6 +1956,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting report:", error);
       res.status(500).json({ message: "Failed to delete report" });
     }
+  });
+
+  // Serve uploaded files
+  app.use('/uploads', requireAuth, (req: any, res, next) => {
+    const express = require('express');
+    express.static('uploads')(req, res, next);
   });
 
   // Catch-all for unmatched API routes - return 404 instead of HTML

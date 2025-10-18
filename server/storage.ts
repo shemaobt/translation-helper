@@ -2,6 +2,7 @@ import {
   users,
   chats,
   messages,
+  messageAttachments,
   apiKeys,
   apiUsage,
   feedback,
@@ -17,6 +18,8 @@ import {
   type InsertChat,
   type Message,
   type InsertMessage,
+  type MessageAttachment,
+  type InsertMessageAttachment,
   type ApiKey,
   type InsertApiKey,
   type ApiUsage,
@@ -68,6 +71,10 @@ export interface IStorage {
   getChatMessages(chatId: string, userId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message>;
+  
+  // Message attachment operations
+  getMessageAttachments(messageId: string): Promise<MessageAttachment[]>;
+  createMessageAttachment(attachment: InsertMessageAttachment): Promise<MessageAttachment>;
   
   // API Key operations
   getUserApiKeys(userId: string): Promise<ApiKey[]>;
@@ -303,6 +310,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(messages.id, messageId))
       .returning();
     return updatedMessage;
+  }
+
+  async getMessageAttachments(messageId: string): Promise<MessageAttachment[]> {
+    return await db
+      .select()
+      .from(messageAttachments)
+      .where(eq(messageAttachments.messageId, messageId));
+  }
+
+  async createMessageAttachment(attachment: InsertMessageAttachment): Promise<MessageAttachment> {
+    const [created] = await db
+      .insert(messageAttachments)
+      .values(attachment)
+      .returning();
+    return created;
   }
 
   // API Key operations
