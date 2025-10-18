@@ -278,6 +278,9 @@ export async function* generateAssistantResponseStream(
     let totalTokens = 0;
     let finalConversationId = conversationId;
     let chunkCount = 0;
+    
+    // Track function calls being built
+    const functionCalls = new Map<string, { name: string; arguments: string }>();
 
     // Process streaming events
     for await (const chunk of stream) {
@@ -301,6 +304,53 @@ export async function* generateAssistantResponseStream(
         console.log('[Stream Generator] Yielding delta:', chunk.delta);
         yield { type: 'content', data: chunk.delta };
         console.log('[Stream Generator] Yielded delta successfully');
+      }
+      
+      // Handle function call events
+      if (chunk.type === 'response.output_item.added' && chunk.item?.type === 'function_call') {
+        // New function call started
+        const itemId = chunk.item.id;
+        functionCalls.set(itemId, { name: chunk.item.name, arguments: '' });
+        console.log('[Stream Generator] Function call started:', chunk.item.name);
+      }
+      
+      if (chunk.type === 'response.function_call_arguments.delta' && chunk.delta) {
+        // Accumulate function arguments
+        const itemId = chunk.item_id;
+        const call = functionCalls.get(itemId);
+        if (call) {
+          call.arguments += chunk.delta;
+        }
+      }
+      
+      if (chunk.type === 'response.function_call_arguments.done') {
+        // Function call complete - execute it
+        const itemId = chunk.item_id;
+        const call = functionCalls.get(itemId);
+        
+        if (call && toolCallExecutor) {
+          try {
+            console.log('[Stream Generator] Executing function:', call.name, 'with args:', call.arguments);
+            const args = JSON.parse(call.arguments);
+            const result = await toolCallExecutor.executeToolCall(call.name, args);
+            
+            yield { 
+              type: 'tool_call', 
+              data: { 
+                tool: call.name, 
+                args, 
+                result 
+              } 
+            };
+            
+            console.log('[Stream Generator] Function executed successfully:', call.name);
+          } catch (error) {
+            console.error('[Stream Generator] Error executing function:', call.name, error);
+          }
+          
+          // Clean up
+          functionCalls.delete(itemId);
+        }
       }
 
       // Track token usage from completed response
