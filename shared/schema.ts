@@ -117,8 +117,8 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
-  // OpenAI thread for intertwined chats (shared across all user's chats)
-  userThreadId: varchar("user_thread_id"),
+  // OpenAI conversation for intertwined chats (shared across all user's chats)
+  userConversationId: varchar("user_conversation_id"),
   // Approval system fields
   approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("approved"),
   approvedAt: timestamp("approved_at"),
@@ -148,7 +148,7 @@ export const chats = pgTable("chats", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   assistantId: varchar("assistant_id").notNull().default('obtMentor'),
   title: varchar("title").notNull(),
-  threadId: varchar("thread_id"), // OpenAI thread ID for conversation context
+  conversationId: varchar("conversation_id"), // OpenAI conversation ID for conversation context
   chainId: varchar("chain_id").references(() => chatChains.id, { onDelete: "set null" }), // Optional: part of a chain
   sequenceIndex: integer("sequence_index"), // Position in chain (0-based, NULL if not in chain)
   createdAt: timestamp("created_at").defaultNow(),
