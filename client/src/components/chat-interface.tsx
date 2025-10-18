@@ -8,7 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import MessageComponent from "./message";
 import FeedbackForm from "./feedback-form";
-import { Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare } from "lucide-react";
+import { Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare, Paperclip, X, Image, Music } from "lucide-react";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
@@ -69,8 +69,11 @@ export default function ChatInterface({
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en-US');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -419,12 +422,121 @@ export default function ChatInterface({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim() || !chatId || isTyping) return;
+  const validateFile = (file: File): boolean => {
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const audioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/ogg'];
     
-    // Use streaming by default, fallback to regular on error
-    sendStreamingMessage(message.trim());
+    const isImage = imageTypes.includes(file.type);
+    const isAudio = audioTypes.includes(file.type);
+    
+    if (!isImage && !isAudio) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image (.jpg, .png, .gif, .webp) or audio file (.mp3, .wav, .m4a, .ogg)",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    const maxSize = isImage ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: `${isImage ? 'Images' : 'Audio files'} must be under ${isImage ? '10MB' : '20MB'}`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && validateFile(file)) {
+      setSelectedFile(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setUploadProgress(0);
+  };
+
+  const uploadFileAttachment = async (messageId: string, file: File): Promise<void> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setUploadProgress(0);
+      const response = await fetch(`/api/messages/${messageId}/attachments`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('File upload failed');
+      }
+
+      setUploadProgress(100);
+    } catch (error) {
+      console.error('File upload error:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if ((!message.trim() && !selectedFile) || !chatId || isTyping) return;
+    
+    if (selectedFile) {
+      setIsTyping(true);
+      try {
+        const userMessage = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
+          content: message.trim() || `[Attachment: ${selectedFile.name}]`,
+        }).then(res => res.json());
+
+        await uploadFileAttachment(userMessage.id, selectedFile);
+
+        queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+
+        const assistantResponse = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
+          content: "process",
+        }).then(res => res.json());
+
+        queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+        
+        setMessage("");
+        setSelectedFile(null);
+        setUploadProgress(0);
+        setIsTyping(false);
+      } catch (error: unknown) {
+        setIsTyping(false);
+        if (isUnauthorizedError(error as Error)) {
+          toast({
+            title: "Unauthorized",
+            description: "You are logged out. Logging in again...",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            window.location.href = "/api/login";
+          }, 500);
+          return;
+        }
+        toast({
+          title: "Error",
+          description: "Failed to send message with attachment",
+          variant: "destructive",
+        });
+      }
+    } else {
+      sendStreamingMessage(message.trim());
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -705,7 +817,65 @@ export default function ChatInterface({
       </div>
       {/* Message Input - Fixed at bottom */}
       <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'p-4'}`}>
+        {/* File Preview */}
+        {selectedFile && (
+          <div className="mb-3 p-3 bg-muted rounded-lg border border-border" data-testid="file-preview">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                {selectedFile.type.startsWith('image/') ? (
+                  <>
+                    <Image className="h-5 w-5 text-primary flex-shrink-0" />
+                    <img
+                      src={URL.createObjectURL(selectedFile)}
+                      alt="Preview"
+                      className="h-12 w-12 object-cover rounded border border-border"
+                      data-testid="img-file-preview"
+                    />
+                  </>
+                ) : (
+                  <Music className="h-5 w-5 text-primary flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" data-testid="text-file-name">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground" data-testid="text-file-size">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="mt-1 w-full bg-secondary rounded-full h-1">
+                      <div 
+                        className="bg-primary h-1 rounded-full transition-all" 
+                        style={{ width: `${uploadProgress}%` }}
+                        data-testid="progress-upload"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveFile}
+                className="h-8 w-8 p-0 flex-shrink-0"
+                data-testid="button-remove-file"
+                aria-label="Remove file"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className={`flex ${isMobile ? 'space-x-2 phone-xs:space-x-1 phone-sm:space-x-2' : 'space-x-3'}`} data-testid="form-message">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,audio/mpeg,audio/mp3,audio/wav,audio/m4a,audio/ogg"
+            onChange={handleFileSelect}
+            className="hidden"
+            data-testid="input-file"
+          />
           <div className="flex-1 min-w-0">
             <Textarea
               ref={textareaRef}
@@ -725,6 +895,18 @@ export default function ChatInterface({
               data-testid="textarea-message"
             />
           </div>
+          {/* Attachment Button */}
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            variant="secondary"
+            className={`${isMobile ? 'min-h-[44px] min-w-[44px] h-11 w-11 phone-sm:h-12 phone-sm:w-12 p-0 touch-manipulation shrink-0' : 'h-11 w-11'}`}
+            data-testid="button-attach-file"
+            aria-label="Attach file"
+            disabled={isTyping}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           {/* Voice Input Button - Always show when supported */}
           {isSpeechRecognitionSupported && (
             <Button
@@ -747,7 +929,7 @@ export default function ChatInterface({
           )}
           <Button
             type="submit"
-            disabled={!message.trim() || sendMessageMutation.isPending || isTyping}
+            disabled={(!message.trim() && !selectedFile) || sendMessageMutation.isPending || isTyping}
             className={`${isMobile ? 'min-h-[44px] min-w-[44px] h-11 w-11 phone-sm:h-12 phone-sm:w-12 p-0 touch-manipulation shrink-0' : 'h-11'}`}
             data-testid="button-send"
             aria-label={

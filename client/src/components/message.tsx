@@ -1,8 +1,9 @@
-import { User, Volume2, VolumeX, Pause, Loader2 } from "lucide-react";
+import { User, Volume2, VolumeX, Pause, Loader2, Music, FileAudio } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
-import type { Message } from "@shared/schema";
+import type { Message, MessageAttachment } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -15,6 +16,12 @@ interface MessageProps {
 export default function MessageComponent({ message, speechSynthesis, selectedLanguage }: MessageProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Fetch attachments for this message
+  const { data: attachments = [] } = useQuery<MessageAttachment[]>({
+    queryKey: ["/api/messages", message.id, "attachments"],
+    retry: false,
+  });
   
   // Sync with speech synthesis state
   useEffect(() => {
@@ -56,6 +63,48 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
         <div className="max-w-2xl">
           <div className="bg-primary text-primary-foreground rounded-lg rounded-br-sm p-4">
             <p data-testid={`text-message-content-${message.id}`}>{message.content}</p>
+            {/* Display attachments */}
+            {attachments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} data-testid={`attachment-${attachment.id}`}>
+                    {attachment.fileType === 'image' ? (
+                      <img
+                        src={`/${attachment.storagePath}`}
+                        alt={attachment.originalName}
+                        className="max-w-full rounded border border-primary-foreground/20"
+                        data-testid={`img-attachment-${attachment.id}`}
+                      />
+                    ) : (
+                      <div className="bg-primary-foreground/10 rounded p-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FileAudio className="h-4 w-4" />
+                          <span className="text-sm" data-testid={`text-attachment-name-${attachment.id}`}>
+                            {attachment.originalName}
+                          </span>
+                        </div>
+                        <audio 
+                          controls 
+                          className="w-full" 
+                          data-testid={`audio-player-${attachment.id}`}
+                        >
+                          <source src={`/${attachment.storagePath}`} type={attachment.mimeType} />
+                          Your browser does not support the audio element.
+                        </audio>
+                        {attachment.transcription && (
+                          <div className="mt-2 pt-2 border-t border-primary-foreground/20">
+                            <p className="text-xs font-medium mb-1">Transcription:</p>
+                            <p className="text-sm" data-testid={`text-transcription-${attachment.id}`}>
+                              {attachment.transcription}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1 text-right" data-testid={`text-message-timestamp-${message.id}`}>
             {formatTimestamp(message.createdAt || "")}
@@ -81,6 +130,48 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
             <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid={`text-message-content-${message.id}`}>
               {message.content}
             </div>
+            {/* Display attachments */}
+            {attachments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} data-testid={`attachment-${attachment.id}`}>
+                    {attachment.fileType === 'image' ? (
+                      <img
+                        src={`/${attachment.storagePath}`}
+                        alt={attachment.originalName}
+                        className="max-w-full rounded border border-border"
+                        data-testid={`img-attachment-${attachment.id}`}
+                      />
+                    ) : (
+                      <div className="bg-muted rounded p-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FileAudio className="h-4 w-4 text-primary" />
+                          <span className="text-sm" data-testid={`text-attachment-name-${attachment.id}`}>
+                            {attachment.originalName}
+                          </span>
+                        </div>
+                        <audio 
+                          controls 
+                          className="w-full" 
+                          data-testid={`audio-player-${attachment.id}`}
+                        >
+                          <source src={`/${attachment.storagePath}`} type={attachment.mimeType} />
+                          Your browser does not support the audio element.
+                        </audio>
+                        {attachment.transcription && (
+                          <div className="mt-2 pt-2 border-t border-border">
+                            <p className="text-xs font-medium mb-1 text-muted-foreground">Transcription:</p>
+                            <p className="text-sm" data-testid={`text-transcription-${attachment.id}`}>
+                              {attachment.transcription}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {speechSynthesis && speechSynthesis.isSupported && (
               <Button
                 onClick={handleSpeak}
