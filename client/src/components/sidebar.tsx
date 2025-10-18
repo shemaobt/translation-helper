@@ -578,7 +578,7 @@ export default function Sidebar({
                 data-testid="link-portfolio"
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
-                Portfólio
+                Portfolio
               </Button>
             </Link>
             

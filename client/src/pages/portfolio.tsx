@@ -848,7 +848,7 @@ export default function Portfolio() {
                                   )}
                                   {qualification.completionDate && (
                                     <span className="text-muted-foreground" data-testid={`text-completion-date-${qualification.id}`}>
-                                      {new Date(qualification.completionDate).toLocaleDateString('pt-BR')}
+                                      {new Date(qualification.completionDate).toLocaleDateString('en-US')}
                                     </span>
                                   )}
                                 </div>
@@ -998,7 +998,7 @@ export default function Portfolio() {
                                       <Badge>{activity.chaptersCount} chapter(s)</Badge>
                                       {activity.activityDate && (
                                         <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
-                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                          {new Date(activity.activityDate).toLocaleDateString('en-US')}
                                         </span>
                                       )}
                                     </div>
@@ -1039,7 +1039,7 @@ export default function Portfolio() {
                                       )}
                                       {activity.activityDate && (
                                         <span className="text-muted-foreground" data-testid={`text-activity-date-${activity.id}`}>
-                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                          {new Date(activity.activityDate).toLocaleDateString('en-US')}
                                         </span>
                                       )}
                                     </div>
