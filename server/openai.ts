@@ -110,12 +110,109 @@ export async function getObtMentorAssistant(): Promise<string> {
       obtMentorAssistantId = process.env.OBT_MENTOR_ASSISTANT_ID;
       console.log('Using OBT Mentor Assistant from environment:', obtMentorAssistantId);
       
-      // Update the assistant's instructions to ensure they're current
+      // Update the assistant's instructions and tools to ensure they're current
       try {
         await openai.beta.assistants.update(obtMentorAssistantId, {
           instructions: OBT_MENTOR_INSTRUCTIONS,
+          tools: [
+            { type: "file_search" },
+            {
+              type: "function",
+              function: {
+                name: "add_qualification",
+                description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    courseName: {
+                      type: "string",
+                      description: "The name of the course, workshop, or qualification"
+                    },
+                    institution: {
+                      type: "string",
+                      description: "The institution or organization that provided the training"
+                    },
+                    completionDate: {
+                      type: "string",
+                      description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')"
+                    },
+                    credentialType: {
+                      type: "string",
+                      description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)"
+                    },
+                    description: {
+                      type: "string",
+                      description: "A brief description of what was learned"
+                    }
+                  },
+                  required: ["courseName", "institution", "completionDate"]
+                }
+              }
+            },
+            {
+              type: "function",
+              function: {
+                name: "add_activity",
+                description: "Add a mentorship activity to the facilitator's portfolio. Use this when the facilitator mentions working with a language or translating chapters.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    languageName: {
+                      type: "string",
+                      description: "The name of the language being translated/mentored"
+                    },
+                    chaptersCount: {
+                      type: "number",
+                      description: "The number of chapters mentored or helped to mentor"
+                    },
+                    notes: {
+                      type: "string",
+                      description: "Optional notes about the mentorship activity"
+                    }
+                  },
+                  required: ["languageName", "chaptersCount"]
+                }
+              }
+            },
+            {
+              type: "function",
+              function: {
+                name: "update_competency",
+                description: "Update the status of a core OBT competency. Use this when the facilitator demonstrates progress in a competency area.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    competencyId: {
+                      type: "string",
+                      enum: [
+                        "scripture_engagement",
+                        "obt_methods",
+                        "cultural_sensitivity",
+                        "community_development",
+                        "team_leadership",
+                        "training_facilitation",
+                        "technology_integration",
+                        "program_assessment"
+                      ],
+                      description: "The ID of the competency to update"
+                    },
+                    status: {
+                      type: "string",
+                      enum: ["not_started", "developing", "proficient", "advanced"],
+                      description: "The new status level for this competency"
+                    },
+                    notes: {
+                      type: "string",
+                      description: "Notes about the progress or evidence of this competency level"
+                    }
+                  },
+                  required: ["competencyId", "status"]
+                }
+              }
+            }
+          ],
         });
-        console.log('Updated OBT Mentor Assistant instructions');
+        console.log('Updated OBT Mentor Assistant instructions and tools');
       } catch (updateError) {
         console.error('Error updating assistant instructions:', updateError);
       }
@@ -128,7 +225,103 @@ export async function getObtMentorAssistant(): Promise<string> {
       name: "OBT Mentor Assistant",
       instructions: OBT_MENTOR_INSTRUCTIONS,
       model: "gpt-4o",
-      tools: [{ type: "file_search" }],
+      tools: [
+        { type: "file_search" },
+        {
+          type: "function",
+          function: {
+            name: "add_qualification",
+            description: "Add a qualification (course, certificate, or training) to the facilitator's portfolio. Use this when the facilitator mentions completing a course or receiving a qualification.",
+            parameters: {
+              type: "object",
+              properties: {
+                courseName: {
+                  type: "string",
+                  description: "The name of the course, workshop, or qualification"
+                },
+                institution: {
+                  type: "string",
+                  description: "The institution or organization that provided the training"
+                },
+                completionDate: {
+                  type: "string",
+                  description: "The date of completion in YYYY-MM-DD format or approximate year (e.g., '2023')"
+                },
+                credentialType: {
+                  type: "string",
+                  description: "Type of credential received (e.g., Certificate, Diploma, Workshop Completion)"
+                },
+                description: {
+                  type: "string",
+                  description: "A brief description of what was learned"
+                }
+              },
+              required: ["courseName", "institution", "completionDate"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "add_activity",
+            description: "Add a mentorship activity to the facilitator's portfolio. Use this when the facilitator mentions working with a language or translating chapters.",
+            parameters: {
+              type: "object",
+              properties: {
+                languageName: {
+                  type: "string",
+                  description: "The name of the language being translated/mentored"
+                },
+                chaptersCount: {
+                  type: "number",
+                  description: "The number of chapters mentored or helped to mentor"
+                },
+                notes: {
+                  type: "string",
+                  description: "Optional notes about the mentorship activity"
+                }
+              },
+              required: ["languageName", "chaptersCount"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "update_competency",
+            description: "Update the status of a core OBT competency. Use this when the facilitator demonstrates progress in a competency area.",
+            parameters: {
+              type: "object",
+              properties: {
+                competencyId: {
+                  type: "string",
+                  enum: [
+                    "scripture_engagement",
+                    "obt_methods",
+                    "cultural_sensitivity",
+                    "community_development",
+                    "team_leadership",
+                    "training_facilitation",
+                    "technology_integration",
+                    "program_assessment"
+                  ],
+                  description: "The ID of the competency to update"
+                },
+                status: {
+                  type: "string",
+                  enum: ["not_started", "developing", "proficient", "advanced"],
+                  description: "The new status level for this competency"
+                },
+                notes: {
+                  type: "string",
+                  description: "Notes about the progress or evidence of this competency level"
+                }
+              },
+              required: ["competencyId", "status"]
+            }
+          }
+        }
+      ],
     });
 
     obtMentorAssistantId = assistant.id;
@@ -166,6 +359,10 @@ export interface AssistantResponse {
   content: string;
   threadId: string;
   tokens: number;
+}
+
+export interface ToolCallExecutor {
+  executeToolCall: (toolName: string, args: any) => Promise<string>;
 }
 
 // Thread ID persistence moved to database for durability across restarts
@@ -250,11 +447,12 @@ export async function generateAssistantResponse(
   }
 }
 
-// New streaming version for real-time responses
+// New streaming version for real-time responses with tool call support
 export async function* generateAssistantResponseStream(
   request: AssistantRequest,
-  userId: string
-): AsyncGenerator<{ type: 'content' | 'done', data: string | AssistantResponse }> {
+  userId: string,
+  toolCallExecutor?: ToolCallExecutor
+): AsyncGenerator<{ type: 'content' | 'done' | 'tool_call', data: string | AssistantResponse | any }> {
   try {
     let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
     
@@ -285,28 +483,86 @@ export async function* generateAssistantResponseStream(
     // Get the OBT Mentor Assistant ID
     const assistantId = await getObtMentorAssistant();
 
-    // Create streaming run
-    const runStream = openai.beta.threads.runs.stream(threadId, {
+    // Create run
+    let run = await openai.beta.threads.runs.create(threadId, {
       assistant_id: assistantId,
     });
 
     let fullContent = "";
     let totalTokens = 0;
 
-    for await (const chunk of runStream) {
-      if (chunk.event === 'thread.message.delta') {
-        const delta = chunk.data.delta;
-        if (delta.content) {
-          for (const contentPart of delta.content) {
-            if (contentPart.type === 'text' && contentPart.text?.value) {
-              const text = contentPart.text.value;
-              fullContent += text;
-              yield { type: 'content', data: text };
+    // Poll for completion or required action
+    while (run.status === "queued" || run.status === "in_progress" || run.status === "requires_action") {
+      
+      // Handle tool calls if required
+      if (run.status === "requires_action" && run.required_action?.type === "submit_tool_outputs") {
+        const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+        
+        if (toolCallExecutor) {
+          // Execute all tool calls
+          const toolOutputs = [];
+          for (const toolCall of toolCalls) {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              yield { type: 'tool_call', data: { name: toolCall.function.name, args } };
+              
+              const result = await toolCallExecutor.executeToolCall(toolCall.function.name, args);
+              
+              toolOutputs.push({
+                tool_call_id: toolCall.id,
+                output: result
+              });
+            } catch (error: any) {
+              console.error(`Error executing tool ${toolCall.function.name}:`, error);
+              toolOutputs.push({
+                tool_call_id: toolCall.id,
+                output: JSON.stringify({ error: error.message || "Failed to execute tool" })
+              });
             }
           }
+
+          // Submit tool outputs
+          run = await openai.beta.threads.runs.submitToolOutputs(
+            run.id,
+            {
+              thread_id: threadId,
+              tool_outputs: toolOutputs,
+            }
+          );
         }
-      } else if (chunk.event === 'thread.run.completed') {
-        totalTokens = chunk.data.usage?.total_tokens || 0;
+      }
+
+      // Wait before polling again
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get updated run status
+      run = await openai.beta.threads.runs.retrieve(run.id, { thread_id: threadId });
+    }
+
+    // Check for failure
+    if (run.status === "failed") {
+      throw new Error("Assistant run failed");
+    }
+
+    // Get total tokens
+    totalTokens = run.usage?.total_tokens || 0;
+
+    // Get the assistant's response
+    const messages = await openai.beta.threads.messages.list(threadId);
+    const lastMessage = messages.data[0];
+    
+    if (lastMessage && lastMessage.role === "assistant") {
+      fullContent = lastMessage.content
+        .filter(block => block.type === "text")
+        .map(block => (block as any).text.value)
+        .join("\n");
+      
+      // Yield content in chunks for streaming effect
+      const chunkSize = 50;
+      for (let i = 0; i < fullContent.length; i += chunkSize) {
+        const chunk = fullContent.slice(i, i + chunkSize);
+        yield { type: 'content', data: chunk };
+        await new Promise(resolve => setTimeout(resolve, 20)); // Small delay for streaming effect
       }
     }
 
@@ -322,7 +578,7 @@ export async function* generateAssistantResponseStream(
 
   } catch (error) {
     console.error("OpenAI Assistant API streaming error:", error);
-    throw new Error("Failed to generate streaming response from StoryTeller assistant. Please try again.");
+    throw new Error("Failed to generate streaming response from assistant. Please try again.");
   }
 }
 
