@@ -174,7 +174,8 @@ export function calculateCompetencyScores(
     );
     
     // Accumulate impacts into total scores
-    for (const [competencyId, weight] of impacts.entries()) {
+    const impactEntries = Array.from(impacts.entries());
+    for (const [competencyId, weight] of impactEntries) {
       const currentScore = competencyScores.get(competencyId) || 0;
       competencyScores.set(competencyId, currentScore + weight);
     }
