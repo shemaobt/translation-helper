@@ -1,6 +1,7 @@
 import OpenAI, { toFile } from "openai";
 import type { Message } from "@shared/schema";
 import { ASSISTANTS, type AssistantId } from "@shared/schema";
+import fs from 'fs';
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "your_openai_api_key"
@@ -341,6 +342,7 @@ export interface AssistantRequest {
   assistantId: AssistantId;
   threadId?: string;
   imageUrls?: string[];
+  imageFilePaths?: string[]; // Local file paths for direct upload to OpenAI
 }
 
 export interface ChatMessage {
@@ -383,13 +385,30 @@ export async function generateAssistantResponse(
       await storage.updateUserThreadId(userId, threadId);
     }
 
+    // Upload images to OpenAI if provided
+    const imageFileIds: string[] = [];
+    if (request.imageFilePaths && request.imageFilePaths.length > 0) {
+      for (const filePath of request.imageFilePaths) {
+        try {
+          const file = await openai.files.create({
+            file: fs.createReadStream(filePath),
+            purpose: "vision",
+          });
+          imageFileIds.push(file.id);
+          console.log(`[OpenAI] Uploaded image file: ${file.id}`);
+        } catch (error) {
+          console.error(`[OpenAI] Failed to upload image ${filePath}:`, error);
+        }
+      }
+    }
+
     // Prepare message content with images if provided
-    const messageContent: any = request.imageUrls && request.imageUrls.length > 0
+    const messageContent: any = imageFileIds.length > 0
       ? [
           { type: "text", text: request.userMessage },
-          ...request.imageUrls.map(url => ({
-            type: "image_url",
-            image_url: { url }
+          ...imageFileIds.map(fileId => ({
+            type: "image_file",
+            image_file: { file_id: fileId }
           }))
         ]
       : request.userMessage;
@@ -465,13 +484,30 @@ export async function* generateAssistantResponseStream(
       await storage.updateUserThreadId(userId, threadId);
     }
 
+    // Upload images to OpenAI if provided
+    const imageFileIds: string[] = [];
+    if (request.imageFilePaths && request.imageFilePaths.length > 0) {
+      for (const filePath of request.imageFilePaths) {
+        try {
+          const file = await openai.files.create({
+            file: fs.createReadStream(filePath),
+            purpose: "vision",
+          });
+          imageFileIds.push(file.id);
+          console.log(`[OpenAI] Uploaded image file: ${file.id}`);
+        } catch (error) {
+          console.error(`[OpenAI] Failed to upload image ${filePath}:`, error);
+        }
+      }
+    }
+
     // Prepare message content with images if provided
-    const messageContent: any = request.imageUrls && request.imageUrls.length > 0
+    const messageContent: any = imageFileIds.length > 0
       ? [
           { type: "text", text: request.userMessage },
-          ...request.imageUrls.map(url => ({
-            type: "image_url",
-            image_url: { url }
+          ...imageFileIds.map(fileId => ({
+            type: "image_file",
+            image_file: { file_id: fileId }
           }))
         ]
       : request.userMessage;
@@ -543,7 +579,10 @@ export async function* generateAssistantResponseStream(
 
     // Check for failure
     if (run.status === "failed") {
-      throw new Error("Assistant run failed");
+      console.error("Assistant run failed. Status:", run.status);
+      console.error("Run details:", JSON.stringify(run, null, 2));
+      console.error("Last error:", run.last_error);
+      throw new Error(`Assistant run failed: ${run.last_error?.message || 'Unknown error'}`);
     }
 
     // Get total tokens
