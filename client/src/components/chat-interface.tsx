@@ -910,7 +910,7 @@ export default function ChatInterface({
                   ? "AI is responding..." 
                   : isListening 
                     ? "Listening..." 
-                    : (isMobile ? "Ask about stories..." : "Type your message...")
+                    : "Let's talk about your journey..."
               }
               data-testid="textarea-message"
             />
