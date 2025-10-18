@@ -1017,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 return JSON.stringify({ 
                   success: true, 
-                  message: `✓ Qualificação "${args.courseName}" adicionada ao seu portfólio!`,
+                  message: `✓ Qualification "${args.courseName}" added to your portfolio!`,
                   qualification 
                 });
                 
@@ -1064,17 +1064,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Generate success message based on type
                 let successMessage = '';
                 if (args.activityType === 'translation') {
-                  successMessage = `✓ Atividade de tradução adicionada: ${args.languageName} (${args.chaptersCount} capítulos)!`;
+                  successMessage = `✓ Translation activity added: ${args.languageName} (${args.chaptersCount} chapters)!`;
                 } else {
                   const typeLabels: Record<string, string> = {
-                    facilitation: 'Experiência de facilitação',
-                    teaching: 'Experiência de ensino',
-                    indigenous_work: 'Trabalho com povos indígenas',
-                    school_work: 'Trabalho em escolas',
-                    general_experience: 'Experiência geral'
+                    facilitation: 'Facilitation experience',
+                    teaching: 'Teaching experience',
+                    indigenous_work: 'Work with indigenous peoples',
+                    school_work: 'School work',
+                    general_experience: 'General experience'
                   };
-                  const typeLabel = typeLabels[args.activityType] || 'Experiência';
-                  successMessage = `✓ ${typeLabel} adicionada ao seu portfólio!`;
+                  const typeLabel = typeLabels[args.activityType] || 'Experience';
+                  successMessage = `✓ ${typeLabel} added to your portfolio!`;
                 }
                 
                 return JSON.stringify({ 
@@ -1103,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 return JSON.stringify({ 
                   success: true, 
-                  message: `✓ Competência atualizada para "${args.status}"!`,
+                  message: `✓ Competency updated to "${args.status}"!`,
                   competency 
                 });
                 
