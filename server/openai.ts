@@ -373,13 +373,14 @@ export async function generateAssistantResponse(
   userId: string
 ): Promise<AssistantResponse> {
   try {
-    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
+    // Use per-user thread for intertwined chats (shared across all user's chats)
+    let threadId = request.threadId || await storage.getUserThreadId(userId);
     
     // Create a new thread if none exists
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
-      await storage.updateChatThreadId(request.chatId, threadId, userId);
+      await storage.updateUserThreadId(userId, threadId);
     }
 
     // Prepare message content with images if provided
@@ -454,13 +455,14 @@ export async function* generateAssistantResponseStream(
   toolCallExecutor?: ToolCallExecutor
 ): AsyncGenerator<{ type: 'content' | 'done' | 'tool_call', data: string | AssistantResponse | any }> {
   try {
-    let threadId = request.threadId || await storage.getChatThreadId(request.chatId, userId);
+    // Use per-user thread for intertwined chats (shared across all user's chats)
+    let threadId = request.threadId || await storage.getUserThreadId(userId);
     
     // Create a new thread if none exists
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
-      await storage.updateChatThreadId(request.chatId, threadId, userId);
+      await storage.updateUserThreadId(userId, threadId);
     }
 
     // Prepare message content with images if provided
