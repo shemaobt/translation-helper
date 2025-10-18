@@ -28,6 +28,12 @@ export async function apiRequest(
     ...customHeaders,
   };
   
+  // Add CSRF protection header for state-changing operations
+  const stateChangingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+  if (stateChangingMethods.includes(method.toUpperCase())) {
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+  }
+  
   let body: string | FormData | undefined;
   
   if (data instanceof FormData) {
