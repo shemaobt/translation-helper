@@ -31,7 +31,8 @@ import {
   Edit,
   Save,
   Sparkles,
-  Zap
+  Zap,
+  Menu
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
@@ -66,6 +67,14 @@ export default function Portfolio() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("profile");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Ensure sidebar is closed when switching to mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   // Competency notes editing state
   const [editingCompetency, setEditingCompetency] = useState<CompetencyId | null>(null);
@@ -365,20 +374,56 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-background flex relative" data-testid="page-portfolio">
-      <div className="relative h-full">
-        <Sidebar isMobile={isMobile} isOpen={true} />
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 2xl:hidden"
+          onClick={() => setSidebarOpen(false)}
+          data-testid="sidebar-overlay"
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        ${isMobile 
+          ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } w-4/5 max-w-sm`
+          : 'relative h-full w-80'
+        }
+      `}>
+        <Sidebar 
+          isMobile={isMobile}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
       </div>
       
       <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
           {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
-            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
-              Portfólio de Facilitador
-            </h1>
-            <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
-              Acompanhe suas competências, qualificações e atividades de tradução
-            </p>
+            <div className="flex items-start gap-3">
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(true)}
+                  className="mt-1 flex-shrink-0"
+                  data-testid="button-open-sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
+              <div className="flex-1">
+                <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
+                  Portfólio de Facilitador
+                </h1>
+                <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
+                  Acompanhe suas competências, qualificações e atividades de tradução
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Competency Overview */}
