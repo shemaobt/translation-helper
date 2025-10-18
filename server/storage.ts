@@ -84,6 +84,7 @@ export interface IStorage {
   
   // Message operations
   getChatMessages(chatId: string, userId: string): Promise<Message[]>;
+  getMessage(messageId: string): Promise<Message | undefined>;
   getRecentUserMessages(userId: string, limit: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message>;
@@ -418,6 +419,16 @@ export class DatabaseStorage implements IStorage {
       .from(messages)
       .where(eq(messages.chatId, chatId))
       .orderBy(messages.createdAt);
+  }
+
+  async getMessage(messageId: string): Promise<Message | undefined> {
+    const result = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, messageId))
+      .limit(1);
+    
+    return result[0];
   }
 
   async getRecentUserMessages(userId: string, limit: number): Promise<Message[]> {

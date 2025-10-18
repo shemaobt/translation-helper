@@ -303,18 +303,45 @@ export default function ChatInterface({
   });
 
   // Streaming message function
-  const sendStreamingMessage = async (content: string) => {
+  const sendStreamingMessage = async (content: string, file?: File) => {
     if (!chatId) return;
     
     setIsTyping(true);
     setStreamingMessage(null);
     
+    let userMessageId: string | null = null;
+    
+    // If there's a file, upload it first before starting the stream
+    if (file) {
+      try {
+        // Create user message first to get ID
+        const messageResponse = await apiRequest("POST", `/api/chats/${chatId}/messages/user-only`, {
+          content,
+        });
+        const messageData = await messageResponse.json();
+        userMessageId = messageData.id;
+        
+        // Upload the file
+        await uploadFileAttachment(userMessageId, file);
+        setUploadProgress(0);
+        
+        // Update queries to show the message
+        queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+      } catch (error) {
+        console.error('File upload error:', error);
+        setIsTyping(false);
+        setUploadProgress(0);
+        toast({
+          title: "Error",
+          description: "Failed to upload attachment",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     try {
-      const eventSource = new EventSource(`/api/chats/${chatId}/messages/stream`, {
-        // Note: EventSource doesn't support custom headers or POST body directly
-        // We'll need to modify this approach
-      });
-
       // For now, let's use fetch with streaming
       const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
         method: 'POST',
@@ -323,7 +350,10 @@ export default function ChatInterface({
           'Accept': 'text/event-stream',
         },
         credentials: 'include',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ 
+          content,
+          existingMessageId: userMessageId, // Pass existing message ID if file was uploaded
+        }),
       });
 
       if (!response.ok) {
@@ -495,20 +525,16 @@ export default function ChatInterface({
     
     if (selectedFile) {
       setIsTyping(true);
+      const fileToUpload = selectedFile;
+      const messageContent = message.trim() || `[Attachment: ${selectedFile.name}]`;
+      
+      setMessage("");
+      setSelectedFile(null);
+      
       try {
-        const response = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
-          content: message.trim() || `[Attachment: ${selectedFile.name}]`,
-        }).then(res => res.json());
-
-        await uploadFileAttachment(response.userMessage.id, selectedFile);
-
-        queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
-        
-        setMessage("");
-        setSelectedFile(null);
-        setUploadProgress(0);
-        setIsTyping(false);
+        // Use streaming endpoint for messages with attachments
+        // This allows the backend to wait for attachment upload before processing
+        sendStreamingMessage(messageContent, fileToUpload);
       } catch (error: unknown) {
         setIsTyping(false);
         if (isUnauthorizedError(error as Error)) {

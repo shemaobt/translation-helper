@@ -837,12 +837,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Streaming message endpoint for real-time AI responses
-  app.post('/api/chats/:chatId/messages/stream', requireAuth, async (req: any, res) => {
+  // Create user message only (without AI response) - for file uploads
+  app.post('/api/chats/:chatId/messages/user-only', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const { chatId } = req.params;
       const { content } = req.body;
+
+      // Validate input
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ message: "Content is required" });
+      }
 
       // Verify chat belongs to user
       const chat = await storage.getChat(chatId, userId);
@@ -850,11 +855,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Chat not found" });
       }
 
-      // Get facilitator info for context and embedding storage
+      // Get facilitator info for embedding storage
       const facilitator = await storage.getFacilitatorByUserId(userId);
       const facilitatorId = facilitator?.id;
 
-      // Create user message
+      // Create user message only
       const userMessage = await storage.createMessage({
         chatId,
         role: "user",
@@ -872,17 +877,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date(),
       }).catch(err => console.error('Error storing user message embedding:', err));
 
-      // Check if this is the first user message and update title immediately
-      const existingMessages = await storage.getChatMessages(chatId, userId);
-      if (existingMessages.length === 1) {
-        const title = await generateChatTitle(content);
-        await storage.updateChatTitle(chatId, title, userId);
+      res.json(userMessage);
+    } catch (error) {
+      console.error("Error creating user message:", error);
+      res.status(500).json({ message: "Failed to create user message" });
+    }
+  });
+
+  // Streaming message endpoint for real-time AI responses
+  app.post('/api/chats/:chatId/messages/stream', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { chatId } = req.params;
+      const { content, existingMessageId } = req.body;
+
+      // Verify chat belongs to user
+      const chat = await storage.getChat(chatId, userId);
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
       }
 
-      // Wait a bit for attachments to be uploaded (they come in a separate request)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Get facilitator info for context and embedding storage
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      const facilitatorId = facilitator?.id;
+
+      let userMessage;
+      
+      // Use existing message if provided (for file uploads), otherwise create new one
+      if (existingMessageId) {
+        const existing = await storage.getMessage(existingMessageId);
+        if (!existing || existing.chatId !== chatId) {
+          return res.status(404).json({ message: "Message not found" });
+        }
+        userMessage = existing;
+      } else {
+        // Create user message
+        userMessage = await storage.createMessage({
+          chatId,
+          role: "user",
+          content,
+        });
+        
+        // Store user message embedding in Qdrant (non-blocking)
+        storeMessageEmbedding({
+          messageId: userMessage.id,
+          chatId,
+          userId,
+          facilitatorId,
+          content,
+          role: 'user',
+          timestamp: new Date(),
+        }).catch(err => console.error('Error storing user message embedding:', err));
+      }
+
+      // Check if this is the first user message and update title immediately (only for new messages)
+      if (!existingMessageId) {
+        const existingMessages = await storage.getChatMessages(chatId, userId);
+        if (existingMessages.length === 1) {
+          const title = await generateChatTitle(content);
+          await storage.updateChatTitle(chatId, title, userId);
+        }
+      }
       
       // Get any image attachments for vision processing
+      // No need to wait - for existingMessageId, attachments are already uploaded
+      // For new messages without attachments, there's nothing to wait for
       const attachments = await storage.getMessageAttachments(userMessage.id);
       const imageAttachments = attachments.filter(att => att.fileType === 'image');
       const imageUrls = imageAttachments.map(att => {
