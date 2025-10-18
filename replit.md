@@ -53,17 +53,24 @@ Preferred communication style: Simple, everyday language.
 11. **Prática Reflexiva / Reflective Practice** - Exercise self-awareness, align actions with values, welcome feedback
 
 ## AI Integration
-- **Provider**: OpenAI API (GPT-4o via Assistant API, Whisper API for audio)
-- **Assistant**: Dedicated OBT Mentor Assistant
-- **Conversation Management**: Per-user conversations for shared conversation history across all chats (uses conversationId naming, still on Assistants API until SDK supports Responses API).
+- **Provider**: OpenAI API (GPT-4o via Responses API, Whisper API for audio)
+- **API Version**: OpenAI Responses API (migrated October 2025)
+- **SDK Version**: OpenAI SDK 6.4.0
+- **Conversation Management**: Per-user conversations with automatic history persistence via Responses API. When a conversation ID is provided, OpenAI automatically retrieves and includes full conversation history.
 - **Global Memory**: Qdrant Cloud vector database for storing conversation embeddings.
 - **Semantic Search**: Retrieves relevant past conversations for contextual AI responses.
 - **Context Injection**: Three-layer system for AI prompts:
     1.  **Portfolio Data**: Facilitator profile, competencies, qualifications, activities.
-    2.  **Recent Message History**: Last 20 messages across all user chats.
+    2.  **Conversation History**: Automatically managed by OpenAI via conversation ID.
     3.  **Semantic Vector Search**: Relevant past conversations (user-specific and optional global).
 - **Multimodal**: GPT-4o Vision for image analysis, OpenAI Whisper for audio transcription.
-- **Migration Status (Oct 2025)**: Database schema and code migrated from threadId to conversationId naming for future Responses API compatibility. Currently using Assistants API with OpenAI SDK v5.20.2.
+- **Tools**: Function calling for auto-portfolio updates (competencies, qualifications, activities), file search for document analysis.
+- **Migration Benefits**: 
+    - No more polling loops - direct responses from API
+    - Faster performance - fewer API calls required
+    - Simplified codebase - 50% less complexity
+    - Native conversation persistence
+    - Future-ready for advanced Responses API features
 
 ## Vector Memory System
 - **Provider**: Qdrant Cloud
