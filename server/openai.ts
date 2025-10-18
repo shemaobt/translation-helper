@@ -542,8 +542,17 @@ export async function* generateAssistantResponseStream(
         if (activeRun.status === "in_progress" || activeRun.status === "queued" || activeRun.status === "requires_action") {
           console.log(`[OpenAI] Cancelling active run: ${activeRun.id} (status: ${activeRun.status})`);
           await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
-          // Wait a bit for cancellation to complete
-          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Wait for cancellation to complete - poll the status
+          let cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: threadId });
+          let attempts = 0;
+          while (cancelledRun.status !== "cancelled" && cancelledRun.status !== "failed" && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            cancelledRun = await openai.beta.threads.runs.retrieve(activeRun.id, { thread_id: threadId });
+            attempts++;
+            console.log(`[OpenAI] Waiting for run cancellation... status: ${cancelledRun.status} (attempt ${attempts})`);
+          }
+          console.log(`[OpenAI] Run ${activeRun.id} cancelled successfully`);
         }
       }
     } catch (error) {
