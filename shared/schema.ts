@@ -250,12 +250,21 @@ export const facilitatorQualifications = pgTable("facilitator_qualifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Mentorship activities tracking
+// Mentorship activities tracking (includes both translation work and general experiences)
 export const mentorshipActivities = pgTable("mentorship_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   facilitatorId: varchar("facilitator_id").notNull().references(() => facilitators.id, { onDelete: "cascade" }),
-  languageName: varchar("language_name").notNull(),
-  chaptersCount: integer("chapters_count").notNull().default(1),
+  activityType: varchar("activity_type", {
+    enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"]
+  }).notNull().default("translation"),
+  // Translation-specific fields (optional for other types)
+  languageName: varchar("language_name"),
+  chaptersCount: integer("chapters_count"),
+  // General experience fields
+  title: varchar("title"), // e.g., "Facilitador OBT", "Professor", etc.
+  description: text("description"), // Free-form description of the experience
+  yearsOfExperience: integer("years_of_experience"), // e.g., "10 years as facilitator"
+  organization: varchar("organization"), // Where the work was done
   activityDate: timestamp("activity_date").defaultNow(),
   notes: text("notes"), // Additional context about the activity
   createdAt: timestamp("created_at").defaultNow(),
@@ -268,6 +277,7 @@ export const quarterlyReports = pgTable("quarterly_reports", {
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
   reportData: jsonb("report_data").notNull(), // Full report JSON structure
+  filePath: varchar("file_path"), // Path to generated .docx file
   generatedAt: timestamp("generated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });

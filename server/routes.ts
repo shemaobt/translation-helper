@@ -7,6 +7,9 @@ import { storeMessageEmbedding, getContextForQuery, getComprehensiveContext } fr
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
+import { generateQuarterlyReport } from "./report-generator";
+import { Packer } from 'docx';
+import fs from 'fs/promises';
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import multer from "multer";
@@ -1028,20 +1031,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
                 
-                // Add activity
-                const activity = await storage.createActivity({
+                // Prepare activity data based on type
+                const activityData: any = {
                   facilitatorId: facilitator.id,
-                  languageName: args.languageName,
-                  chaptersCount: args.chaptersCount,
-                  notes: args.notes || null,
-                });
+                  activityType: args.activityType || 'translation',
+                };
+
+                // Add type-specific fields
+                if (args.activityType === 'translation') {
+                  activityData.languageName = args.languageName;
+                  activityData.chaptersCount = args.chaptersCount;
+                } else {
+                  // General experience fields
+                  activityData.title = args.title || null;
+                  activityData.description = args.description || null;
+                  activityData.yearsOfExperience = args.yearsOfExperience || null;
+                  activityData.organization = args.organization || null;
+                }
                 
-                // Update facilitator totals (calculates automatically from all activities)
+                // Common fields
+                activityData.notes = args.notes || null;
+                
+                // Add activity
+                const activity = await storage.createActivity(activityData);
+                
+                // Update facilitator totals (calculates automatically from all translation activities)
                 await storage.updateFacilitatorTotals(facilitator.id);
+                
+                // Generate success message based on type
+                let successMessage = '';
+                if (args.activityType === 'translation') {
+                  successMessage = `✓ Atividade de tradução adicionada: ${args.languageName} (${args.chaptersCount} capítulos)!`;
+                } else {
+                  const typeLabels: Record<string, string> = {
+                    facilitation: 'Experiência de facilitação',
+                    teaching: 'Experiência de ensino',
+                    indigenous_work: 'Trabalho com povos indígenas',
+                    school_work: 'Trabalho em escolas',
+                    general_experience: 'Experiência geral'
+                  };
+                  const typeLabel = typeLabels[args.activityType] || 'Experiência';
+                  successMessage = `✓ ${typeLabel} adicionada ao seu portfólio!`;
+                }
                 
                 return JSON.stringify({ 
                   success: true, 
-                  message: `✓ Atividade de mentoria adicionada: ${args.languageName} (${args.chaptersCount} capítulos)!`,
+                  message: successMessage,
                   activity 
                 });
                 
@@ -2452,17 +2487,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completedCompetencies: competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length,
           totalQualifications: qualifications.length,
           totalActivities: periodActivities.length,
-          totalChapters: periodActivities.reduce((sum, a) => sum + a.chaptersCount, 0),
+          totalChapters: periodActivities.reduce((sum, a) => sum + (a.chaptersCount || 0), 0),
           languages: Array.from(new Set(periodActivities.map(a => a.languageName)))
         }
       };
       
-      // Create the report
+      // Get recent chat messages for narrative summary
+      const recentMessages = await storage.getRecentUserMessages(req.userId, 50);
+      
+      // Generate .docx file
+      const { filePath, document } = await generateQuarterlyReport({
+        facilitator,
+        competencies,
+        qualifications,
+        activities: periodActivities,
+        recentMessages,
+        periodStart: startDate,
+        periodEnd: endDate,
+      });
+      
+      // Convert document to buffer and save
+      const buffer = await Packer.toBuffer(document);
+      await fs.writeFile(filePath, buffer);
+      
+      // Create the report with filePath
       const report = await storage.createQuarterlyReport({
         facilitatorId: facilitator.id,
         periodStart: startDate,
         periodEnd: endDate,
-        reportData
+        reportData,
+        filePath,
       });
       
       res.json(report);
@@ -2493,11 +2547,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized to delete this report" });
       }
       
+      // Delete the .docx file if it exists
+      if (report.filePath) {
+        try {
+          await fs.unlink(report.filePath);
+        } catch (fileError) {
+          console.error("Error deleting report file:", fileError);
+          // Continue with database deletion even if file deletion fails
+        }
+      }
+      
       await storage.deleteQuarterlyReport(reportId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting report:", error);
       res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+
+  // Download report .docx file
+  app.get('/api/facilitator/reports/:reportId/download', requireAuth, async (req: any, res) => {
+    try {
+      const { reportId } = req.params;
+      const userId = req.userId;
+      
+      // Get user to check if admin
+      const user = await storage.getUserById(userId);
+      const facilitator = await storage.getFacilitatorByUserId(userId);
+      
+      // Fetch the report
+      const report = await storage.getQuarterlyReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Verify authorization: owner or admin
+      const isOwner = facilitator && report.facilitatorId === facilitator.id;
+      const isAdmin = user?.isAdmin === true;
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "Unauthorized to download this report" });
+      }
+      
+      // Check if file exists
+      if (!report.filePath) {
+        return res.status(404).json({ message: "Report file not found" });
+      }
+      
+      // Prevent directory traversal attacks
+      const normalizedPath = path.normalize(report.filePath);
+      if (normalizedPath.includes('..')) {
+        return res.status(400).json({ message: "Invalid file path" });
+      }
+      
+      // Check if file exists on filesystem
+      try {
+        await fs.access(report.filePath);
+      } catch {
+        return res.status(404).json({ message: "Report file not found on server" });
+      }
+      
+      // Set headers for download
+      const fileName = `relatorio-${new Date(report.periodStart).toISOString().split('T')[0]}.docx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      
+      // Stream the file
+      const fileStream = require('fs').createReadStream(report.filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      res.status(500).json({ message: "Failed to download report" });
     }
   });
 
