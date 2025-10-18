@@ -154,24 +154,47 @@ export async function getObtMentorAssistant(): Promise<string> {
               type: "function",
               function: {
                 name: "add_activity",
-                description: "Add a mentorship activity to the facilitator's portfolio. Use this when the facilitator mentions working with a language or translating chapters.",
+                description: "Add a work experience or mentorship activity to the facilitator's portfolio. Use this for: translation work, facilitation experience, teaching, work with indigenous peoples, work in schools, or any other relevant professional experience.",
                 parameters: {
                   type: "object",
                   properties: {
+                    activityType: {
+                      type: "string",
+                      enum: ["translation", "facilitation", "teaching", "indigenous_work", "school_work", "general_experience"],
+                      description: "Type of activity: 'translation' for translation/mentorship work, 'facilitation' for OBT facilitation, 'teaching' for teaching roles, 'indigenous_work' for work with indigenous peoples, 'school_work' for work in schools, 'general_experience' for other relevant experiences"
+                    },
+                    // For translation activities
                     languageName: {
                       type: "string",
-                      description: "The name of the language being translated/mentored"
+                      description: "The name of the language (required for translation type)"
                     },
                     chaptersCount: {
                       type: "number",
-                      description: "The number of chapters mentored or helped to mentor"
+                      description: "The number of chapters mentored (required for translation type)"
+                    },
+                    // For general experiences
+                    title: {
+                      type: "string",
+                      description: "Title/role of the experience (e.g., 'Facilitador OBT', 'Professor')"
+                    },
+                    description: {
+                      type: "string",
+                      description: "Detailed description of the experience and what was accomplished"
+                    },
+                    yearsOfExperience: {
+                      type: "number",
+                      description: "Number of years in this role/experience (e.g., 10 for '10 years as facilitator')"
+                    },
+                    organization: {
+                      type: "string",
+                      description: "Organization or institution where the work was done"
                     },
                     notes: {
                       type: "string",
-                      description: "Optional notes about the mentorship activity"
+                      description: "Additional notes about the activity"
                     }
                   },
-                  required: ["languageName", "chaptersCount"]
+                  required: ["activityType"]
                 }
               }
             },
