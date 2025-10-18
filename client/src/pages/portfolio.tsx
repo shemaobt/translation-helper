@@ -29,7 +29,9 @@ import {
   Download,
   User,
   Edit,
-  Save
+  Save,
+  Sparkles,
+  Zap
 } from "lucide-react";
 import { 
   CORE_COMPETENCIES,
@@ -335,6 +337,20 @@ export default function Portfolio() {
     return competency?.notes || '';
   };
 
+  // Get competency data object
+  const getCompetencyData = (competencyId: CompetencyId) => {
+    return competencies.find(c => c.competencyId === competencyId);
+  };
+
+  // Check if competency has a suggestion different from current status
+  const hasSuggestion = (competencyId: CompetencyId): boolean => {
+    const competency = getCompetencyData(competencyId);
+    if (!competency) return false;
+    return competency.statusSource === 'manual' && 
+           competency.suggestedStatus !== null && 
+           competency.suggestedStatus !== competency.status;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -516,6 +532,9 @@ export default function Portfolio() {
                         const status = getCompetencyStatus(competencyId);
                         const notes = getCompetencyNotes(competencyId);
                         const isEditing = editingCompetency === competencyId;
+                        const competencyData = getCompetencyData(competencyId);
+                        const isAuto = competencyData?.statusSource === 'auto';
+                        const showSuggestion = hasSuggestion(competencyId);
 
                         return (
                           <Card key={competencyId} data-testid={`card-competency-${competencyId}`}>
@@ -531,8 +550,16 @@ export default function Portfolio() {
                                     <h3 className="font-medium" data-testid={`text-competency-name-${competencyId}`}>
                                       {CORE_COMPETENCIES[competencyId]}
                                     </h3>
+                                    {isAuto ? (
+                                      <Badge variant="secondary" className="flex items-center space-x-1" data-testid={`badge-auto-${competencyId}`}>
+                                        <Sparkles className="h-3 w-3" />
+                                        <span>Auto</span>
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" data-testid={`badge-manual-${competencyId}`}>Manual</Badge>
+                                    )}
                                   </div>
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-2 flex-wrap">
                                     <Select
                                       value={status}
                                       onValueChange={(value) => updateCompetencyMutation.mutate({ 
@@ -556,6 +583,36 @@ export default function Portfolio() {
                                       {statusLabels[status]}
                                     </Badge>
                                   </div>
+                                  {showSuggestion && competencyData?.suggestedStatus && (
+                                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md" data-testid={`suggestion-${competencyId}`}>
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center space-x-2 mb-1">
+                                            <Zap className="h-4 w-4 text-blue-600" />
+                                            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                              Sugestão do Sistema
+                                            </span>
+                                          </div>
+                                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                                            Baseado em suas qualificações, sugerimos: <strong>{statusLabels[competencyData.suggestedStatus as CompetencyStatus]}</strong>
+                                          </p>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          onClick={() => updateCompetencyMutation.mutate({ 
+                                            competencyId, 
+                                            status: competencyData.suggestedStatus as CompetencyStatus,
+                                            notes
+                                          })}
+                                          className="ml-2"
+                                          data-testid={`button-accept-suggestion-${competencyId}`}
+                                        >
+                                          Aceitar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
                                   {notes && !isEditing && (
                                     <p className="text-sm text-muted-foreground mt-2" data-testid={`text-competency-notes-${competencyId}`}>
                                       {notes}
