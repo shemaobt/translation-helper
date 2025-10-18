@@ -23,13 +23,13 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   // Header
   sections.push(
     new Paragraph({
-      text: "RELATÓRIO TRIMESTRAL DE MENTORIA",
+      text: "QUARTERLY MENTORSHIP REPORT",
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
       spacing: { after: 300 },
     }),
     new Paragraph({
-      text: `Período: ${periodStart.toLocaleDateString('pt-BR')} a ${periodEnd.toLocaleDateString('pt-BR')}`,
+      text: `Period: ${periodStart.toLocaleDateString('en-US')} to ${periodEnd.toLocaleDateString('en-US')}`,
       alignment: AlignmentType.CENTER,
       spacing: { after: 600 },
     })
@@ -38,34 +38,34 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   // Facilitator Info
   sections.push(
     new Paragraph({
-      text: "Informações do Facilitador",
+      text: "Facilitator Information",
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 400, after: 200 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: "Região: ", bold: true }),
-        new TextRun(facilitator.region || "Não especificado"),
+        new TextRun({ text: "Region: ", bold: true }),
+        new TextRun(facilitator.region || "Not specified"),
       ],
       spacing: { after: 100 },
     }),
     new Paragraph({
       children: [
         new TextRun({ text: "Supervisor: ", bold: true }),
-        new TextRun(facilitator.mentorSupervisor || "Não especificado"),
+        new TextRun(facilitator.mentorSupervisor || "Not specified"),
       ],
       spacing: { after: 100 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: "Total de Línguas Mentoreadas: ", bold: true }),
+        new TextRun({ text: "Total Languages Mentored: ", bold: true }),
         new TextRun(facilitator.totalLanguagesMentored.toString()),
       ],
       spacing: { after: 100 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: "Total de Capítulos Mentoreados: ", bold: true }),
+        new TextRun({ text: "Total Chapters Mentored: ", bold: true }),
         new TextRun(facilitator.totalChaptersMentored.toString()),
       ],
       spacing: { after: 400 },
@@ -75,7 +75,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   // Competencies Progress
   sections.push(
     new Paragraph({
-      text: "Progresso nas Competências",
+      text: "Competency Progress",
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 400, after: 200 },
     })
@@ -106,7 +106,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   if (qualifications.length > 0) {
     sections.push(
       new Paragraph({
-        text: "Qualificações Formais",
+        text: "Formal Qualifications",
         heading: HeadingLevel.HEADING_2,
         spacing: { before: 400, after: 200 },
       })
@@ -141,7 +141,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   if (activities.length > 0) {
     sections.push(
       new Paragraph({
-        text: "Atividades e Experiências",
+        text: "Activities and Experience",
         heading: HeadingLevel.HEADING_2,
         spacing: { before: 400, after: 200 },
       })
@@ -171,7 +171,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
       if (activity.notes) {
         sections.push(
           new Paragraph({
-            text: `  Notas: ${activity.notes}`,
+            text: `  Notes: ${activity.notes}`,
             spacing: { after: 200 },
           })
         );
@@ -184,12 +184,12 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   // Summary of Conversations
   sections.push(
     new Paragraph({
-      text: "Resumo das Conversas de Mentoria",
+      text: "Mentorship Conversation Summary",
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 400, after: 200 },
     }),
     new Paragraph({
-      text: `Durante este período, o facilitador participou de ${Math.floor(recentMessages.filter(m => m.role === 'user').length / 2)} sessões de mentoria, demonstrando engajamento ativo no desenvolvimento de suas competências.`,
+      text: `During this period, the facilitator participated in ${Math.floor(recentMessages.filter(m => m.role === 'user').length / 2)} mentorship sessions, demonstrating active engagement in developing their competencies.`,
       spacing: { after: 200 },
     })
   );
@@ -199,9 +199,9 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   if (userMessages.length > 0) {
     sections.push(
       new Paragraph({
-        text: "Tópicos principais abordados:",
+        text: "Key Topics Addressed:",
         spacing: { before: 200, after: 100 },
-        children: [new TextRun({ text: "Tópicos principais abordados:", bold: true })],
+        children: [new TextRun({ text: "Key Topics Addressed:", bold: true })],
       })
     );
 
@@ -220,12 +220,12 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   // Conclusion
   sections.push(
     new Paragraph({
-      text: "Próximos Passos",
+      text: "Next Steps",
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 400, after: 200 },
     }),
     new Paragraph({
-      text: "O facilitador deve continuar desenvolvendo suas competências através de prática contínua, feedback regular e participação em atividades de mentoria. Recomenda-se manter o diálogo ativo com o supervisor e buscar oportunidades de aplicar os conhecimentos adquiridos.",
+      text: "The facilitator should continue developing their competencies through continuous practice, regular feedback, and participation in mentoring activities. It is recommended to maintain active dialogue with the supervisor and seek opportunities to apply acquired knowledge.",
       spacing: { after: 400 },
     })
   );
@@ -244,7 +244,7 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
   const reportsDir = path.join(process.cwd(), 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
   
-  const fileName = `relatorio-${facilitator.id}-${periodStart.getTime()}.docx`;
+  const fileName = `report-${facilitator.id}-${periodStart.getTime()}.docx`;
   const filePath = path.join(reportsDir, fileName);
 
   return { filePath, document: doc };
@@ -252,36 +252,36 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
 
 function translateStatus(status: string): string {
   const translations: Record<string, string> = {
-    not_started: "Não iniciado",
-    emerging: "Emergente",
-    growing: "Em crescimento",
-    proficient: "Proficiente",
-    advanced: "Avançado"
+    not_started: "Not Started",
+    emerging: "Emerging",
+    growing: "Growing",
+    proficient: "Proficient",
+    advanced: "Advanced"
   };
   return translations[status] || status;
 }
 
 function getActivityLabel(activity: MentorshipActivity): string {
   if (activity.activityType === 'translation' && activity.languageName) {
-    return `Tradução em ${activity.languageName} (${activity.chaptersCount || 0} capítulos)`;
+    return `Translation in ${activity.languageName} (${activity.chaptersCount || 0} chapters)`;
   }
   
   const typeLabels: Record<string, string> = {
-    facilitation: 'Facilitação OBT',
-    teaching: 'Ensino',
-    indigenous_work: 'Trabalho com Povos Indígenas',
-    school_work: 'Trabalho em Escolas',
-    general_experience: 'Experiência Geral'
+    facilitation: 'OBT Facilitation',
+    teaching: 'Teaching',
+    indigenous_work: 'Work with Indigenous Peoples',
+    school_work: 'School Work',
+    general_experience: 'General Experience'
   };
   
-  const typeLabel = typeLabels[activity.activityType || ''] || 'Atividade';
+  const typeLabel = typeLabels[activity.activityType || ''] || 'Activity';
   
   if (activity.title) {
     return `${activity.title} - ${typeLabel}`;
   }
   
   if (activity.yearsOfExperience) {
-    return `${typeLabel} (${activity.yearsOfExperience} anos)`;
+    return `${typeLabel} (${activity.yearsOfExperience} years)`;
   }
   
   return typeLabel;

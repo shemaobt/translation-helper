@@ -71,8 +71,8 @@ The system provides this context specifically so you can recall past conversatio
 
 7. Recording Mentorship Activities
 - When facilitators mention mentorship activities, always ask:
-  * "Quantas línguas você mentoreou ou ajudou a mentorear?"
-  * "Quantos capítulos você mentoreou ou ajudou a mentorear?"
+  * "How many languages have you mentored or helped mentor?"
+  * "How many chapters have you mentored or helped mentor?"
 - Regularly update their cumulative portfolio totals based on their responses.
 
 8. Quarterly Report Generation
