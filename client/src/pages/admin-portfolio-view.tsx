@@ -35,11 +35,11 @@ const competencyStatusOptions = ['not_started', 'emerging', 'growing', 'proficie
 type CompetencyStatus = typeof competencyStatusOptions[number];
 
 const statusLabels: Record<CompetencyStatus, string> = {
-  not_started: 'Não Iniciado',
-  emerging: 'Emergente',
-  growing: 'Em Crescimento',
-  proficient: 'Proficiente',
-  advanced: 'Avançado'
+  not_started: 'Not Started',
+  emerging: 'Emerging',
+  growing: 'Growing',
+  proficient: 'Proficient',
+  advanced: 'Advanced'
 };
 
 const statusColors: Record<CompetencyStatus, string> = {
@@ -132,10 +132,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
           {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
             <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-foreground`}>
-              Portfólio do Facilitador (Admin View)
+              Facilitator Portfolio (Admin View)
             </h1>
             <p className={`text-muted-foreground mt-2 ${isMobile ? 'text-sm' : ''}`}>
-              Visualização somente leitura do portfólio do facilitador
+              Read-only view of facilitator portfolio
             </p>
           </div>
 
@@ -143,7 +143,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Progresso Geral das Competências</span>
+                <span className="text-sm font-medium">Overall Competency Progress</span>
                 <span className="text-sm text-muted-foreground">{Math.round(competencyProgress)}%</span>
               </div>
               <Progress value={competencyProgress} className="h-2" />
@@ -155,19 +155,19 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="competencies" data-testid="tab-competencies">
                 <Target className="h-4 w-4 mr-2" />
-                {!isMobile && "Competências"}
+                {!isMobile && "Competencies"}
               </TabsTrigger>
               <TabsTrigger value="qualifications" data-testid="tab-qualifications">
                 <GraduationCap className="h-4 w-4 mr-2" />
-                {!isMobile && "Qualificações"}
+                {!isMobile && "Qualifications"}
               </TabsTrigger>
               <TabsTrigger value="activities" data-testid="tab-activities">
                 <Activity className="h-4 w-4 mr-2" />
-                {!isMobile && "Atividades"}
+                {!isMobile && "Activities"}
               </TabsTrigger>
               <TabsTrigger value="reports" data-testid="tab-reports">
                 <FileText className="h-4 w-4 mr-2" />
-                {!isMobile && "Relatórios"}
+                {!isMobile && "Reports"}
               </TabsTrigger>
             </TabsList>
 
@@ -177,10 +177,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Target className="h-5 w-5" />
-                    <span>Competências Principais</span>
+                    <span>Core Competencies</span>
                   </CardTitle>
                   <CardDescription>
-                    Competências de facilitação TBO
+                    OBT facilitation competencies
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -237,10 +237,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <GraduationCap className="h-5 w-5" />
-                    <span>Qualificações</span>
+                    <span>Qualifications</span>
                   </CardTitle>
                   <CardDescription>
-                    Qualificações e certificações formais
+                    Completed courses and certifications
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -251,7 +251,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                   ) : qualifications.length === 0 ? (
                     <div className="text-center py-8">
                       <GraduationCap className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma qualificação registrada</p>
+                      <p className="text-sm text-muted-foreground">No qualifications recorded</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -288,10 +288,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Activity className="h-5 w-5" />
-                    <span>Atividades e Experiências</span>
+                    <span>Activities and Experiences</span>
                   </CardTitle>
                   <CardDescription>
-                    Registro de trabalho de tradução e experiências gerais
+                    Record of translation work and general experiences
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -302,7 +302,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                   ) : activities.length === 0 ? (
                     <div className="text-center py-8">
                       <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma atividade registrada</p>
+                      <p className="text-sm text-muted-foreground">No activities recorded</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -319,10 +319,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                       <h3 className="font-medium text-foreground">{activity.languageName}</h3>
                                     </div>
                                     <div className="flex items-center space-x-3 text-sm mb-2">
-                                      <Badge>{activity.chaptersCount} capítulo(s)</Badge>
+                                      <Badge>{activity.chaptersCount} chapter(s)</Badge>
                                       {activity.activityDate && (
                                         <span className="text-muted-foreground">
-                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                          {new Date(activity.activityDate).toLocaleDateString('en-US')}
                                         </span>
                                       )}
                                     </div>
@@ -338,28 +338,28 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                     <div className="flex items-center space-x-2 mb-2">
                                       <Calendar className="h-5 w-5 text-primary" />
                                       <h3 className="font-medium text-foreground">
-                                        {activity.title || 'Experiência Profissional'}
+                                        {activity.title || 'Professional Experience'}
                                       </h3>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 text-sm mb-2">
                                       <Badge variant="outline">
-                                        {activity.activityType === 'facilitation' ? 'Facilitação' :
-                                         activity.activityType === 'teaching' ? 'Ensino' :
-                                         activity.activityType === 'indigenous_work' ? 'Trabalho com Povos' :
-                                         activity.activityType === 'school_work' ? 'Trabalho Escolar' :
-                                         'Experiência Geral'}
+                                        {activity.activityType === 'facilitation' ? 'Facilitation' :
+                                         activity.activityType === 'teaching' ? 'Teaching' :
+                                         activity.activityType === 'indigenous_work' ? 'Work with Indigenous Peoples' :
+                                         activity.activityType === 'school_work' ? 'School Work' :
+                                         'General Experience'}
                                       </Badge>
                                       {activity.organization && (
                                         <span className="text-muted-foreground">{activity.organization}</span>
                                       )}
                                       {activity.yearsOfExperience && (
                                         <span className="text-muted-foreground">
-                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'ano' : 'anos'}
+                                          {activity.yearsOfExperience} {activity.yearsOfExperience === 1 ? 'year' : 'years'}
                                         </span>
                                       )}
                                       {activity.activityDate && (
                                         <span className="text-muted-foreground">
-                                          {new Date(activity.activityDate).toLocaleDateString('pt-BR')}
+                                          {new Date(activity.activityDate).toLocaleDateString('en-US')}
                                         </span>
                                       )}
                                     </div>
@@ -385,10 +385,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <FileText className="h-5 w-5" />
-                    <span>Relatórios Trimestrais</span>
+                    <span>Quarterly Reports</span>
                   </CardTitle>
                   <CardDescription>
-                    Relatórios de avaliação gerados
+                    Generated assessment reports
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -399,7 +399,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                   ) : reports.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhum relatório gerado</p>
+                      <p className="text-sm text-muted-foreground">No reports generated</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -409,10 +409,10 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <h3 className="font-medium text-foreground mb-1">
-                                  Relatório {new Date(report.periodStart).toLocaleDateString('pt-BR')} - {new Date(report.periodEnd).toLocaleDateString('pt-BR')}
+                                  Report {new Date(report.periodStart).toLocaleDateString('en-US')} - {new Date(report.periodEnd).toLocaleDateString('en-US')}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                  Gerado em {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('pt-BR') : 'Data desconhecida'}
+                                  Generated on {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString('en-US') : 'Unknown date'}
                                 </p>
                                 <div className="mt-3">
                                   <Button
@@ -425,22 +425,22 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                         });
                                         
                                         if (!response.ok) {
-                                          throw new Error('Falha ao baixar relatório');
+                                          throw new Error('Failed to download report');
                                         }
                                         
                                         const blob = await response.blob();
                                         const url = window.URL.createObjectURL(blob);
                                         const a = document.createElement('a');
                                         a.href = url;
-                                        a.download = `relatorio-${new Date(report.periodStart).toISOString().split('T')[0]}.docx`;
+                                        a.download = `report-${new Date(report.periodStart).toISOString().split('T')[0]}.docx`;
                                         document.body.appendChild(a);
                                         a.click();
                                         window.URL.revokeObjectURL(url);
                                         document.body.removeChild(a);
                                       } catch (error) {
                                         toast({
-                                          title: "Erro",
-                                          description: "Não foi possível baixar o relatório",
+                                          title: "Error",
+                                          description: "Could not download report",
                                           variant: "destructive",
                                         });
                                       }
@@ -448,7 +448,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                                     data-testid={`button-download-report-${report.id}`}
                                   >
                                     <Download className="h-4 w-4 mr-2" />
-                                    Baixar .docx
+                                    Download .docx
                                   </Button>
                                 </div>
                               </div>
