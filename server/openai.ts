@@ -257,14 +257,19 @@ export async function* generateAssistantResponseStream(
     }
 
     // Use streaming via create with stream: true
+    console.log("[OpenAI] Creating streaming response with config:", JSON.stringify(responseConfig, null, 2));
     const stream = await openai.responses.create(responseConfig) as any;
+    console.log("[OpenAI] Stream created, processing chunks...");
 
     let fullContent = "";
     let totalTokens = 0;
     let finalConversationId = conversationId;
+    let chunkCount = 0;
 
     // Process streaming events
     for await (const chunk of stream) {
+      chunkCount++;
+      console.log(`[OpenAI] Chunk ${chunkCount}:`, JSON.stringify(chunk, null, 2).substring(0, 500));
       // Track conversation ID from response
       if (chunk.conversation && !finalConversationId) {
         const newConversationId = typeof chunk.conversation === 'string' ? chunk.conversation : chunk.conversation?.id;
