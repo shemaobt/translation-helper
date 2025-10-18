@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import { generateQuarterlyReport } from "./report-generator";
 import { Packer } from 'docx';
 import fs from 'fs/promises';
+import * as fsSync from 'fs';
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import multer from "multer";
@@ -2640,7 +2641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       
       // Stream the file
-      const fileStream = require('fs').createReadStream(report.filePath);
+      const fileStream = fsSync.createReadStream(report.filePath);
       fileStream.pipe(res);
     } catch (error) {
       console.error("Error downloading report:", error);
