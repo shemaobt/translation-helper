@@ -147,6 +147,7 @@ export interface AssistantRequest {
   userMessage: string;
   assistantId: AssistantId;
   threadId?: string;
+  imageUrls?: string[];
 }
 
 export interface ChatMessage {
@@ -184,10 +185,21 @@ export async function generateAssistantResponse(
       await storage.updateChatThreadId(request.chatId, threadId, userId);
     }
 
+    // Prepare message content with images if provided
+    const messageContent: any = request.imageUrls && request.imageUrls.length > 0
+      ? [
+          { type: "text", text: request.userMessage },
+          ...request.imageUrls.map(url => ({
+            type: "image_url",
+            image_url: { url }
+          }))
+        ]
+      : request.userMessage;
+
     // Add the user message to the thread
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
-      content: request.userMessage,
+      content: messageContent,
     });
 
     // Get the OBT Mentor Assistant ID
@@ -253,10 +265,21 @@ export async function* generateAssistantResponseStream(
       await storage.updateChatThreadId(request.chatId, threadId, userId);
     }
 
+    // Prepare message content with images if provided
+    const messageContent: any = request.imageUrls && request.imageUrls.length > 0
+      ? [
+          { type: "text", text: request.userMessage },
+          ...request.imageUrls.map(url => ({
+            type: "image_url",
+            image_url: { url }
+          }))
+        ]
+      : request.userMessage;
+
     // Add the user message to the thread
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
-      content: request.userMessage,
+      content: messageContent,
     });
 
     // Get the OBT Mentor Assistant ID
