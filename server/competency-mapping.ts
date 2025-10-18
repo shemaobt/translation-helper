@@ -1,13 +1,20 @@
 /**
  * Qualification-Competency Mapping System
  * 
- * This file defines how qualifications (courses) impact the 11 OBT competencies.
- * Each mapping includes keywords to match in course titles and the competency impact weights.
+ * This file defines how qualifications (courses) and activities (work experiences) 
+ * impact the 11 OBT competencies.
+ * Each mapping includes keywords to match and the competency impact weights.
  */
 
 export interface CompetencyImpact {
   competencyId: string;
   weight: number; // 1-5, where 1=low impact, 5=high impact
+}
+
+export interface ActivityType {
+  type: string;
+  impacts: CompetencyImpact[];
+  yearsMultiplier?: number; // Optional multiplier based on years of experience
 }
 
 export interface QualificationPattern {
@@ -131,6 +138,48 @@ export const QUALIFICATION_PATTERNS: QualificationPattern[] = [
 ];
 
 /**
+ * Activity type mappings to competencies
+ * Maps different work experience types to relevant competencies
+ */
+export const ACTIVITY_TYPE_IMPACTS: Record<string, CompetencyImpact[]> = {
+  'translation': [
+    { competencyId: 'translation_theory', weight: 3 },
+    { competencyId: 'languages_communication', weight: 3 },
+    { competencyId: 'multimodal_skills', weight: 2 },
+    { competencyId: 'consulting_mentoring', weight: 2 },
+    { competencyId: 'planning_quality', weight: 1 },
+  ],
+  'facilitation': [
+    { competencyId: 'interpersonal_skills', weight: 4 },
+    { competencyId: 'consulting_mentoring', weight: 4 },
+    { competencyId: 'planning_quality', weight: 3 },
+    { competencyId: 'intercultural_communication', weight: 2 },
+    { competencyId: 'reflective_practice', weight: 2 },
+  ],
+  'teaching': [
+    { competencyId: 'consulting_mentoring', weight: 4 },
+    { competencyId: 'interpersonal_skills', weight: 3 },
+    { competencyId: 'planning_quality', weight: 2 },
+    { competencyId: 'reflective_practice', weight: 2 },
+  ],
+  'indigenous_work': [
+    { competencyId: 'intercultural_communication', weight: 5 },
+    { competencyId: 'interpersonal_skills', weight: 3 },
+    { competencyId: 'languages_communication', weight: 2 },
+    { competencyId: 'reflective_practice', weight: 2 },
+  ],
+  'school_work': [
+    { competencyId: 'interpersonal_skills', weight: 2 },
+    { competencyId: 'planning_quality', weight: 2 },
+    { competencyId: 'reflective_practice', weight: 1 },
+  ],
+  'general_experience': [
+    { competencyId: 'interpersonal_skills', weight: 1 },
+    { competencyId: 'reflective_practice', weight: 1 },
+  ],
+};
+
+/**
  * Calculate competency impacts for a given qualification
  */
 export function calculateQualificationImpacts(
@@ -177,10 +226,77 @@ export function scoreToStatus(score: number): string {
 }
 
 /**
- * Calculate all competency scores for a facilitator based on their qualifications
+ * Calculate competency impacts for a given activity/experience
+ */
+export function calculateActivityImpacts(
+  activityType: string | null,
+  yearsOfExperience?: number | null,
+  description?: string | null,
+  chaptersCount?: number | null
+): Map<string, number> {
+  const impacts = new Map<string, number>();
+  
+  // Default to general_experience for activities without explicit type
+  // This avoids mis-scoring and is safer than inferring type from other fields
+  // Legacy translation activities should be re-added with explicit activityType
+  const type = activityType || 'general_experience';
+  
+  // Get base impacts for this activity type
+  const baseImpacts = ACTIVITY_TYPE_IMPACTS[type] || ACTIVITY_TYPE_IMPACTS['general_experience'];
+  
+  // Calculate multiplier based on years of experience
+  let multiplier = 1;
+  if (yearsOfExperience && yearsOfExperience > 0) {
+    // Scale: 1 year = 1.0x, 2 years = 1.2x, 3 years = 1.4x, 5+ years = 2.0x
+    multiplier = Math.min(1 + (yearsOfExperience - 1) * 0.2, 2.0);
+  } else if (chaptersCount && chaptersCount > 0) {
+    // For translation activities, use chapters as a proxy for experience
+    // Scale: 1-5 chapters = 1.0x, 6-10 = 1.2x, 11-20 = 1.5x, 20+ = 2.0x
+    if (chaptersCount >= 20) multiplier = 2.0;
+    else if (chaptersCount >= 11) multiplier = 1.5;
+    else if (chaptersCount >= 6) multiplier = 1.2;
+  }
+  
+  // Apply base impacts with multiplier
+  for (const impact of baseImpacts) {
+    impacts.set(impact.competencyId, impact.weight * multiplier);
+  }
+  
+  // Additional keyword-based impacts from description
+  if (description) {
+    const descLower = description.toLowerCase();
+    
+    // Check for additional skill indicators in description
+    const keywordBoosts: Array<{ keywords: string[]; competencyId: string; boost: number }> = [
+      { keywords: ['lead', 'leader', 'leadership'], competencyId: 'interpersonal_skills', boost: 1 },
+      { keywords: ['mentor', 'coach', 'train'], competencyId: 'consulting_mentoring', boost: 1 },
+      { keywords: ['translation', 'translate'], competencyId: 'translation_theory', boost: 1 },
+      { keywords: ['culture', 'cultural', 'cross-cultural'], competencyId: 'intercultural_communication', boost: 1 },
+      { keywords: ['technology', 'software', 'digital'], competencyId: 'applied_technology', boost: 1 },
+    ];
+    
+    for (const { keywords, competencyId, boost } of keywordBoosts) {
+      if (keywords.some(kw => descLower.includes(kw))) {
+        const current = impacts.get(competencyId) || 0;
+        impacts.set(competencyId, current + boost);
+      }
+    }
+  }
+  
+  return impacts;
+}
+
+/**
+ * Calculate all competency scores for a facilitator based on their qualifications and activities
  */
 export function calculateCompetencyScores(
-  qualifications: Array<{ courseTitle: string; description?: string | null }>
+  qualifications: Array<{ courseTitle: string; description?: string | null }>,
+  activities?: Array<{ 
+    activityType?: string | null; 
+    yearsOfExperience?: number | null;
+    description?: string | null;
+    chaptersCount?: number | null;
+  }>
 ): Map<string, number> {
   const competencyScores = new Map<string, number>();
   
@@ -196,6 +312,25 @@ export function calculateCompetencyScores(
     for (const [competencyId, weight] of impactEntries) {
       const currentScore = competencyScores.get(competencyId) || 0;
       competencyScores.set(competencyId, currentScore + weight);
+    }
+  }
+  
+  // Process each activity
+  if (activities) {
+    for (const activity of activities) {
+      const impacts = calculateActivityImpacts(
+        activity.activityType || null,
+        activity.yearsOfExperience || null,
+        activity.description || null,
+        activity.chaptersCount || null
+      );
+      
+      // Accumulate impacts into total scores
+      const impactEntries = Array.from(impacts.entries());
+      for (const [competencyId, weight] of impactEntries) {
+        const currentScore = competencyScores.get(competencyId) || 0;
+        competencyScores.set(competencyId, currentScore + weight);
+      }
     }
   }
   
