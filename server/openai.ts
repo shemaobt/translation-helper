@@ -162,9 +162,8 @@ export async function generateAssistantResponse(
     }
 
     // Create response using Responses API
-    // Note: Tools are defined in the dashboard prompt, not in the API call
+    // Note: Tools and model are defined in the dashboard prompt, not in the API call
     const responseConfig: any = {
-      model: "gpt-4o",
       prompt: {
         id: OBT_MENTOR_PROMPT_ID
       },
@@ -240,9 +239,8 @@ export async function* generateAssistantResponseStream(
     }
 
     // Create streaming response using Responses API
-    // Note: Tools are defined in the dashboard prompt, not in the API call
+    // Note: Tools and model are defined in the dashboard prompt, not in the API call
     const responseConfig: any = {
-      model: "gpt-4o",
       prompt: {
         id: OBT_MENTOR_PROMPT_ID
       },
@@ -330,9 +328,8 @@ export async function generateChatCompletion(
     }));
 
     // Create response using Responses API
-    // Note: Tools and instructions are defined in the dashboard prompt
+    // Note: Tools, instructions, and model are defined in the dashboard prompt
     const responseConfig: any = {
-      model: "gpt-4o",
       prompt: {
         id: OBT_MENTOR_PROMPT_ID
       },
