@@ -306,9 +306,9 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="font-medium text-foreground">{activity.language}</h3>
+                                <h3 className="font-medium text-foreground">{activity.languageName}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                  {activity.chaptersMentored} capítulo{activity.chaptersMentored !== 1 ? 's' : ''}
+                                  {activity.chaptersCount} capítulo{activity.chaptersCount !== 1 ? 's' : ''}
                                 </p>
                                 {activity.activityDate && (
                                   <p className="text-xs text-muted-foreground mt-1">
@@ -360,7 +360,7 @@ export default function AdminPortfolioView({ params }: AdminPortfolioProps) {
                               Relatório {new Date(report.periodStart).toLocaleDateString()} - {new Date(report.periodEnd).toLocaleDateString()}
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                              Gerado em {new Date(report.createdAt).toLocaleDateString()}
+                              Gerado em {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'Data desconhecida'}
                             </p>
                           </CardContent>
                         </Card>
