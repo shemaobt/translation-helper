@@ -102,6 +102,115 @@ export async function generateQuarterlyReport(data: ReportData): Promise<{ fileP
 
   sections.push(new Paragraph({ text: "", spacing: { after: 300 } }));
 
+  // Progress Narrative
+  sections.push(
+    new Paragraph({
+      text: "Progress Narrative",
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 400, after: 200 },
+    })
+  );
+
+  // Generate narrative based on competency levels
+  const proficientCount = competencies.filter(c => c.status === 'proficient' || c.status === 'advanced').length;
+  const growingCount = competencies.filter(c => c.status === 'growing').length;
+  const emergingCount = competencies.filter(c => c.status === 'emerging').length;
+  const totalCompetencies = Object.keys(CORE_COMPETENCIES).length;
+  
+  let narrativeParagraphs: Paragraph[] = [];
+  
+  // Opening paragraph
+  narrativeParagraphs.push(
+    new Paragraph({
+      text: `This report summarizes the mentorship journey of the facilitator during the period from ${periodStart.toLocaleDateString('en-US')} to ${periodEnd.toLocaleDateString('en-US')}. The facilitator has demonstrated commitment to developing the core competencies necessary for effective OBT mentorship.`,
+      spacing: { after: 200 },
+    })
+  );
+
+  // Competency progress narrative
+  if (proficientCount > 0) {
+    const percentage = Math.round((proficientCount / totalCompetencies) * 100);
+    narrativeParagraphs.push(
+      new Paragraph({
+        text: `The facilitator has achieved proficiency in ${proficientCount} of ${totalCompetencies} core competencies (${percentage}%), demonstrating readiness in key areas of OBT facilitation. This level of competency indicates the facilitator is well-equipped to mentor translation teams effectively.`,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  if (growingCount > 0) {
+    narrativeParagraphs.push(
+      new Paragraph({
+        text: `${growingCount} competenc${growingCount === 1 ? 'y is' : 'ies are'} currently in the growing stage, showing steady development and increasing capability. Continued practice and mentorship will help solidify these skills into full proficiency.`,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  if (emergingCount > 0) {
+    narrativeParagraphs.push(
+      new Paragraph({
+        text: `${emergingCount} competenc${emergingCount === 1 ? 'y is' : 'ies are'} in the emerging stage, representing areas of recent development or initial exposure. These competencies would benefit from focused attention and additional practice opportunities.`,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  // Qualifications narrative
+  if (qualifications.length > 0) {
+    narrativeParagraphs.push(
+      new Paragraph({
+        text: `The facilitator has completed ${qualifications.length} formal qualification${qualifications.length === 1 ? '' : 's'}, providing a solid educational foundation for their mentorship work. These credentials demonstrate commitment to professional development and mastery of essential knowledge areas.`,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  // Activities narrative
+  if (activities.length > 0) {
+    const translationActivities = activities.filter(a => a.activityType === 'translation' || !a.activityType);
+    const experienceActivities = activities.filter(a => a.activityType && a.activityType !== 'translation');
+    
+    if (translationActivities.length > 0) {
+      narrativeParagraphs.push(
+        new Paragraph({
+          text: `The facilitator has been actively engaged in ${translationActivities.length} translation activit${translationActivities.length === 1 ? 'y' : 'ies'}, working with ${facilitator.totalLanguagesMentored} language${facilitator.totalLanguagesMentored === 1 ? '' : 's'} and completing ${facilitator.totalChaptersMentored} chapter${facilitator.totalChaptersMentored === 1 ? '' : 's'}. This hands-on experience is invaluable for developing practical mentorship skills.`,
+          spacing: { after: 200 },
+        })
+      );
+    }
+    
+    if (experienceActivities.length > 0) {
+      narrativeParagraphs.push(
+        new Paragraph({
+          text: `Additionally, the facilitator brings ${experienceActivities.length} other professional experience${experienceActivities.length === 1 ? '' : 's'} to their mentorship role, enriching their ability to guide teams through diverse challenges and contexts.`,
+          spacing: { after: 200 },
+        })
+      );
+    }
+  }
+
+  // Engagement narrative
+  const sessionCount = Math.floor(recentMessages.filter(m => m.role === 'user').length / 2);
+  if (sessionCount > 0) {
+    narrativeParagraphs.push(
+      new Paragraph({
+        text: `Throughout this reporting period, the facilitator participated in ${sessionCount} mentorship session${sessionCount === 1 ? '' : 's'}, engaging actively with the OBT Mentor Assistant to refine their understanding and approach. This consistent engagement demonstrates dedication to continuous improvement and reflective practice.`,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  // Closing paragraph
+  narrativeParagraphs.push(
+    new Paragraph({
+      text: `Overall, the facilitator shows promising development as an OBT mentor. With continued practice, regular feedback, and engagement in mentorship opportunities, they are positioned to make meaningful contributions to Bible translation work and effectively guide translation teams toward excellence.`,
+      spacing: { after: 400 },
+    })
+  );
+
+  sections.push(...narrativeParagraphs);
+
   // Qualifications
   if (qualifications.length > 0) {
     sections.push(
