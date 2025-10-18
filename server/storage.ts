@@ -871,6 +871,7 @@ export class DatabaseStorage implements IStorage {
   async recalculateCompetencies(facilitatorId: string): Promise<void> {
     // Import here to avoid circular dependencies
     const { calculateCompetencyScores, scoreToStatus } = await import('./competency-mapping');
+    const { CORE_COMPETENCIES } = await import('@shared/schema');
     
     // Get all qualifications for this facilitator
     const qualifications = await this.getFacilitatorQualifications(facilitatorId);
@@ -884,9 +885,12 @@ export class DatabaseStorage implements IStorage {
       existingCompetencies.map(c => [c.competencyId, c])
     );
     
-    // Update each competency with calculated scores
-    const scoreEntries = Array.from(scores.entries());
-    for (const [competencyId, score] of scoreEntries) {
+    // Get all competency IDs from the schema
+    const allCompetencyIds = Object.keys(CORE_COMPETENCIES);
+    
+    // Process ALL competencies (not just those with scores)
+    for (const competencyId of allCompetencyIds) {
+      const score = scores.get(competencyId) || 0;
       const suggestedStatus = scoreToStatus(score);
       const existing = competencyMap.get(competencyId);
       
