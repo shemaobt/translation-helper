@@ -199,3 +199,92 @@ export function generateChatTitle(firstMessage: string): string {
   
   return result + '...';
 }
+
+const directAi = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<string> {
+  try {
+    const base64Audio = audioBuffer.toString('base64');
+    
+    let mimeType = 'audio/webm';
+    if (filename.endsWith('.mp3')) mimeType = 'audio/mp3';
+    else if (filename.endsWith('.wav')) mimeType = 'audio/wav';
+    else if (filename.endsWith('.ogg')) mimeType = 'audio/ogg';
+    else if (filename.endsWith('.m4a')) mimeType = 'audio/mp4';
+    
+    const response = await directAi.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: base64Audio
+              }
+            },
+            {
+              text: "Please transcribe the audio exactly as spoken. Only output the transcription text, nothing else."
+            }
+          ]
+        }
+      ]
+    });
+    
+    return response.text || "";
+  } catch (error) {
+    console.error("Error transcribing audio with Gemini:", error);
+    throw new Error("Failed to transcribe audio");
+  }
+}
+
+export async function generateSpeech(text: string, language = 'en-US', voiceId?: string): Promise<Buffer> {
+  try {
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: { text },
+          voice: {
+            languageCode: language.split('-')[0] + '-' + language.split('-')[1],
+            name: voiceId || `${language}-Standard-A`,
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: 1.0,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("TTS API error:", errorText);
+      
+      const fallbackResponse = await directAi.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: 'user',
+          parts: [{ text: `Please read this text aloud: "${text}"` }]
+        }]
+      });
+      
+      const emptyBuffer = Buffer.alloc(0);
+      return emptyBuffer;
+    }
+
+    const data = await response.json() as { audioContent: string };
+    const audioBuffer = Buffer.from(data.audioContent, 'base64');
+    return audioBuffer;
+  } catch (error) {
+    console.error("Error generating speech:", error);
+    throw new Error("Failed to generate speech");
+  }
+}

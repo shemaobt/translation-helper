@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./openai";
-import OpenAI from "openai";
+import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./gemini";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
@@ -77,11 +76,6 @@ class AudioCache {
 }
 
 const audioCache = new AudioCache();
-
-// OpenAI instance for direct API calls
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR 
-});
 
 // Multer configuration for audio uploads
 const upload = multer({
@@ -996,26 +990,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text too long (max 2048 characters)" });
       }
 
-      // Create a translation prompt
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
       const prompt = context 
         ? `Translate the following text from ${fromLanguage} to ${toLanguage}. Context: ${context}\n\nText to translate: ${text}`
         : `Translate the following text from ${fromLanguage} to ${toLanguage}:\n\n${text}`;
 
-      // Create a direct OpenAI chat completion for translation
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: 'system', content: 'You are a professional translator. Provide only the translation without any additional text or explanations.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 1000,
-        temperature: 0.1
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: 'You are a professional translator. Provide only the translation without any additional text or explanations.',
+        },
       });
       
-      const response = completion.choices[0].message.content;
+      const translatedText = response.text || "";
 
       res.json({
-        translatedText: response,
+        translatedText,
         fromLanguage,
         toLanguage,
         originalText: text
