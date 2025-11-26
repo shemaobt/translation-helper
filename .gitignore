@@ -86,3 +86,22 @@ vite.config.ts.*
 # Replit specific
 .replit
 replit.nix
+
+# User-generated content (security: don't commit user data)
+attached_assets/
+!attached_assets/.gitkeep
+
+# Python testing
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.env.test
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl

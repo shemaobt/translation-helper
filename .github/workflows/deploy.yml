@@ -1,0 +1,120 @@
+name: Build and Deploy Translation Helper
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_REGION: ${{ secrets.ARTIFACT_REGISTRY_REGION }}
+  GAR_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+  BACKEND_IMAGE: ${{ secrets.BACKEND_IMAGE_NAME }}
+  FRONTEND_IMAGE: ${{ secrets.FRONTEND_IMAGE_NAME }}
+  WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}
+  CLOUD_RUN_REGION: ${{ secrets.CLOUD_RUN_REGION }}
+  BACKEND_SERVICE: ${{ secrets.CLOUD_RUN_BACKEND_SERVICE }}
+  FRONTEND_SERVICE: ${{ secrets.CLOUD_RUN_FRONTEND_SERVICE }}
+  FRONTEND_API_URL: ${{ secrets.FRONTEND_API_URL }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-translation-helper
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Configure gcloud project
+        run: gcloud config set project "${PROJECT_ID}"
+
+      - name: Configure Artifact Registry authentication
+        run: gcloud auth configure-docker "${GAR_REGION}-docker.pkg.dev" --quiet
+
+      - name: Set image tags
+        id: vars
+        run: |
+          TAG="${GITHUB_SHA}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          BACKEND_URI="${GAR_REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${BACKEND_IMAGE}:${TAG}"
+          FRONTEND_URI="${GAR_REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${FRONTEND_IMAGE}:${TAG}"
+          echo "backend_image_uri=${BACKEND_URI}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image_uri=${FRONTEND_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -f Dockerfile.backend \
+            -t "${{ steps.vars.outputs.backend_image_uri }}" \
+            .
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -f Dockerfile.frontend \
+            --build-arg VITE_API_URL="${FRONTEND_API_URL}" \
+            -t "${{ steps.vars.outputs.frontend_image_uri }}" \
+            .
+
+      - name: Push backend image
+        run: docker push "${{ steps.vars.outputs.backend_image_uri }}"
+
+      - name: Push frontend image
+        run: docker push "${{ steps.vars.outputs.frontend_image_uri }}"
+
+      - name: Deploy backend to Cloud Run
+        id: deploy-backend
+        run: |
+          DATABASE_URL="${{ secrets.NEON_DATABASE_URL }}"
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "Secret NEON_DATABASE_URL is required but was not provided." >&2
+            exit 1
+          fi
+          
+          GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
+          SESSION_SECRET="${{ secrets.SESSION_SECRET }}"
+          REPLIT_OIDC_CLIENT_ID="${{ secrets.REPLIT_OIDC_CLIENT_ID }}"
+          REPLIT_OIDC_CLIENT_SECRET="${{ secrets.REPLIT_OIDC_CLIENT_SECRET }}"
+          
+          gcloud run deploy "${BACKEND_SERVICE}" \
+            --image "${{ steps.vars.outputs.backend_image_uri }}" \
+            --region "${CLOUD_RUN_REGION}" \
+            --project "${PROJECT_ID}" \
+            --set-env-vars="DATABASE_URL=${DATABASE_URL},GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_API_KEY},SESSION_SECRET=${SESSION_SECRET},REPLIT_OIDC_CLIENT_ID=${REPLIT_OIDC_CLIENT_ID},REPLIT_OIDC_CLIENT_SECRET=${REPLIT_OIDC_CLIENT_SECRET},REPLIT_OIDC_ISSUER=https://replit.com,NODE_ENV=production" \
+            --quiet \
+            --format="value(status.url)" > backend_url.txt
+          echo "backend_url=$(cat backend_url.txt)" >> $GITHUB_OUTPUT
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          BACKEND_URL="${{ steps.deploy-backend.outputs.backend_url }}"
+          gcloud run deploy "${FRONTEND_SERVICE}" \
+            --image "${{ steps.vars.outputs.frontend_image_uri }}" \
+            --region "${CLOUD_RUN_REGION}" \
+            --project "${PROJECT_ID}" \
+            --set-env-vars="BACKEND_URL=${BACKEND_URL}" \
+            --quiet
+
+      - name: Show deployment URLs
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo ""
+          echo "Backend URL: ${{ steps.deploy-backend.outputs.backend_url }}"
+          echo "Frontend URL: Check Cloud Run console"
+          echo ""
+          echo "Note: Run 'npm run db:push' manually if database schema changes are needed."
+
