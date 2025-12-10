@@ -5,6 +5,7 @@ import {
   apiKeys,
   apiUsage,
   feedback,
+  agentPrompts,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -18,7 +19,10 @@ import {
   type InsertApiUsage,
   type Feedback,
   type InsertFeedback,
+  type AgentPrompt,
+  type InsertAgentPrompt,
 } from "@shared/schema";
+import { getAllDefaultPrompts, type AgentPromptId } from "./prompts";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -96,6 +100,13 @@ export interface IStorage {
   getPendingUsersCount(): Promise<number>;
   approveUser(userId: string, approvedById: string): Promise<User>;
   rejectUser(userId: string, approvedById: string): Promise<User>;
+  
+  // Agent prompt operations
+  getAllPrompts(): Promise<AgentPrompt[]>;
+  getPrompt(agentId: string): Promise<AgentPrompt | undefined>;
+  updatePrompt(agentId: string, prompt: string, userId: string, name?: string, description?: string): Promise<AgentPrompt>;
+  resetPromptToDefault(agentId: string, userId: string): Promise<AgentPrompt>;
+  seedPrompts(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -587,6 +598,93 @@ export class DatabaseStorage implements IStorage {
     }
 
     return updatedUser;
+  }
+
+  // Agent prompt operations
+  async getAllPrompts(): Promise<AgentPrompt[]> {
+    return await db
+      .select()
+      .from(agentPrompts)
+      .where(eq(agentPrompts.isActive, true))
+      .orderBy(agentPrompts.name);
+  }
+
+  async getPrompt(agentId: string): Promise<AgentPrompt | undefined> {
+    const [prompt] = await db
+      .select()
+      .from(agentPrompts)
+      .where(and(eq(agentPrompts.agentId, agentId), eq(agentPrompts.isActive, true)));
+    return prompt;
+  }
+
+  async updatePrompt(agentId: string, prompt: string, userId: string, name?: string, description?: string): Promise<AgentPrompt> {
+    // First check if prompt exists
+    const existing = await this.getPrompt(agentId);
+    
+    if (!existing) {
+      throw new Error(`Prompt for agent ${agentId} not found`);
+    }
+
+    const updateData: Partial<AgentPrompt> = {
+      prompt,
+      version: existing.version + 1,
+      updatedBy: userId,
+      updatedAt: new Date(),
+    };
+    
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+
+    const [updatedPrompt] = await db
+      .update(agentPrompts)
+      .set(updateData)
+      .where(eq(agentPrompts.agentId, agentId))
+      .returning();
+    
+    return updatedPrompt;
+  }
+
+  async resetPromptToDefault(agentId: string, userId: string): Promise<AgentPrompt> {
+    const defaults = getAllDefaultPrompts();
+    const defaultPrompt = defaults.find(p => p.agentId === agentId);
+    
+    if (!defaultPrompt) {
+      throw new Error(`No default prompt found for agent ${agentId}`);
+    }
+
+    return await this.updatePrompt(
+      agentId, 
+      defaultPrompt.prompt, 
+      userId,
+      defaultPrompt.name,
+      defaultPrompt.description
+    );
+  }
+
+  async seedPrompts(): Promise<void> {
+    const defaults = getAllDefaultPrompts();
+    
+    for (const defaultPrompt of defaults) {
+      // Check if prompt already exists
+      const existing = await this.getPrompt(defaultPrompt.agentId);
+      
+      if (!existing) {
+        // Insert new prompt
+        await db.insert(agentPrompts).values({
+          agentId: defaultPrompt.agentId,
+          name: defaultPrompt.name,
+          description: defaultPrompt.description,
+          prompt: defaultPrompt.prompt,
+          version: 1,
+          isActive: true,
+        });
+        console.log(`Seeded prompt for agent: ${defaultPrompt.agentId}`);
+      }
+    }
   }
 }
 

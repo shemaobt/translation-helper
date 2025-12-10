@@ -1469,6 +1469,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin prompt management endpoints
+  app.get('/api/admin/prompts', requireAdmin, async (req: any, res) => {
+    try {
+      const prompts = await storage.getAllPrompts();
+      res.json(prompts);
+    } catch (error) {
+      console.error("Error fetching prompts:", error);
+      res.status(500).json({ message: "Failed to fetch prompts" });
+    }
+  });
+
+  app.get('/api/admin/prompts/:agentId', requireAdmin, async (req: any, res) => {
+    try {
+      const { agentId } = req.params;
+      const prompt = await storage.getPrompt(agentId);
+      
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      res.json(prompt);
+    } catch (error) {
+      console.error("Error fetching prompt:", error);
+      res.status(500).json({ message: "Failed to fetch prompt" });
+    }
+  });
+
+  app.put('/api/admin/prompts/:agentId', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { agentId } = req.params;
+      const { prompt, name, description } = req.body;
+
+      // Validate prompt content
+      const promptSchema = z.object({
+        prompt: z.string().min(1, "Prompt is required"),
+        name: z.string().optional(),
+        description: z.string().optional(),
+      });
+      
+      const validated = promptSchema.parse({ prompt, name, description });
+
+      const updatedPrompt = await storage.updatePrompt(
+        agentId, 
+        validated.prompt, 
+        req.userId,
+        validated.name,
+        validated.description
+      );
+      
+      res.json(updatedPrompt);
+    } catch (error) {
+      console.error("Error updating prompt:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid prompt data", errors: error.errors });
+      }
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to update prompt" });
+    }
+  });
+
+  app.post('/api/admin/prompts/:agentId/reset', requireAdmin, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const { agentId } = req.params;
+
+      const resetPrompt = await storage.resetPromptToDefault(agentId, req.userId);
+      
+      res.json(resetPrompt);
+    } catch (error) {
+      console.error("Error resetting prompt:", error);
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to reset prompt" });
+    }
+  });
+
+  app.post('/api/admin/prompts/seed', requireAdmin, async (req: any, res) => {
+    try {
+      await storage.seedPrompts();
+      res.json({ message: "Prompts seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding prompts:", error);
+      res.status(500).json({ message: "Failed to seed prompts" });
+    }
+  });
+
   // Catch-all for unmatched API routes - return 404 instead of HTML
   app.use('/api/*', (req, res) => {
     res.status(404).json({ message: "API endpoint not found" });

@@ -37,6 +37,33 @@ export interface AssistantResponse {
 
 // Thread ID persistence moved to database for durability across restarts
 import { storage } from './storage';
+import { getDefaultPrompt, type AgentPromptId } from './prompts';
+
+/**
+ * Get the system instruction for an assistant.
+ * First tries to load from database, falls back to file-based defaults.
+ */
+async function getSystemInstruction(assistantId: AssistantId): Promise<string> {
+  try {
+    // Try to get from database first
+    const dbPrompt = await storage.getPrompt(assistantId);
+    if (dbPrompt?.prompt) {
+      return dbPrompt.prompt;
+    }
+  } catch (error) {
+    console.warn(`Failed to load prompt from DB for ${assistantId}, using default:`, error);
+  }
+  
+  // Fall back to file-based default or schema default
+  try {
+    return getDefaultPrompt(assistantId as AgentPromptId);
+  } catch {
+    // Final fallback to schema
+    const assistantConfig = ASSISTANTS[assistantId];
+    return assistantConfig.systemPrompt || 
+      "You are a helpful AI assistant specializing in translation and language support.";
+  }
+}
 
 /**
  * Generate assistant response using Gemini 2.0 Flash (cheap and fast)
@@ -55,7 +82,7 @@ export async function generateAssistantResponse(
     }
 
     // Get chat history from database
-    const chatHistory = await storage.getMessages(request.chatId, userId);
+    const chatHistory = await storage.getChatMessages(request.chatId, userId);
     
     // Build conversation history for Gemini
     const history = chatHistory
@@ -65,10 +92,8 @@ export async function generateAssistantResponse(
         parts: [{ text: msg.content }],
       }));
 
-    // Get assistant instructions
-    const assistantConfig = ASSISTANTS[request.assistantId];
-    const systemInstruction = assistantConfig.instructions || 
-      "You are a helpful AI assistant specializing in translation and language support.";
+    // Get assistant instructions from database or defaults
+    const systemInstruction = await getSystemInstruction(request.assistantId);
 
     // Use Gemini 2.0 Flash for cost optimization
     const model = genAI.getGenerativeModel({
@@ -123,7 +148,7 @@ export async function* generateAssistantResponseStream(
     }
 
     // Get chat history from database
-    const chatHistory = await storage.getMessages(request.chatId, userId);
+    const chatHistory = await storage.getChatMessages(request.chatId, userId);
     
     // Build conversation history for Gemini
     const history = chatHistory
@@ -133,10 +158,8 @@ export async function* generateAssistantResponseStream(
         parts: [{ text: msg.content }],
       }));
 
-    // Get assistant instructions
-    const assistantConfig = ASSISTANTS[request.assistantId];
-    const systemInstruction = assistantConfig.instructions || 
-      "You are a helpful AI assistant specializing in translation and language support.";
+    // Get assistant instructions from database or defaults
+    const systemInstruction = await getSystemInstruction(request.assistantId);
 
     // Use Gemini 2.0 Flash for cost optimization
     const model = genAI.getGenerativeModel({
@@ -207,11 +230,10 @@ export async function generateChatCompletion(
     const systemMessages = request.messages.filter(msg => msg.role === "system");
     const conversationMessages = request.messages.filter(msg => msg.role !== "system");
 
-    // Build system instruction
+    // Build system instruction - use provided system messages or load from database
     const systemInstruction = systemMessages.length > 0
       ? systemMessages.map(msg => msg.content).join("\n\n")
-      : ASSISTANTS[request.assistantId].instructions || 
-        "You are a helpful AI assistant specializing in translation and language support.";
+      : await getSystemInstruction(request.assistantId);
 
     // Build conversation history
     const history = conversationMessages.slice(0, -1).map(msg => ({

@@ -80,11 +80,11 @@ function Signup() {
     <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+          <div className="mx-auto w-16 h-16 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
             <img 
               src={logoImage} 
               alt="Translation Helper Logo" 
-              className="h-12 w-12 object-contain"
+              className="w-16 h-16 object-contain"
               data-testid="img-signup-logo"
             />
           </div>

@@ -186,6 +186,20 @@ export const feedback = pgTable("feedback", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Agent prompts table for database-backed prompt management
+export const agentPrompts = pgTable("agent_prompts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().unique(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  prompt: text("prompt").notNull(),
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
@@ -230,6 +244,13 @@ export const apiUsageRelations = relations(apiUsage, ({ one }) => ({
 export const feedbackRelations = relations(feedback, ({ one }) => ({
   user: one(users, {
     fields: [feedback.userId],
+    references: [users.id],
+  }),
+}));
+
+export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [agentPrompts.updatedBy],
     references: [users.id],
   }),
 }));
@@ -279,6 +300,18 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   updatedAt: true,
 });
 
+export const insertAgentPromptSchema = createInsertSchema(agentPrompts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateAgentPromptSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  name: z.string().optional(),
+  description: z.string().optional(),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -293,3 +326,6 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 export type InsertApiUsage = z.infer<typeof insertApiUsageSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type AgentPrompt = typeof agentPrompts.$inferSelect;
+export type InsertAgentPrompt = z.infer<typeof insertAgentPromptSchema>;
+export type UpdateAgentPrompt = z.infer<typeof updateAgentPromptSchema>;
