@@ -23,11 +23,12 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install production dependencies only
-RUN npm ci --production
+# Install all dependencies (vite is needed for the serveStatic module even in production)
+RUN npm ci
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/client/dist ./client/dist
 
 # Create necessary directories for user uploads
 RUN mkdir -p attached_assets && \
