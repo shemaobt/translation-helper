@@ -16,15 +16,17 @@ RUN npm run build
 
 FROM node:20-alpine AS runtime
 
-ENV NODE_ENV=production
-
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install all dependencies (vite is needed for the serveStatic module even in production)
+# Install all dependencies first (before setting NODE_ENV=production)
+# vite is needed for the serveStatic module imports
 RUN npm ci
+
+# Set production env after dependencies are installed
+ENV NODE_ENV=production
 
 # Copy built files from builder (includes both server dist and client public assets)
 COPY --from=builder /app/dist ./dist
