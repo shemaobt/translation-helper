@@ -26,9 +26,8 @@ COPY package.json package-lock.json* ./
 # Install all dependencies (vite is needed for the serveStatic module even in production)
 RUN npm ci
 
-# Copy built files from builder
+# Copy built files from builder (includes both server dist and client public assets)
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/client/dist ./client/dist
 
 # Create necessary directories for user uploads
 RUN mkdir -p attached_assets && \
