@@ -1,13 +1,17 @@
 # Translation Helper - AI-Powered Voice Translation App
 
-A comprehensive OpenAI-powered voice-enabled translation helper chat application with universal browser compatibility, featuring OpenAI Whisper for speech-to-text, OpenAI TTS for text-to-speech, real-time streaming responses, and optimized performance through advanced caching strategies.
+A comprehensive **Google Gemini-powered** voice-enabled translation application with universal browser compatibility, featuring Gemini Audio for speech-to-text, Google Cloud TTS for text-to-speech, real-time streaming responses, and optimized performance.
+
+🎉 **Recently migrated from OpenAI to Google Gemini - achieving 97% cost reduction!**
+
+📚 **[Read the Complete Guide](COMPLETE_GUIDE.md)** for detailed documentation, deployment instructions, and architecture diagrams.
 
 ## Features
 
 ### 🎯 Core Features
-- **AI-Powered Translation**: Uses OpenAI's Assistant API for intelligent translation services
-- **Voice Recognition**: OpenAI Whisper integration for speech-to-text conversion
-- **Text-to-Speech**: Multiple OpenAI TTS voices with voice-specific caching
+- **AI-Powered Translation**: Uses Google Gemini 2.0 Flash for cost-effective translation (~$0.13/M tokens)
+- **Voice Recognition**: Gemini Audio integration for speech-to-text conversion
+- **Text-to-Speech**: Google Cloud TTS with Neural2 voices
 - **Real-time Streaming**: Server-Sent Events (SSE) for streaming AI responses
 - **Multi-language Support**: Comprehensive language support for global users
 - **Chat Management**: Persistent conversation history with chat organization
@@ -46,7 +50,8 @@ A comprehensive OpenAI-powered voice-enabled translation helper chat application
 - **TypeScript** with ESM modules
 - **Drizzle ORM** with PostgreSQL
 - **Passport.js** with OpenID Connect
-- **OpenAI API** integration
+- **Google Gemini API** integration
+- **Google Cloud TTS** for voice synthesis
 
 ### Database
 - **PostgreSQL** with Neon serverless driver
@@ -58,17 +63,21 @@ A comprehensive OpenAI-powered voice-enabled translation helper chat application
 
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL database
-- OpenAI API key
-- Replit account (for authentication)
+- PostgreSQL database (recommended: [Neon](https://neon.tech) serverless)
+- Google Gemini API key ([Get one here](https://ai.google.dev/))
+- Google Cloud account (for TTS API)
+- Replit account (optional, for authentication)
 
 ### Environment Variables
 ```bash
-# Database
+# Database (use Neon for serverless PostgreSQL)
 DATABASE_URL=your_postgresql_connection_string
 
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
+# Google Gemini API
+GOOGLE_API_KEY=your_gemini_api_key
+
+# Google Cloud (for TTS)
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 # Authentication
 REPLIT_OIDC_CLIENT_ID=your_replit_client_id
@@ -99,6 +108,27 @@ npm run build
 # Start production server
 npm start
 ```
+
+### Docker Deployment
+
+```bash
+# Using Docker Compose (recommended for local/staging)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+### Cloud Run Deployment
+
+See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#deployment) for detailed deployment instructions including:
+- Terraform infrastructure setup
+- GitHub Actions CI/CD configuration
+- Environment variable configuration
+- Custom domain setup
 
 ## API Documentation
 
@@ -380,9 +410,56 @@ with open('output.mp3', 'wb') as f:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Testing
+
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+./run_tests.sh all
+
+# Run quick tests only
+./run_tests.sh quick
+
+# Run with coverage
+./run_tests.sh coverage
+```
+
+See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#testing) for detailed testing documentation.
+
+## Cost Comparison
+
+| Service | OpenAI | Google Gemini | Savings |
+|---------|--------|---------------|---------|
+| Translation (1M tokens) | $5.00 | $0.13 | **97%** |
+| Transcription (1 hour) | $0.36 | Included | **100%** |
+| Infrastructure | N/A | ~$5.50/month | Cloud Run |
+
+**Total monthly cost**: ~$15-20 for typical usage (vs $100+ with OpenAI)
+
+## Architecture
+
+The application uses a modern, cloud-native architecture:
+- **Frontend**: React + Vite served by Nginx on Google Cloud Run
+- **Backend**: Node.js/Express on Google Cloud Run
+- **Database**: Neon PostgreSQL (serverless)
+- **AI**: Google Gemini 2.0 Flash + Google Cloud TTS
+- **Infrastructure**: Terraform for IaC, GitHub Actions for CI/CD
+
+See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#architecture) for detailed architecture diagrams.
+
+## Documentation
+
+- **[Complete Guide](COMPLETE_GUIDE.md)** - Comprehensive documentation with diagrams
+- **[Terraform Setup](../tf/environments/translation-prod/README.md)** - Infrastructure deployment
+- **[API Documentation](COMPLETE_GUIDE.md#api-documentation)** - Full API reference
+
 ## Acknowledgments
 
-- **OpenAI** for providing the AI models and APIs
-- **Replit** for hosting and authentication services
+- **Google Gemini** for cost-effective, high-quality AI
+- **Neon** for serverless PostgreSQL
+- **Google Cloud** for scalable infrastructure
+- **Replit** for authentication services
 - **Radix UI** and **shadcn/ui** for the component library
 - **Tailwind CSS** for styling utilities

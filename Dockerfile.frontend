@@ -1,0 +1,46 @@
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy source files
+COPY . .
+
+# Build frontend with Vite
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+ENV NODE_ENV=production
+
+RUN npm run build
+
+FROM nginx:stable-alpine AS runtime
+
+# Copy nginx configuration template
+COPY client/nginx.conf /etc/nginx/nginx.conf.template
+
+# Copy built files from Vite build
+COPY --from=build /app/dist/public /usr/share/nginx/html
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Create necessary directories for Nginx to run
+RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
+    chown -R nginx:nginx /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html && \
+    chmod -R 755 /var/cache/nginx /var/run /var/log/nginx && \
+    touch /var/run/nginx.pid && \
+    chown nginx:nginx /var/run/nginx.pid
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+
+EXPOSE 8080
+
+# Run entrypoint as root (needed to write nginx.conf), nginx will run as nginx user
+CMD ["/docker-entrypoint.sh"]
+

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, generateSpeech } from "./gemini";
+import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, translateText, generateSpeech } from "./gemini";
 import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { randomBytes, createHash } from "crypto";
 import bcrypt from "bcryptjs";
@@ -990,27 +990,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text too long (max 2048 characters)" });
       }
 
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({
-        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-        httpOptions: {
-          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-        },
-      });
-
-      const prompt = context 
-        ? `Translate the following text from ${fromLanguage} to ${toLanguage}. Context: ${context}\n\nText to translate: ${text}`
-        : `Translate the following text from ${fromLanguage} to ${toLanguage}:\n\n${text}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: 'You are a professional translator. Provide only the translation without any additional text or explanations.',
-        },
-      });
-      
-      const translatedText = response.text || "";
+      // Use Gemini for translation
+      const translatedText = await translateText(text, fromLanguage, toLanguage, context);
 
       res.json({
         translatedText,
