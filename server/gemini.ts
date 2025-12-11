@@ -85,11 +85,12 @@ export async function generateAssistantResponse(
     const chatHistory = await storage.getChatMessages(request.chatId, userId);
     
     // Build conversation history for Gemini
-    const history = chatHistory
-      .map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      }));
+    // Note: Schema only allows 'user' and 'assistant' roles, no 'system' messages in DB
+    // System instructions are passed separately via systemInstruction parameter
+    const history = chatHistory.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
 
     // Get assistant instructions from database or defaults
     const systemInstruction = await getSystemInstruction(request.assistantId);
@@ -150,11 +151,12 @@ export async function* generateAssistantResponseStream(
     const chatHistory = await storage.getChatMessages(request.chatId, userId);
     
     // Build conversation history for Gemini
-    const history = chatHistory
-      .map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      }));
+    // Note: Schema only allows 'user' and 'assistant' roles, no 'system' messages in DB
+    // System instructions are passed separately via systemInstruction parameter
+    const history = chatHistory.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
 
     // Get assistant instructions from database or defaults
     const systemInstruction = await getSystemInstruction(request.assistantId);
