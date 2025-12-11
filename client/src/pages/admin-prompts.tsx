@@ -68,6 +68,7 @@ export default function AdminPrompts() {
   const { data: prompts = [], isLoading: promptsLoading, refetch } = useQuery<AgentPrompt[]>({
     queryKey: ["/api/admin/prompts"],
     retry: false,
+    enabled: isAuthenticated && user?.isAdmin === true,
   });
 
   const updatePromptMutation = useMutation({
@@ -279,18 +280,25 @@ export default function AdminPrompts() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
+  // Guard: Return null if not authenticated or not admin
+  if (!isAuthenticated || (user && !user.isAdmin)) {
+    return null;
+  }
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar isMobile={isMobile} />
+    <div className="min-h-screen bg-background flex relative">
+      <div className="relative h-full">
+        <Sidebar isMobile={isMobile} isOpen={true} />
+      </div>
       
-      <main className="flex-1 overflow-auto">
-        <div className="p-6 max-w-5xl mx-auto">
+      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-6'} overflow-auto`}>
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -476,7 +484,7 @@ export default function AdminPrompts() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
