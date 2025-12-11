@@ -428,10 +428,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName,
         isAdmin: user.isAdmin,
+        profileImageUrl: user.profileImageUrl,
+        createdAt: user.createdAt,
       });
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  // Multer configuration for profile image uploads
+  const profileImageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req: any, file: any, cb: any) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  // User profile routes
+  app.post('/api/user/profile-image', requireAuth, profileImageUpload.single('image'), async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      // Convert image to base64 data URL for storage
+      // In production, you'd want to use a proper file storage service (S3, GCS, etc.)
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      
+      // Update user profile image
+      await storage.updateUserProfileImage(userId, base64Image);
+      
+      res.json({ message: "Profile image updated successfully", profileImageUrl: base64Image });
+    } catch (error) {
+      console.error("Profile image upload error:", error);
+      res.status(500).json({ message: "Failed to upload profile image" });
+    }
+  });
+
+  app.post('/api/user/change-password', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+      
+      // Get user and verify current password
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash and update new password
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await storage.updateUserPassword(userId, hashedPassword);
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
 

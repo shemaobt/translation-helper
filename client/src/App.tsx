@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/home";
-import Dashboard from "@/pages/dashboard";
+import Profile from "@/pages/profile";
 import AdminFeedback from "@/pages/admin-feedback";
 import AdminUsers from "@/pages/admin-users";
 import AdminPrompts from "@/pages/admin-prompts";
@@ -38,9 +38,8 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/chat/:chatId" component={Home} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/api-keys" component={Dashboard} />
-          <Route path="/settings" component={Dashboard} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/settings" component={Profile} />
           <Route path="/admin/feedback" component={AdminFeedback} />
           <Route path="/admin/users" component={AdminUsers} />
           <Route path="/admin/prompts" component={AdminPrompts} />

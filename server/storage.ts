@@ -37,6 +37,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Profile operations
+  updateUserProfileImage(userId: string, imageUrl: string): Promise<void>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  
   // Activity tracking operations
   incrementUserChatCount(userId: string): Promise<void>;
   incrementUserMessageCount(userId: string): Promise<void>;
@@ -145,6 +149,27 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Profile operations
+  async updateUserProfileImage(userId: string, imageUrl: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        profileImageUrl: imageUrl,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
   }
 
   // Activity tracking operations

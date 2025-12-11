@@ -22,10 +22,10 @@ import {
   Users,
   ChevronUp, 
   ChevronDown,
-  BarChart3, 
   Key, 
   Settings, 
   LogOut,
+  UserCircle,
   MessageSquare,
   X,
   Trash,
@@ -348,20 +348,23 @@ export default function Sidebar({
         {/* Dropdown Menu */}
         {userMenuOpen && (
           <div className="mt-2 bg-popover border border-border rounded-md shadow-lg py-2 max-h-96 overflow-y-auto">
+            {/* Profile option (visible to all users) */}
+            <Link href="/profile" className="block">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
+                onClick={() => setUserMenuOpen(false)}
+                data-testid="link-profile"
+              >
+                <UserCircle className="mr-2 h-4 w-4" />
+                Profile Settings
+              </Button>
+            </Link>
+            
             {/* Admin-only options */}
             {isAdmin && (
               <>
-                <Link href="/dashboard" className="block">
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start text-sm px-3 md:px-4 ${isMobile ? 'h-10 sm:h-12' : 'py-2 h-auto'}`}
-                    onClick={() => setUserMenuOpen(false)}
-                    data-testid="link-dashboard"
-                  >
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </Button>
-                </Link>
+                <Separator className="my-1" />
                 <Link href="/admin/users" className="block">
                   <Button
                     variant="ghost"
