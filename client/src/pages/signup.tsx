@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Camera, User } from "lucide-react";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
@@ -32,9 +33,43 @@ type SignupFormData = z.infer<typeof signupSchema>;
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { login } = useAuth();
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Image must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
 
   const form = useForm<SignupFormData>({
@@ -49,7 +84,7 @@ function Signup() {
   });
 
   const signupMutation = useMutation({
-    mutationFn: async (data: Omit<SignupFormData, 'confirmPassword'>) => {
+    mutationFn: async (data: Omit<SignupFormData, 'confirmPassword'> & { profileImageUrl?: string }) => {
       const response = await apiRequest("POST", "/api/auth/signup", data);
       return response.json();
     },
@@ -73,7 +108,10 @@ function Signup() {
 
   const onSubmit = (data: SignupFormData) => {
     const { confirmPassword, ...signupData } = data;
-    signupMutation.mutate(signupData);
+    signupMutation.mutate({
+      ...signupData,
+      profileImageUrl: profileImage || undefined,
+    });
   };
 
   return (
@@ -96,6 +134,35 @@ function Signup() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Profile Picture Upload */}
+              <div className="flex flex-col items-center mb-2">
+                <div className="relative">
+                  <Avatar className="h-20 w-20 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <AvatarImage src={profileImage || undefined} alt="Profile" />
+                    <AvatarFallback className="bg-muted">
+                      <User className="h-10 w-10 text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Add a profile picture (optional)
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

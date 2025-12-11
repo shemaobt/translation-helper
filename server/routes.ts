@@ -211,6 +211,7 @@ const signupValidationSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long"),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+  profileImageUrl: z.string().optional(),
 });
 
 const loginValidationSchema = z.object({
