@@ -12,7 +12,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Clock, XCircle, UserPlus, LogIn } from "lucide-react";
 
 // Use logo from public directory
 const logoImage = "/logo.png";
@@ -100,22 +100,26 @@ function Login() {
 
   return (
     <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto h-12 w-12 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center">
             <img 
               src={logoImage} 
               alt="Translation Helper Logo" 
-              className="h-12 w-12 object-contain"
+              className="w-16 h-16 object-contain"
               data-testid="img-login-logo"
             />
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your Translation Helper account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Sign in to your Translation Helper account</p>
+          </div>
+        </div>
+
+        {/* Login Form Card */}
+        <Card>
+          <CardContent className="pt-6">
           {/* Show appropriate message based on URL parameters */}
           {messageType === 'pending' && (
             <Alert className="mb-4" data-testid="alert-pending">
@@ -202,23 +206,46 @@ function Login() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 font-semibold"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
-                {loginMutation.isPending ? "Signing in..." : "Sign in"}
+                {loginMutation.isPending ? (
+                  "Signing in..."
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign in
+                  </>
+                )}
               </Button>
             </form>
           </Form>
+        </CardContent>
+      </Card>
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link href="/signup" className="text-primary hover:underline" data-testid="link-signup">
-              Sign up
+      {/* Create Account Section */}
+      <Card>
+        <CardContent className="py-6">
+          <div className="text-center space-y-4">
+            <UserPlus className="h-8 w-8 text-primary mx-auto" />
+            <h3 className="text-xl font-bold text-foreground">New to Translation Helper?</h3>
+            <p className="text-muted-foreground text-sm">
+              Create a free account to start using our AI-powered translation assistants
+            </p>
+            <Link href="/signup">
+              <Button 
+                className="w-full h-11 font-semibold"
+                data-testid="link-signup"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Create Free Account
+              </Button>
             </Link>
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
