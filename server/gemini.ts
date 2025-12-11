@@ -86,7 +86,6 @@ export async function generateAssistantResponse(
     
     // Build conversation history for Gemini
     const history = chatHistory
-      .filter(msg => msg.role !== 'system')
       .map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],
@@ -152,7 +151,6 @@ export async function* generateAssistantResponseStream(
     
     // Build conversation history for Gemini
     const history = chatHistory
-      .filter(msg => msg.role !== 'system')
       .map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],

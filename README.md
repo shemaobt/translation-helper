@@ -1,402 +1,289 @@
-# Translation Helper - AI-Powered Voice Translation App
+# Translation Helper
 
-A comprehensive **Google Gemini-powered** voice-enabled translation application with universal browser compatibility, featuring Gemini Audio for speech-to-text, Google Cloud TTS for text-to-speech, real-time streaming responses, and optimized performance.
+**AI-Powered Voice Translation Application with Google Gemini**
 
-🎉 **Recently migrated from OpenAI to Google Gemini - achieving 97% cost reduction!**
-
-📚 **[Read the Complete Guide](COMPLETE_GUIDE.md)** for detailed documentation, deployment instructions, and architecture diagrams.
+A modern, cost-effective translation application featuring voice recognition, text-to-speech, real-time streaming responses, and comprehensive Bible translation assistant tools.
 
 ## Features
 
-### 🎯 Core Features
-- **AI-Powered Translation**: Uses Google Gemini 2.0 Flash for cost-effective translation (~$0.13/M tokens)
-- **Voice Recognition**: Gemini Audio integration for speech-to-text conversion
-- **Text-to-Speech**: Google Cloud TTS with Neural2 voices
-- **Real-time Streaming**: Server-Sent Events (SSE) for streaming AI responses
-- **Multi-language Support**: Comprehensive language support for global users
-- **Chat Management**: Persistent conversation history with chat organization
+### Core Capabilities
+- **AI Translation** - Context-aware translations using Google Gemini 2.0 Flash (~$0.13/M tokens)
+- **Speech-to-Text** - Gemini Audio integration for voice transcription
+- **Text-to-Speech** - Google Cloud TTS with Neural2 voices
+- **Real-time Streaming** - Server-Sent Events for live AI responses
+- **Chat Management** - Persistent conversation history
 
-### 🔊 Voice Features
-- **Speech Recognition**: Record voice messages and convert to text
-- **Multiple TTS Voices**: Choose from 6 different AI voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer)
-- **Voice-Specific Caching**: Instant replay for previously generated audio
-- **Fast Audio Generation**: Optimized TTS model for 1-3 second response times
-- **Transcription Editing**: Edit transcribed text before sending
+### Specialized Assistants
+- **Storyteller** - Creates engaging, spoken-language stories about biblical themes
+- **Oral Performer** - Transforms biblical passages into oral versions for live audiences
+- **Conversation Partner** - General translation assistance
+- **OBT Health Assessor** - Evaluates Oral Bible Translation projects
+- **Back Translation Checker** - Verifies translation accuracy against original texts
 
-### ⚡ Performance Optimizations
-- **Multi-layer Caching**: Voice-specific audio caching with ETag support
-- **Fast TTS Model**: Uses tts-1 model for optimal speed/quality balance
-- **Real-time Streaming**: SSE for immediate response display
-- **Efficient Audio Processing**: Optimized pipeline for voice features
-
-### 🔐 Security & Authentication
-- **Replit Auth Integration**: Secure OpenID Connect authentication
-- **Session Management**: PostgreSQL-backed session storage
-- **API Key Management**: User-generated API keys for external access
-- **Usage Tracking**: Monitor API usage and costs
+### Voice Features
+- Multiple TTS voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer)
+- Voice-specific caching for instant replay
+- Transcription editing before sending
 
 ## Tech Stack
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development and optimized builds
-- **Tailwind CSS** with shadcn/ui components
-- **TanStack Query** for server state management
-- **Wouter** for lightweight routing
-- **Radix UI** primitives for accessible components
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| **Backend** | Node.js, Express.js, TypeScript, Drizzle ORM |
+| **Database** | PostgreSQL (Neon serverless) |
+| **AI** | Google Gemini 2.0 Flash, Google Cloud TTS |
+| **Infrastructure** | Docker, Google Cloud Run, Terraform, GitHub Actions |
 
-### Backend
-- **Node.js** with Express.js
-- **TypeScript** with ESM modules
-- **Drizzle ORM** with PostgreSQL
-- **Passport.js** with OpenID Connect
-- **Google Gemini API** integration
-- **Google Cloud TTS** for voice synthesis
-
-### Database
-- **PostgreSQL** with Neon serverless driver
-- **Session storage** for authentication
-- **Chat and message persistence**
-- **API key management**
-
-## Installation & Setup
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- PostgreSQL database (recommended: [Neon](https://neon.tech) serverless)
+- Node.js 18+
+- PostgreSQL database ([Neon](https://neon.tech) recommended)
 - Google Gemini API key ([Get one here](https://ai.google.dev/))
-- Google Cloud account (for TTS API)
-- Replit account (optional, for authentication)
+- Google Cloud account (for TTS)
 
-### Environment Variables
+### Installation
+
 ```bash
-# Database (use Neon for serverless PostgreSQL)
-DATABASE_URL=your_postgresql_connection_string
+# Clone repository
+git clone https://github.com/shemaobt/translation-helper.git
+cd translation-helper
 
-# Google Gemini API
-GOOGLE_API_KEY=your_gemini_api_key
-
-# Google Cloud (for TTS)
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
-
-# Authentication
-REPLIT_OIDC_CLIENT_ID=your_replit_client_id
-REPLIT_OIDC_CLIENT_SECRET=your_replit_client_secret
-REPLIT_OIDC_ISSUER=https://replit.com
-
-# Session
-SESSION_SECRET=your_session_secret
-```
-
-### Development Setup
-```bash
 # Install dependencies
 npm install
 
-# Push database schema
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Set up database
 npm run db:push
 
 # Start development server
 npm run dev
 ```
 
-### Production Build
-```bash
-# Build the application
-npm run build
+### Environment Variables
 
-# Start production server
-npm start
+```env
+DATABASE_URL=postgresql://user:pass@host/db
+GOOGLE_API_KEY=your_gemini_api_key
+SESSION_SECRET=your_session_secret
 ```
 
-### Docker Deployment
+## Project Structure
 
-```bash
-# Using Docker Compose (recommended for local/staging)
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
 ```
-
-### Cloud Run Deployment
-
-See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#deployment) for detailed deployment instructions including:
-- Terraform infrastructure setup
-- GitHub Actions CI/CD configuration
-- Environment variable configuration
-- Custom domain setup
+Translation-Helper-WebApp/
+├── client/                  # React frontend
+│   ├── src/
+│   │   ├── components/     # UI components
+│   │   ├── pages/          # Page components
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── lib/            # Utilities
+│   └── nginx.conf          # Production web server config
+├── server/                  # Node.js backend
+│   ├── gemini.ts           # AI integration
+│   ├── prompts.ts          # Agent prompt definitions
+│   ├── routes.ts           # API endpoints
+│   ├── storage.ts          # Database layer
+│   └── db.ts               # Database connection
+├── shared/
+│   └── schema.ts           # Shared types & DB schema
+├── tests/                   # Integration tests
+├── Dockerfile.backend       # Backend container
+├── Dockerfile.frontend      # Frontend container
+└── docker-compose.yml       # Local Docker setup
+```
 
 ## API Documentation
 
-### Authentication
-The API has two types of endpoints:
-- **Protected endpoints** (`/api/*`) - Require authentication via session cookies
-- **Public endpoints** (`/api/public/*`) - No authentication required, but rate-limited
+### Public Endpoints (No Auth Required)
 
-### Public API Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/public/info` | GET | Available endpoints and rate limits |
+| `/api/public/translate` | POST | Translate text between languages |
+| `/api/public/transcribe` | POST | Convert speech to text |
+| `/api/public/speak` | POST | Convert text to speech |
 
-#### Get API Information
-```http
-GET /api/public/info
-```
-Returns information about available public endpoints, rate limits, and available voices.
+**Rate Limit:** 50 requests per 15 minutes per IP
 
-#### Public Text Translation
-```http
-POST /api/public/translate
-Content-Type: application/json
+### Translation Example
 
-{
-  "text": "Hello world",
-  "fromLanguage": "en-US",
-  "toLanguage": "es-ES",
-  "context": "Casual greeting"
-}
+```bash
+curl -X POST https://your-app.com/api/public/translate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello world",
+    "fromLanguage": "en-US",
+    "toLanguage": "es-ES"
+  }'
 ```
 
-**Response:**
-```json
-{
-  "translatedText": "Hola mundo",
-  "fromLanguage": "en-US",
-  "toLanguage": "es-ES",
-  "originalText": "Hello world"
-}
-```
+### Protected Endpoints (Auth Required)
 
-#### Public Speech-to-Text
-```http
-POST /api/public/transcribe
-Content-Type: multipart/form-data
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chats` | GET/POST | List or create chats |
+| `/api/chats/:id/messages` | GET/POST | Get or send messages |
+| `/api/chats/:id/stream` | GET | Stream AI responses (SSE) |
+| `/api/auth/user` | GET | Current user info |
+| `/api/user/profile-image` | POST | Upload profile picture |
+| `/api/user/change-password` | POST | Update password |
 
-Form Data:
-- audio: Audio file (required)
-- language: Language code (optional, default: 'auto')
-```
+### Admin Endpoints
 
-**Response:**
-```json
-{
-  "text": "Transcribed text content",
-  "language": "en-US"
-}
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/admin/prompts` | GET | List all agent prompts |
+| `/api/admin/prompts/:id` | GET/PUT | Get or update a prompt |
+| `/api/admin/prompts/:id/reset` | POST | Reset prompt to default |
+| `/api/admin/users` | GET | List all users |
+| `/api/admin/feedback` | GET | View user feedback |
 
-#### Public Text-to-Speech
-```http
-POST /api/public/speak
-Content-Type: application/json
+## Prompt Management
 
-{
-  "text": "Hello world",
-  "language": "en-US",
-  "voice": "alloy"
-}
-```
+Agent prompts are stored in the database and can be managed via the Admin UI at `/admin/prompts`.
 
-**Response:** Audio file (MP3 format)
+### Default Prompts
 
-**Rate Limits for Public API:**
-- 50 requests per 15 minutes per IP address
-- Text length limits: 2048 chars for translation, 1024 chars for TTS
+Edit default prompts in `server/prompts.ts`:
 
-### Chat Endpoints
-
-#### Create New Chat
-```http
-POST /api/chats
-Content-Type: application/json
-
-{
-  "title": "Chat title"
-}
-```
-
-#### Get User's Chats
-```http
-GET /api/chats
-```
-
-#### Get Chat Messages
-```http
-GET /api/chats/:chatId/messages
-```
-
-#### Send Message
-```http
-POST /api/chats/:chatId/messages
-Content-Type: application/json
-
-{
-  "content": "Message content",
-  "role": "user"
-}
-```
-
-#### Stream AI Response
-```http
-GET /api/chats/:chatId/stream
-Accept: text/event-stream
-```
-
-### Voice API Endpoints
-
-#### Speech-to-Text (Whisper)
-```http
-POST /api/audio/transcribe
-Content-Type: multipart/form-data
-Authorization: Required
-
-Form Data:
-- audio: Audio file (mp3, wav, m4a, etc.)
-- language: Target language code (optional)
-```
-
-**Response:**
-```json
-{
-  "text": "Transcribed text content",
-  "language": "en-US"
-}
-```
-
-#### Text-to-Speech (TTS)
-```http
-POST /api/audio/speak
-Content-Type: application/json
-Authorization: Required
-
-{
-  "text": "Text to convert to speech",
-  "language": "en-US",
-  "voice": "alloy"
-}
-```
-
-**Available Voices:**
-- `alloy` - Versatile and balanced
-- `echo` - Clear and articulate  
-- `fable` - Expressive and warm
-- `onyx` - Deep and authoritative
-- `nova` - Warm and engaging
-- `shimmer` - Soft and gentle
-
-**Response:** Audio file (MP3 format)
-
-### User Management
-
-#### Get Current User
-```http
-GET /api/auth/user
-```
-
-#### Generate API Key
-```http
-POST /api/users/api-keys
-Content-Type: application/json
-
-{
-  "name": "API key name"
-}
-```
-
-#### Get API Keys
-```http
-GET /api/users/api-keys
-```
-
-## Usage Examples
-
-### JavaScript/TypeScript Client
 ```typescript
-// Send a chat message
-const response = await fetch('/api/chats/123/messages', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    content: 'Translate this to Spanish: Hello world',
-    role: 'user'
-  })
-});
-
-// Convert speech to text
-const formData = new FormData();
-formData.append('audio', audioFile);
-formData.append('language', 'en-US');
-
-const transcription = await fetch('/api/audio/transcribe', {
-  method: 'POST',
-  body: formData
-});
-
-// Convert text to speech
-const audioResponse = await fetch('/api/audio/speak', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    text: 'Hello, how are you?',
-    voice: 'alloy',
-    language: 'en-US'
-  })
-});
-const audioBlob = await audioResponse.blob();
+export const AGENT_PROMPTS = {
+  storyteller: `You are the Storyteller Assistant...`,
+  conversation: `You are the Conversation Partner...`,
+  performer: `You are the Oral Performer...`,
+  // ...
+};
 ```
 
-### Python Client
-```python
-import requests
+### Adding a New Agent
 
-# Transcribe audio
-with open('audio.mp3', 'rb') as audio_file:
-    response = requests.post(
-        'https://your-app.replit.app/api/audio/transcribe',
-        files={'audio': audio_file},
-        data={'language': 'en-US'}
-    )
-    transcription = response.json()
-
-# Generate speech
-response = requests.post(
-    'https://your-app.replit.app/api/audio/speak',
-    json={
-        'text': 'Hello world',
-        'voice': 'nova',
-        'language': 'en-US'
-    }
-)
-with open('output.mp3', 'wb') as f:
-    f.write(response.content)
+1. Add to schema in `shared/schema.ts`:
+```typescript
+export const ASSISTANTS = {
+  // ...existing agents...
+  newAgent: {
+    id: 'newAgent',
+    name: 'New Agent Name',
+    description: 'Agent description',
+    model: 'gemini-2.0-flash-exp',
+  }
+};
 ```
 
-## Performance Features
+2. Add prompt in `server/prompts.ts`:
+```typescript
+export const AGENT_PROMPTS = {
+  // ...existing prompts...
+  newAgent: `Your prompt instructions here...`,
+};
+```
 
-### Caching Strategy
-- **Voice-specific caching**: Each voice has separate cache entries
-- **ETag support**: Efficient client-side caching
-- **Instant replay**: Previously generated audio plays immediately
-- **Memory management**: Automatic cache cleanup and rotation
+3. Run `npm run db:push` to seed the prompt to the database.
 
-### Optimization Details
-- **Fast TTS Model**: Uses `tts-1` for 1-3 second generation times
-- **Streaming Responses**: Real-time AI response display
-- **Efficient Audio Processing**: Optimized encoding and delivery
-- **Connection Pooling**: Database connection optimization
+## Deployment
 
-## Browser Compatibility
+### Docker (Local/Staging)
 
-- **Chrome/Chromium**: Full support
-- **Firefox**: Full support  
-- **Safari**: Full support
-- **Edge**: Full support
-- **Mobile browsers**: Responsive design with touch support
+```bash
+docker compose up -d
+docker compose logs -f
+```
+
+### Google Cloud Run (Production)
+
+1. **Set up infrastructure with Terraform:**
+```bash
+cd ../tf/environments/translation-prod
+terraform init
+terraform apply -var-file="translation-prod.tfvars"
+```
+
+2. **Configure GitHub Secrets:**
+   - `GCP_PROJECT_ID`
+   - `GCP_WORKLOAD_IDENTITY_PROVIDER`
+   - `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT`
+   - `NEON_DATABASE_URL`
+   - `GOOGLE_API_KEY`
+   - `SESSION_SECRET`
+
+3. **Deploy via push to main:**
+```bash
+git push origin main
+```
+
+GitHub Actions will automatically build, push, and deploy to Cloud Run.
+
+## Testing
+
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+./run_tests.sh all
+
+# Quick tests only
+./run_tests.sh quick
+
+# With coverage
+./run_tests.sh coverage
+```
+
+## Cost Analysis
+
+| Service | Cost |
+|---------|------|
+| Cloud Run (100k requests/month) | ~$5/month |
+| Gemini 2.0 Flash (1M tokens) | ~$0.13 |
+| Google Cloud TTS (1M chars) | ~$16 |
+| **Total typical usage** | **~$15-20/month** |
+
+**Compared to OpenAI: 97% cost reduction on AI operations**
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm start` | Start production server |
+| `npm run db:push` | Push schema changes to database |
+| `npm run check` | TypeScript type checking |
+
+## Troubleshooting
+
+### Database Connection Error
+```bash
+# Verify DATABASE_URL format
+postgresql://user:password@host:port/database
+
+# Test connection
+psql "$DATABASE_URL"
+```
+
+### Gemini API Errors
+```bash
+# Verify API key
+curl -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"test"}]}]}' \
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=YOUR_KEY"
+```
+
+### Cloud Run Deployment Issues
+```bash
+# Check logs
+gcloud run services logs read translation-helper-backend \
+  --region=us-central1 --limit=50
+
+# Check service status
+gcloud run services describe translation-helper-backend \
+  --region=us-central1
+```
 
 ## Contributing
 
@@ -408,58 +295,4 @@ with open('output.mp3', 'wb') as f:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Testing
-
-```bash
-# Install test dependencies
-pip install -r requirements-test.txt
-
-# Run all tests
-./run_tests.sh all
-
-# Run quick tests only
-./run_tests.sh quick
-
-# Run with coverage
-./run_tests.sh coverage
-```
-
-See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#testing) for detailed testing documentation.
-
-## Cost Comparison
-
-| Service | OpenAI | Google Gemini | Savings |
-|---------|--------|---------------|---------|
-| Translation (1M tokens) | $5.00 | $0.13 | **97%** |
-| Transcription (1 hour) | $0.36 | Included | **100%** |
-| Infrastructure | N/A | ~$5.50/month | Cloud Run |
-
-**Total monthly cost**: ~$15-20 for typical usage (vs $100+ with OpenAI)
-
-## Architecture
-
-The application uses a modern, cloud-native architecture:
-- **Frontend**: React + Vite served by Nginx on Google Cloud Run
-- **Backend**: Node.js/Express on Google Cloud Run
-- **Database**: Neon PostgreSQL (serverless)
-- **AI**: Google Gemini 2.0 Flash + Google Cloud TTS
-- **Infrastructure**: Terraform for IaC, GitHub Actions for CI/CD
-
-See [COMPLETE_GUIDE.md](COMPLETE_GUIDE.md#architecture) for detailed architecture diagrams.
-
-## Documentation
-
-- **[Complete Guide](COMPLETE_GUIDE.md)** - Comprehensive documentation with diagrams
-- **[Terraform Setup](../tf/environments/translation-prod/README.md)** - Infrastructure deployment
-- **[API Documentation](COMPLETE_GUIDE.md#api-documentation)** - Full API reference
-
-## Acknowledgments
-
-- **Google Gemini** for cost-effective, high-quality AI
-- **Neon** for serverless PostgreSQL
-- **Google Cloud** for scalable infrastructure
-- **Replit** for authentication services
-- **Radix UI** and **shadcn/ui** for the component library
-- **Tailwind CSS** for styling utilities
+MIT License - see [LICENSE](LICENSE) for details.

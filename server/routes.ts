@@ -420,9 +420,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Debug logging for admin status
-      console.log(`[Auth] User ${user.email} - isAdmin: ${user.isAdmin}, userId: ${user.id}`);
-      
       res.json({
         id: user.id,
         email: user.email,
