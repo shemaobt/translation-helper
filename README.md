@@ -243,8 +243,6 @@ pip install -r requirements-test.txt
 | Google Cloud TTS (1M chars) | ~$16 |
 | **Total typical usage** | **~$15-20/month** |
 
-**Compared to OpenAI: 97% cost reduction on AI operations**
-
 ## Scripts
 
 | Command | Description |
