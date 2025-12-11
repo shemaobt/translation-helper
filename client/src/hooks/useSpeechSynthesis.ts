@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
-interface OpenAISpeechSynthesisOptions {
+interface SpeechSynthesisOptions {
   lang?: string;
 }
 
-interface OpenAISpeechSynthesisHook {
+interface SpeechSynthesisHook {
   speak: (text: string, lang?: string) => void;
   pause: () => void;
   resume: () => void;
@@ -20,7 +20,7 @@ interface OpenAISpeechSynthesisHook {
 }
 
 // Local cache management
-const CACHE_KEY_PREFIX = 'openai_tts_';
+const CACHE_KEY_PREFIX = 'tts_cache_';
 const CACHE_EXPIRY_HOURS = 24;
 const MAX_CACHE_SIZE = 50; // Maximum number of cached audio files
 
@@ -121,9 +121,9 @@ function cleanupOldCache(): void {
   }
 }
 
-export function useOpenAISpeechSynthesis(
-  options: OpenAISpeechSynthesisOptions = {}
-): OpenAISpeechSynthesisHook {
+export function useSpeechSynthesis(
+  options: SpeechSynthesisOptions = {}
+): SpeechSynthesisHook {
   const { lang = 'en-US' } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -132,7 +132,7 @@ export function useOpenAISpeechSynthesis(
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentLanguageRef = useRef<string>(lang);
 
-  // OpenAI TTS is always supported (just needs internet)
+  // TTS is always supported (just needs internet)
   const isSupported = typeof window !== 'undefined';
 
   // Voice options - with canonical IDs for backend
@@ -188,7 +188,7 @@ export function useOpenAISpeechSynthesis(
       let audioUrl = getCachedAudio(text, language, voiceId);
       
       if (!audioUrl) {
-        // Generate new audio via OpenAI TTS
+        // Generate new audio via TTS API
         setIsLoading(true); // Show loading state for audio generation
         
         const response = await apiRequest('POST', '/api/audio/speak', {

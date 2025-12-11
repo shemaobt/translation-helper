@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
-interface OpenAISpeechRecognitionOptions {
+interface SpeechRecognitionOptions {
   lang?: string;
 }
 
-interface OpenAISpeechRecognitionHook {
+interface SpeechRecognitionHook {
   transcript: string;
   interimTranscript: string;
   isListening: boolean;
@@ -17,9 +17,9 @@ interface OpenAISpeechRecognitionHook {
   permissionDenied: boolean;
 }
 
-export function useOpenAISpeechRecognition(
-  options: OpenAISpeechRecognitionOptions = {}
-): OpenAISpeechRecognitionHook {
+export function useSpeechRecognition(
+  options: SpeechRecognitionOptions = {}
+): SpeechRecognitionHook {
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);

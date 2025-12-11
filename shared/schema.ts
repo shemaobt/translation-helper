@@ -103,8 +103,7 @@ Act like a consultant or facilitator who helps ensure translations faithfully co
 
 export type AssistantId = keyof typeof ASSISTANTS;
 
-// Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// Session storage table for user authentication.
 export const sessions = pgTable(
   "sessions",
   {
@@ -142,7 +141,7 @@ export const chats = pgTable("chats", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   assistantId: varchar("assistant_id").notNull().default('storyteller'),
   title: varchar("title").notNull(),
-  threadId: varchar("thread_id"), // OpenAI thread ID for conversation context
+  threadId: varchar("thread_id"), // Thread ID for conversation context
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

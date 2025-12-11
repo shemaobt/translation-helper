@@ -12,9 +12,6 @@ services:
       GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_API_KEY:-}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
-      REPLIT_OIDC_CLIENT_ID: ${REPLIT_OIDC_CLIENT_ID:-}
-      REPLIT_OIDC_CLIENT_SECRET: ${REPLIT_OIDC_CLIENT_SECRET:-}
-      REPLIT_OIDC_ISSUER: ${REPLIT_OIDC_ISSUER:-https://replit.com}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 5000
     ports:
@@ -45,4 +42,3 @@ services:
 networks:
   translation-network:
     driver: bridge
-

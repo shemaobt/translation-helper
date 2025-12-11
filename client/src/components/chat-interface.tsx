@@ -12,8 +12,8 @@ import { Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume
 
 // Use logo from public directory
 const logoImage = "/logo.png";
-import { useOpenAISpeechRecognition } from "@/hooks/useOpenAISpeechRecognition";
-import { useOpenAISpeechSynthesis } from "@/hooks/useOpenAISpeechSynthesis";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,11 +86,11 @@ export default function ChatInterface({
     isSupported: isSpeechRecognitionSupported,
     lastError,
     permissionDenied
-  } = useOpenAISpeechRecognition({ lang: selectedLanguage });
+  } = useSpeechRecognition({ lang: selectedLanguage });
   
   
   // Speech synthesis hook - expose for message components to use
-  const speechSynthesis = useOpenAISpeechSynthesis({ lang: selectedLanguage });
+  const speechSynthesis = useSpeechSynthesis({ lang: selectedLanguage });
   
 
   // Show toast for speech recognition errors

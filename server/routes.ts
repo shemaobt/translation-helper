@@ -978,7 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Audio transcription endpoint using OpenAI Whisper
+  // Audio transcription endpoint using Gemini
   app.post('/api/audio/transcribe', requireAuth, upload.single('audio'), async (req: any, res) => {
     try {
       if (!req.file) {
@@ -997,7 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Text-to-speech endpoint using OpenAI TTS
+  // Text-to-speech endpoint using Google Cloud TTS
   app.post('/api/audio/speak', requireAuth, async (req: any, res) => {
     try {
       const { text, language = 'en-US', voice } = req.body;
