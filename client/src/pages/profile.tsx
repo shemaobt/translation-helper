@@ -40,7 +40,7 @@ const passwordSchema = z.object({
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export default function Profile() {
-  const { user, isAuthenticated, isLoading, refetchUser } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -98,8 +98,8 @@ export default function Profile() {
         description: "Profile picture updated successfully",
       });
       setPreviewImage(null);
-      refetchUser();
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // Refetch user data to update the profile image in the UI
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
