@@ -292,8 +292,8 @@ export default function AdminPrompts() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative">
-      <div className="relative h-full">
+    <div className="h-screen bg-background flex relative overflow-hidden">
+      <div className="relative h-full w-64 flex-shrink-0">
         <Sidebar isMobile={isMobile} isOpen={true} />
       </div>
       

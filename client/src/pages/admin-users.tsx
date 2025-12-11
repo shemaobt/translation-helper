@@ -450,16 +450,16 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative" data-testid="page-admin-users">
+    <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-admin-users">
       {/* Sidebar - Always visible */}
-      <div className="relative h-full">
+      <div className="relative h-full w-64 flex-shrink-0">
         <Sidebar 
           isMobile={isMobile}
           isOpen={true}
         />
       </div>
       
-      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'}`}>
+      <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'} overflow-auto`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
           {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
