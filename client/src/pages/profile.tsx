@@ -51,7 +51,6 @@ export default function Profile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -98,7 +97,6 @@ export default function Profile() {
         description: "Profile picture updated successfully",
       });
       setPreviewImage(null);
-      // Refetch user data to update the profile image in the UI
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: any) => {
@@ -158,7 +156,6 @@ export default function Profile() {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         toast({
           title: "Invalid file",
@@ -168,7 +165,6 @@ export default function Profile() {
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -178,14 +174,12 @@ export default function Profile() {
         return;
       }
       
-      // Show preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewImage(e.target?.result as string);
       };
       reader.readAsDataURL(file);
       
-      // Upload
       uploadImageMutation.mutate(file);
     }
   };
@@ -236,7 +230,6 @@ export default function Profile() {
       
       <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'} overflow-auto`}>
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Header */}
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <User className="h-6 w-6" />
@@ -247,7 +240,6 @@ export default function Profile() {
             </p>
           </div>
 
-          {/* Profile Picture Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -303,7 +295,6 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Account Info Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -343,7 +334,6 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Change Password Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">

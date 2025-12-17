@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { Eye, EyeOff, Camera, User } from "lucide-react";
 
-// Use logo from public directory
 const logoImage = "/logo.png";
 
 const signupSchema = z.object({
@@ -42,7 +41,6 @@ function Signup() {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         toast({
           title: "Invalid file",
@@ -52,7 +50,6 @@ function Signup() {
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -62,7 +59,6 @@ function Signup() {
         return;
       }
       
-      // Convert to base64
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfileImage(e.target?.result as string);
@@ -89,12 +85,10 @@ function Signup() {
       return response.json();
     },
     onSuccess: (result) => {
-      // All new accounts require approval - never auto-login
       toast({
         title: "Account created!",
         description: "Your account has been created and is awaiting admin approval. You'll be able to log in once approved.",
       });
-      // Always redirect to login page with pending message
       setLocation("/login?message=pending");
     },
     onError: (error: any) => {
@@ -134,7 +128,6 @@ function Signup() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Profile Picture Upload */}
               <div className="flex flex-col items-center mb-2">
                 <div className="relative">
                   <Avatar className="h-20 w-20 cursor-pointer" onClick={() => fileInputRef.current?.click()}>

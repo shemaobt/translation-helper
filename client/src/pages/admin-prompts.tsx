@@ -38,7 +38,6 @@ export default function AdminPrompts() {
   const [editingNames, setEditingNames] = useState<Record<string, string>>({});
   const [editingDescriptions, setEditingDescriptions] = useState<Record<string, string>>({});
 
-  // Redirect to login if not authenticated, to dashboard if not admin
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -81,7 +80,6 @@ export default function AdminPrompts() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prompts"] });
-      // Clear the editing state for this agent
       setEditingPrompts(prev => {
         const newState = { ...prev };
         delete newState[data.agentId];
@@ -132,7 +130,6 @@ export default function AdminPrompts() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prompts"] });
-      // Clear the editing state for this agent
       setEditingPrompts(prev => {
         const newState = { ...prev };
         delete newState[data.agentId];
@@ -286,7 +283,6 @@ export default function AdminPrompts() {
     );
   }
 
-  // Guard: Return null if not authenticated or not admin
   if (!isAuthenticated || (user && !user.isAdmin)) {
     return null;
   }

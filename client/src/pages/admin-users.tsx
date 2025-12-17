@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAdminGuard } from "@/hooks/useAdminGuard";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
@@ -66,57 +66,26 @@ interface UserWithStats {
 }
 
 export default function AdminUsers() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, canAccess } = useAdminGuard();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  // Sidebar is always visible, no toggle state needed
   
-  // Filter and sort states
   const [searchQuery, setSearchQuery] = useState("");
   const [adminFilter, setAdminFilter] = useState<string>("all");
   const [approvalFilter, setApprovalFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   
-  // Dialog states
   const [passwordResetDialog, setPasswordResetDialog] = useState<{ open: boolean; user?: UserWithStats; password?: string }>({ open: false });
   const [copied, setCopied] = useState(false);
-
-  // Redirect to login if not authenticated, to dashboard if not admin
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 500);
-      return;
-    }
-    
-    if (!isLoading && isAuthenticated && user && !user.isAdmin) {
-      toast({
-        title: "Access Denied",
-        description: "Admin privileges required. Redirecting to dashboard...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, user, toast]);
 
   const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery<UserWithStats[]>({
     queryKey: ["/api/admin/users"],
     retry: false,
-    enabled: isAuthenticated && user?.isAdmin === true,
+    enabled: canAccess,
   });
 
-  // Handle query errors with useEffect
   useEffect(() => {
     if (usersError) {
       if (isUnauthorizedError(usersError)) {
@@ -131,7 +100,6 @@ export default function AdminUsers() {
         return;
       }
       
-      // Handle 403 Forbidden (not admin)
       if ((usersError as any)?.status === 403) {
         toast({
           title: "Access Denied",
@@ -232,8 +200,6 @@ export default function AdminUsers() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      // Show the password reset dialog with the temporary password
-      // Use data from API response instead of searching in local state
       const dialogUser: UserWithStats = users.find((u: UserWithStats) => u.id === data.id) || {
         id: data.id,
         email: data.email || 'Unknown user',
@@ -275,7 +241,6 @@ export default function AdminUsers() {
     },
   });
 
-  // Approval management mutations
   const approveUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const response = await apiRequest("POST", `/api/admin/users/${userId}/approve`, 
@@ -375,22 +340,18 @@ export default function AdminUsers() {
     }
   };
 
-  // Filter and sort users
   const filteredAndSortedUsers = (users as UserWithStats[])
     .filter((user: UserWithStats) => {
-      // Search filter
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = 
         user.email.toLowerCase().includes(searchLower) ||
         formatName(user).toLowerCase().includes(searchLower);
       
-      // Admin filter
       const matchesAdminFilter = 
         adminFilter === "all" ||
         (adminFilter === "admin" && user.isAdmin) ||
         (adminFilter === "user" && !user.isAdmin);
       
-      // Approval status filter
       const matchesApprovalFilter = 
         approvalFilter === "all" ||
         (approvalFilter === "pending" && user.approvalStatus === "pending") ||
@@ -451,7 +412,6 @@ export default function AdminUsers() {
 
   return (
     <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-admin-users">
-      {/* Sidebar - Always visible */}
       <div className="relative h-full w-64 flex-shrink-0">
         <Sidebar 
           isMobile={isMobile}
@@ -461,7 +421,6 @@ export default function AdminUsers() {
       
       <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'} overflow-auto`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
-          {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
             <div className="flex items-center justify-between">
               <div>
@@ -475,7 +434,6 @@ export default function AdminUsers() {
             </div>
           </div>
 
-          {/* Filters and Search */}
           <Card className="mb-6">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center space-x-2">
@@ -485,7 +443,6 @@ export default function AdminUsers() {
             </CardHeader>
             <CardContent>
               <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 lg:grid-cols-4 gap-4'}`}>
-                {/* Search */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Search</label>
                   <div className="relative">
@@ -500,7 +457,6 @@ export default function AdminUsers() {
                   </div>
                 </div>
                 
-                {/* Admin Filter */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">User Type</label>
                   <Select value={adminFilter} onValueChange={setAdminFilter}>
@@ -515,7 +471,6 @@ export default function AdminUsers() {
                   </Select>
                 </div>
                 
-                {/* Approval Status Filter */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Approval Status</label>
                   <Select value={approvalFilter} onValueChange={setApprovalFilter}>
@@ -531,7 +486,6 @@ export default function AdminUsers() {
                   </Select>
                 </div>
                 
-                {/* Sort By */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Sort By</label>
                   <Select value={sortBy} onValueChange={setSortBy}>
@@ -549,7 +503,6 @@ export default function AdminUsers() {
                   </Select>
                 </div>
                 
-                {/* Sort Order */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Order</label>
                   <Button
@@ -586,7 +539,6 @@ export default function AdminUsers() {
             </CardContent>
           </Card>
 
-          {/* Users List */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -614,7 +566,6 @@ export default function AdminUsers() {
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-3">
-                            {/* Header with name, email and admin badge */}
                             <div className="flex items-start gap-3 flex-wrap">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -627,7 +578,6 @@ export default function AdminUsers() {
                                       Admin
                                     </Badge>
                                   )}
-                                  {/* Approval Status Badge */}
                                   {user.approvalStatus === 'pending' && (
                                     <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" data-testid={`badge-pending-${user.id}`}>
                                       <Clock className="h-3 w-3 mr-1" />
@@ -654,7 +604,6 @@ export default function AdminUsers() {
                               </div>
                             </div>
 
-                            {/* User Information */}
                             <div className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-2 lg:grid-cols-3 gap-4'}`}>
                               <div className="flex items-center gap-2 text-sm">
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -677,7 +626,6 @@ export default function AdminUsers() {
                               </div>
                             </div>
 
-                            {/* Usage Statistics */}
                             <div className="bg-muted/30 rounded-lg p-4">
                               <h4 className="font-medium text-foreground mb-3">Usage Statistics</h4>
                               <div className={`grid ${isMobile ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-4'}`}>
@@ -713,7 +661,6 @@ export default function AdminUsers() {
                             </div>
                           </div>
                           
-                          {/* Actions Menu */}
                           <div className="ml-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -754,7 +701,6 @@ export default function AdminUsers() {
                                   Reset Password
                                 </DropdownMenuItem>
                                 
-                                {/* Approval Actions - Only show for pending users */}
                                 {user.approvalStatus === 'pending' && (
                                   <>
                                     <DropdownMenuItem
@@ -828,7 +774,6 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Password Reset Dialog */}
       <Dialog open={passwordResetDialog.open} onOpenChange={(open) => setPasswordResetDialog({ ...passwordResetDialog, open })}>
         <DialogContent data-testid="dialog-password-reset">
           <DialogHeader>

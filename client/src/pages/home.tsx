@@ -15,14 +15,12 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [defaultAssistant, setDefaultAssistant] = useState<AssistantId>('storyteller');
 
-  // Ensure sidebar is closed when switching to mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
     }
   }, [isMobile]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -51,7 +49,6 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-home">
-      {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 2xl:hidden"
@@ -60,7 +57,6 @@ export default function Home() {
         />
       )}
       
-      {/* Sidebar */}
       <div className={`
         ${isMobile 
           ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
@@ -78,7 +74,6 @@ export default function Home() {
         />
       </div>
       
-      {/* Main Chat Interface */}
       <div className="flex-1 flex flex-col min-w-0">
         <ChatInterface 
           chatId={chatId} 
