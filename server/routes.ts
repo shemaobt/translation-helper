@@ -2,89 +2,21 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateAssistantResponse, generateAssistantResponseStream, generateChatCompletion, generateChatTitle, clearChatThread, getChatThreadId, transcribeAudio, translateText, generateSpeech } from "./gemini";
-import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
-import { randomBytes, createHash } from "crypto";
+import { insertChatSchema, insertMessageSchema, insertApiKeySchema, insertFeedbackSchema } from "@shared/schema";
+import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
-import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import multer from "multer";
+import { config } from "./config";
+import { requireAuth, requireAdmin, requireCSRFHeader, getEffectiveApproval, authLimiter, publicApiLimiter, aiApiLimiter } from "./middleware";
+import { audioCache } from "./services";
 
-// Server-side audio cache for faster TTS responses
-interface CachedAudio {
-  buffer: Buffer;
-  timestamp: number;
-  etag: string;
-}
-
-class AudioCache {
-  private cache = new Map<string, CachedAudio>();
-  private maxSize = 100; // Limit memory usage
-  private ttl = 24 * 60 * 60 * 1000; // 24 hours
-
-  private createCacheKey(text: string, language: string, voice?: string): string {
-    // Normalize text for consistent caching
-    const normalizedText = text.trim().toLowerCase();
-    const voiceKey = voice || 'default';
-    return createHash('sha256').update(`${normalizedText}:${language}:${voiceKey}`).digest('hex');
-  }
-
-  private isExpired(cached: CachedAudio): boolean {
-    return Date.now() - cached.timestamp > this.ttl;
-  }
-
-  get(text: string, language: string, voice?: string): CachedAudio | null {
-    const key = this.createCacheKey(text, language, voice);
-    const cached = this.cache.get(key);
-    
-    if (cached && !this.isExpired(cached)) {
-      // LRU: Move to end by re-inserting
-      this.cache.delete(key);
-      this.cache.set(key, cached);
-      return cached;
-    }
-    
-    if (cached) {
-      this.cache.delete(key); // Remove expired
-    }
-    
-    return null;
-  }
-
-  set(text: string, language: string, buffer: Buffer, voice?: string): CachedAudio {
-    const key = this.createCacheKey(text, language, voice);
-    const etag = `"${key.substring(0, 16)}"`;
-    const cached: CachedAudio = {
-      buffer,
-      timestamp: Date.now(),
-      etag
-    };
-
-    // LRU eviction if cache is full
-    if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) this.cache.delete(firstKey);
-    }
-
-    this.cache.set(key, cached);
-    return cached;
-  }
-
-  getETag(text: string, language: string, voice?: string): string {
-    const key = this.createCacheKey(text, language, voice);
-    return `"${key.substring(0, 16)}"`;
-  }
-}
-
-const audioCache = new AudioCache();
-
-// Multer configuration for audio uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB limit (Whisper max file size)
+    fileSize: config.upload.audioMaxSize,
   },
-  fileFilter: (req: any, file: any, cb: any) => {
-    // Accept audio files
+  fileFilter: (_req: any, file: any, cb: any) => {
     if (file.mimetype.startsWith('audio/') || file.mimetype === 'video/webm') {
       cb(null, true);
     } else {
@@ -93,119 +25,6 @@ const upload = multer({
   }
 });
 
-// Authentication middleware
-async function requireAuth(req: any, res: any, next: any) {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  
-  try {
-    const user = await storage.getUserById(req.session.userId);
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-    
-    // Check approval status with legacy user override
-    const approvalStatus = user.approvalStatus ?? 'approved';
-    // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
-    const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
-    
-    if (effectiveApproval === 'pending') {
-      console.warn(`[Auth] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
-      return res.status(403).json({ 
-        message: "Your account is awaiting admin approval.",
-        approvalStatus: "pending"
-      });
-    }
-    
-    if (effectiveApproval === 'rejected') {
-      return res.status(403).json({ 
-        message: "Your account has been rejected. Please contact support.",
-        approvalStatus: "rejected"
-      });
-    }
-    
-    if (effectiveApproval !== 'approved') {
-      console.warn(`[Auth] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
-      return res.status(403).json({ 
-        message: "Account access denied. Please contact support.",
-        approvalStatus: effectiveApproval
-      });
-    }
-    
-    req.userId = req.session.userId;
-    req.user = user;
-    return next();
-  } catch (error) {
-    console.error("Authentication middleware error:", error);
-    return res.status(500).json({ message: "Authentication check failed" });
-  }
-}
-
-// Admin authorization middleware
-async function requireAdmin(req: any, res: any, next: any) {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  
-  try {
-    const user = await storage.getUserById(req.session.userId);
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-    
-    // Check approval status first with legacy user override
-    const approvalStatus = user.approvalStatus ?? 'approved';
-    // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
-    const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
-    
-    if (effectiveApproval === 'pending') {
-      console.warn(`[Admin] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
-      return res.status(403).json({ 
-        message: "Your account is awaiting admin approval.",
-        approvalStatus: "pending"
-      });
-    }
-    
-    if (effectiveApproval === 'rejected') {
-      return res.status(403).json({ 
-        message: "Your account has been rejected. Please contact support.",
-        approvalStatus: "rejected"
-      });
-    }
-    
-    if (effectiveApproval !== 'approved') {
-      console.warn(`[Admin] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
-      return res.status(403).json({ 
-        message: "Account access denied. Please contact support.",
-        approvalStatus: effectiveApproval
-      });
-    }
-    
-    // Then check admin status
-    if (!user.isAdmin) {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    
-    req.userId = user.id;
-    req.user = user;
-    return next();
-  } catch (error) {
-    console.error("Admin authorization error:", error);
-    return res.status(500).json({ message: "Authorization check failed" });
-  }
-}
-
-// CSRF protection middleware - requires custom header for state-changing operations
-function requireCSRFHeader(req: any, res: any, next: any) {
-  const customHeader = req.get('X-Requested-With');
-  if (customHeader !== 'XMLHttpRequest') {
-    return res.status(403).json({ message: "Missing required security header" });
-  }
-  return next();
-}
-
-// Explicit validation schemas with security requirements
 const signupValidationSchema = z.object({
   email: z.string().email().toLowerCase(),
   password: z.string().min(6, "Password must be at least 6 characters long"),
@@ -219,55 +38,23 @@ const loginValidationSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-// Rate limiting for authentication routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 auth attempts per windowMs
-  message: { message: "Too many authentication attempts, please try again later" },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limiter for public API endpoints
-const publicApiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: { error: 'Too many requests from this IP, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limiter for AI endpoints (more restrictive)
-const aiApiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 AI requests per windowMs
-  message: { error: 'Too many AI requests from this IP, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth routes
   app.post('/api/auth/signup', authLimiter, async (req: any, res) => {
     try {
       const userData = signupValidationSchema.parse(req.body);
       
-      // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
       
-      // Hash password
-      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      const hashedPassword = await bcrypt.hash(userData.password, config.auth.saltRounds);
       
-      // Create user
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword
       });
       
-      // Check approval status - don't log in pending users
       const approvalStatus = user.approvalStatus ?? 'pending';
       
       if (approvalStatus === 'pending') {
@@ -278,19 +65,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Only log in approved users (legacy behavior for existing approved users)
       if (approvalStatus === 'approved') {
-        // Regenerate session to prevent session fixation
         req.session.regenerate((err: any) => {
           if (err) {
             console.error('Session regeneration failed:', err);
             return res.status(500).json({ message: "Failed to create session" });
           }
           
-          // Set session
           req.session.userId = user.id;
           
-          // Save session to ensure it's persisted
           req.session.save((saveErr: any) => {
             if (saveErr) {
               console.error('Session save failed:', saveErr);
@@ -307,7 +90,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         });
       } else {
-        // Rejected or other status
         return res.status(403).json({ 
           message: "Account creation failed. Please contact support.",
           approvalStatus: approvalStatus 
@@ -321,7 +103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', authLimiter, async (req: any, res) => {
     try {
-      // Validate login data
       const { email, password } = loginValidationSchema.parse(req.body);
       
       const user = await storage.getUserByEmail(email);
@@ -334,13 +115,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Check approval status before creating session with legacy user override
-      const approvalStatus = user.approvalStatus ?? 'approved';
-      // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
-      const effectiveApproval = (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
+      const effectiveApproval = getEffectiveApproval(user);
       
       if (effectiveApproval === 'pending') {
-        console.warn(`[Login] Blocking pending user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
         return res.status(403).json({ 
           message: "Your account is awaiting admin approval. Please wait for approval before logging in.",
           approvalStatus: "pending"
@@ -354,38 +131,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Only allow approved users to log in
       if (effectiveApproval !== 'approved') {
-        console.warn(`[Login] Blocking unapproved user: approval=${user.approvalStatus} lastLoginAt=${user.lastLoginAt} email=${user.email}`);
         return res.status(403).json({ 
           message: "Account access denied. Please contact support.",
           approvalStatus: effectiveApproval
         });
       }
       
-      // Regenerate session to prevent session fixation
       req.session.regenerate((err: any) => {
         if (err) {
           console.error('Session regeneration failed:', err);
           return res.status(500).json({ message: "Failed to create session" });
         }
         
-        // Set session
         req.session.userId = user.id;
         
-        // Save session to ensure it's persisted
         req.session.save(async (saveErr: any) => {
           if (saveErr) {
             console.error('Session save failed:', saveErr);
             return res.status(500).json({ message: "Failed to save session" });
           }
           
-          // Track login activity
           try {
             await storage.updateUserLastLogin(user.id);
           } catch (loginTrackErr) {
             console.error('Failed to track login:', loginTrackErr);
-            // Don't fail the login for tracking errors
           }
           
           res.json({
@@ -408,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Failed to logout" });
       }
-      res.clearCookie('translation.sid'); // Use our custom session cookie name
+      res.clearCookie(config.session.cookieName);
       res.json({ message: "Logged out successfully" });
     });
   });
@@ -435,13 +205,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Multer configuration for profile image uploads
   const profileImageUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit
+      fileSize: config.upload.profileImageMaxSize,
     },
-    fileFilter: (req: any, file: any, cb: any) => {
+    fileFilter: (_req: any, file: any, cb: any) => {
       if (file.mimetype.startsWith('image/')) {
         cb(null, true);
       } else {
@@ -450,7 +219,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User profile routes
   app.post('/api/user/profile-image', requireAuth, profileImageUpload.single('image'), async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -460,11 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No image file provided" });
       }
       
-      // Convert image to base64 data URL for storage
-      // In production, you'd want to use a proper file storage service (S3, GCS, etc.)
       const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-      
-      // Update user profile image
       await storage.updateUserProfileImage(userId, base64Image);
       
       res.json({ message: "Profile image updated successfully", profileImageUrl: base64Image });
@@ -487,7 +251,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "New password must be at least 6 characters" });
       }
       
-      // Get user and verify current password
       const user = await storage.getUserById(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -498,8 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
       
-      // Hash and update new password
-      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      const hashedPassword = await bcrypt.hash(newPassword, config.auth.saltRounds);
       await storage.updateUserPassword(userId, hashedPassword);
       
       res.json({ message: "Password changed successfully" });
@@ -509,7 +271,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat routes
   app.get('/api/chats', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -527,7 +288,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const chatData = insertChatSchema.parse({ ...req.body, userId });
       const chat = await storage.createChat(chatData);
       
-      // Track chat creation
       await storage.incrementUserChatCount(userId);
       
       res.json(chat);
@@ -570,27 +330,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { chatId } = req.params;
       const { content } = req.body;
 
-      // Verify chat belongs to user
       const chat = await storage.getChat(chatId, userId);
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
       }
 
-      // Create user message
       const userMessage = await storage.createMessage({
         chatId,
         role: "user",
         content,
       });
 
-      // Check if this is the first user message and update title immediately
       const existingMessages = await storage.getChatMessages(chatId, userId);
       if (existingMessages.length === 1) {
         const title = await generateChatTitle(content);
         await storage.updateChatTitle(chatId, title, userId);
       }
 
-      // Generate AI response using the selected assistant
       const threadId = await getChatThreadId(chatId, userId);
       const aiResponse = await generateAssistantResponse({
         chatId,
@@ -599,14 +355,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         threadId: threadId || undefined,
       }, userId);
 
-      // Create assistant message
       const assistantMessage = await storage.createMessage({
         chatId,
         role: "assistant",
         content: aiResponse.content,
       });
 
-      // Track message creation and API usage
       await Promise.all([
         storage.incrementUserMessageCount(userId),
         storage.incrementUserApiUsage(userId)
@@ -622,47 +376,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Streaming message endpoint for real-time AI responses
   app.post('/api/chats/:chatId/messages/stream', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const { chatId } = req.params;
       const { content } = req.body;
 
-      // Verify chat belongs to user
       const chat = await storage.getChat(chatId, userId);
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
       }
 
-      // Create user message
       const userMessage = await storage.createMessage({
         chatId,
         role: "user",
         content,
       });
 
-      // Check if this is the first user message and update title immediately
       const existingMessages = await storage.getChatMessages(chatId, userId);
       if (existingMessages.length === 1) {
         const title = await generateChatTitle(content);
         await storage.updateChatTitle(chatId, title, userId);
       }
 
-      // Set up Server-Sent Events
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders();
 
-      // Send initial user message
       res.write(`data: ${JSON.stringify({ 
         type: 'user_message', 
         data: userMessage 
       })}\n\n`);
 
       try {
-        // Generate streaming AI response
         const threadId = await getChatThreadId(chatId, userId);
         let assistantMessageId: string | null = null;
         let fullContent = "";
@@ -677,41 +424,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (chunk.type === 'content') {
             fullContent += chunk.data;
             
-            // Create assistant message on first chunk
             if (!assistantMessageId) {
               const assistantMessage = await storage.createMessage({
                 chatId,
                 role: "assistant",
-                content: "", // Will be updated incrementally
+                content: "",
               });
               assistantMessageId = assistantMessage.id;
               
-              // Send assistant message created event
               res.write(`data: ${JSON.stringify({ 
                 type: 'assistant_message_start',
                 data: assistantMessage
               })}\n\n`);
             }
 
-            // Send content chunk
             res.write(`data: ${JSON.stringify({ 
               type: 'content', 
               data: chunk.data 
             })}\n\n`);
 
           } else if (chunk.type === 'done') {
-            // Update the assistant message with final content
             if (assistantMessageId) {
               await storage.updateMessage(assistantMessageId, { content: fullContent });
             }
 
-            // Track message creation and API usage for streaming
             await Promise.all([
               storage.incrementUserMessageCount(userId),
               storage.incrementUserApiUsage(userId)
             ]);
 
-            // Send completion event
             res.write(`data: ${JSON.stringify({ 
               type: 'done', 
               data: chunk.data 
@@ -738,7 +479,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const { chatId } = req.params;
       await storage.deleteChat(chatId, userId);
-      // Clean up thread to prevent memory leaks
       await clearChatThread(chatId, userId);
       res.json({ message: "Chat deleted successfully" });
     } catch (error) {
@@ -752,17 +492,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const { chatId } = req.params;
       
-      // Create update schema for validating partial chat updates
       const updateChatSchema = insertChatSchema.pick({ assistantId: true, title: true }).partial();
       const updates = updateChatSchema.parse(req.body);
       
-      // Verify chat belongs to user
       const existingChat = await storage.getChat(chatId, userId);
       if (!existingChat) {
         return res.status(404).json({ message: "Chat not found" });
       }
       
-      // Update the chat
       const updatedChat = await storage.updateChat(chatId, updates, userId);
       res.json(updatedChat);
     } catch (error) {
@@ -771,13 +508,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API Key routes
   app.get('/api/api-keys', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const apiKeys = await storage.getUserApiKeys(userId);
       
-      // Don't return the actual key hash
       const safeApiKeys = apiKeys.map(key => ({
         ...key,
         keyHash: undefined,
@@ -796,7 +531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const { name } = insertApiKeySchema.parse({ ...req.body, userId });
       
-      // Generate a new API key
       const key = `ak_${randomBytes(16).toString('hex')}`;
       
       const apiKey = await storage.createApiKey({
@@ -806,10 +540,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true,
       });
 
-      // Return the key once (user needs to save it)
       res.json({
         ...apiKey,
-        key, // Only returned once
+        key,
         keyHash: undefined,
       });
     } catch (error) {
@@ -830,7 +563,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard stats
   app.get('/api/stats', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
@@ -841,8 +573,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
-
-  // Public API endpoints (for external API access)
   const authenticateApiKey = async (req: any, res: any, next: any) => {
     try {
       const authHeader = req.headers.authorization;
@@ -852,20 +582,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const apiKey = authHeader.substring(7);
       
-      // Extract prefix for lookup (first 8 characters)
       if (apiKey.length < 8) {
         return res.status(401).json({ message: "Invalid API key format" });
       }
       
       const prefix = apiKey.substring(0, 8);
-      
-      // Get candidate keys by prefix
       const candidateKeys = await storage.getApiKeysByPrefix(prefix);
       if (candidateKeys.length === 0) {
         return res.status(401).json({ message: "Invalid API key" });
       }
       
-      // Find matching key using constant-time comparison
       let matchedKey: any = null;
       for (const candidateKey of candidateKeys) {
         const isValid = await bcrypt.compare(apiKey, candidateKey.keyHash);
@@ -879,19 +605,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid API key" });
       }
 
-      // Check approval status of the API key owner
       const keyOwner = await storage.getUserById(matchedKey.userId);
       if (!keyOwner) {
         return res.status(401).json({ message: "API key owner not found" });
       }
       
-      // Check approval status with legacy user override
-      const approvalStatus = keyOwner.approvalStatus ?? 'approved';
-      // Legacy override: users with lastLoginAt who are 'pending' are treated as 'approved'
-      const effectiveApproval = (approvalStatus === 'pending' && keyOwner.lastLoginAt) ? 'approved' : approvalStatus;
+      const effectiveApproval = getEffectiveApproval(keyOwner);
       
       if (effectiveApproval === 'pending') {
-        console.warn(`[API] Blocking pending user: approval=${keyOwner.approvalStatus} lastLoginAt=${keyOwner.lastLoginAt} email=${keyOwner.email}`);
         return res.status(403).json({ 
           message: "API access denied. Your account is awaiting admin approval.",
           approvalStatus: "pending"
@@ -906,7 +627,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (effectiveApproval !== 'approved') {
-        console.warn(`[API] Blocking unapproved user: approval=${keyOwner.approvalStatus} lastLoginAt=${keyOwner.lastLoginAt} email=${keyOwner.email}`);
         return res.status(403).json({ 
           message: "API access denied. Please contact support.",
           approvalStatus: effectiveApproval
@@ -932,7 +652,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Messages array is required" });
       }
 
-      // For external API, we'll use the assistant with a temporary chat ID
       const tempChatId = `api_${randomBytes(8).toString('hex')}`;
       const lastUserMessage = messages[messages.length - 1];
       
@@ -940,14 +659,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Last message must be from user" });
       }
 
-      // Use the new generateChatCompletion function to handle the entire conversation
       const response = await generateChatCompletion({
         chatId: tempChatId,
         messages: messages,
-        assistantId: 'storyteller', // Default to storyteller for external API
-      }, 'api-user'); // Use special API user ID for external requests
+        assistantId: 'storyteller',
+      }, 'api-user');
 
-      // Record usage
       await storage.recordApiUsage({
         apiKeyId: req.apiKey.id,
         tokens: response.tokens,
@@ -978,7 +695,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Audio transcription endpoint using Gemini
   app.post('/api/audio/transcribe', requireAuth, upload.single('audio'), async (req: any, res) => {
     try {
       if (!req.file) {
@@ -986,8 +702,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
-      
-      // Track API usage
       await storage.incrementUserApiUsage(req.userId);
       
       res.json({ text: transcription });
@@ -997,7 +711,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Text-to-speech endpoint using Google Cloud TTS
   app.post('/api/audio/speak', requireAuth, async (req: any, res) => {
     try {
       const { text, language = 'en-US', voice } = req.body;
@@ -1010,35 +723,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Text too long (max 4096 characters)" });
       }
 
-      // Generate ETag for this content (include voice for proper caching)
       const etag = audioCache.getETag(text, language, voice);
       
-      // Check if client has cached version
       const clientETag = req.headers['if-none-match'];
       if (clientETag === etag) {
-        return res.status(304).end(); // Not Modified
+        return res.status(304).end();
       }
 
-      // Check server cache first
       let cached = audioCache.get(text, language, voice);
       let audioBuffer: Buffer;
 
       if (cached) {
-        // Cache hit - instant response!
         audioBuffer = cached.buffer;
       } else {
-        // Cache miss - generate and cache
         audioBuffer = await generateSpeech(text, language, voice);
         cached = audioCache.set(text, language, audioBuffer, voice);
-        
-        // Track API usage for new generations
         await storage.incrementUserApiUsage(req.userId);
       }
       
       res.set({
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.length.toString(),
-        'Cache-Control': 'public, max-age=31536000, immutable', // 1 year - content-addressable
+        'Cache-Control': 'public, max-age=31536000, immutable',
         'ETag': etag,
       });
       
@@ -1049,9 +755,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PUBLIC API ENDPOINTS - No authentication required, but rate limited
-  
-  // Public text translation endpoint
   app.post('/api/public/translate', aiApiLimiter, async (req: any, res) => {
     try {
       const { text, fromLanguage = 'auto', toLanguage = 'en-US', context = '' } = req.body;
@@ -1064,7 +767,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text too long (max 2048 characters)" });
       }
 
-      // Use Gemini for translation
       const translatedText = await translateText(text, fromLanguage, toLanguage, context);
 
       res.json({
@@ -1079,7 +781,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public speech-to-text endpoint
   app.post('/api/public/transcribe', aiApiLimiter, upload.single('audio'), async (req: any, res) => {
     try {
       if (!req.file) {
@@ -1099,7 +800,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public text-to-speech endpoint
   app.post('/api/public/speak', aiApiLimiter, async (req: any, res) => {
     try {
       const { text, language = 'en-US', voice = 'alloy' } = req.body;
@@ -1112,16 +812,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text too long (max 1024 characters for public API)" });
       }
 
-      // Generate ETag for this content
       const etag = audioCache.getETag(text, language, voice);
       
-      // Check if client has cached version
       const clientETag = req.headers['if-none-match'];
       if (clientETag === etag) {
-        return res.status(304).end(); // Not Modified
+        return res.status(304).end();
       }
 
-      // Check server cache first
       let cached = audioCache.get(text, language, voice);
       let audioBuffer: Buffer;
 
@@ -1137,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Content-Length': audioBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
         'ETag': etag,
-        'Access-Control-Allow-Origin': '*', // Allow CORS for public API
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type, If-None-Match',
       });
       
@@ -1147,8 +844,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Speech generation failed" });
     }
   });
-
-  // Public API info endpoint
   app.get('/api/public/info', publicApiLimiter, (req: any, res) => {
     res.json({
       name: "Translation Helper Public API",
@@ -1193,10 +888,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Feedback routes
   app.post('/api/feedback', publicApiLimiter, async (req: any, res) => {
     try {
-      // Validate feedback data
       const feedbackSchema = insertFeedbackSchema.extend({
         message: z.string().min(1, "Feedback message is required").max(5000, "Message too long"),
         userEmail: z.string().email().optional().or(z.literal("")),
@@ -1205,8 +898,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const feedbackData = feedbackSchema.parse(req.body);
-      
-      // Extract userId from session if available
       const userId = req.session?.userId || null;
 
       const feedback = await storage.createFeedback({
@@ -1214,7 +905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         userEmail: feedbackData.userEmail || undefined,
         userName: feedbackData.userName || undefined,
-        status: 'new', // Default status
+        status: 'new',
       });
 
       res.json({
@@ -1231,7 +922,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin feedback management routes (requires admin auth)
   app.get('/api/admin/feedback', requireAdmin, async (req: any, res) => {
     try {
       const feedback = await storage.getAllFeedback();
@@ -1242,7 +932,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // More specific routes must come before generic :id routes
   app.get('/api/admin/feedback/unread-count', requireAdmin, async (req: any, res) => {
     try {
       const unreadCount = await storage.getUnreadFeedbackCount();
@@ -1274,7 +963,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
 
-      // Validate status
       const statusSchema = z.enum(["new", "read", "resolved"]);
       const validatedStatus = statusSchema.parse(status);
 
@@ -1310,12 +998,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin user management endpoints
   app.get('/api/admin/users', requireAdmin, async (req: any, res) => {
     try {
       const users = await storage.getAllUsersWithStats();
       
-      // Remove sensitive information from response but include approval status
       const sanitizedUsers = users.map(user => ({
         id: user.id,
         email: user.email,
@@ -1342,18 +1028,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       
-      // Validation: ensure userId is provided and is a valid UUID format
       const userIdSchema = z.string().uuid();
       const validatedUserId = userIdSchema.parse(userId);
 
-      // Prevent admins from removing their own admin status
       if (validatedUserId === req.userId) {
         return res.status(400).json({ message: "Cannot modify your own admin status" });
       }
 
       const updatedUser = await storage.toggleUserAdminStatus(validatedUserId);
       
-      // Return sanitized user data
       const sanitizedUser = {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -1380,11 +1063,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       
-      // Validation: ensure userId is provided and is a valid UUID format
       const userIdSchema = z.string().uuid();
       const validatedUserId = userIdSchema.parse(userId);
 
-      // Prevent admins from deleting their own account
       if (validatedUserId === req.userId) {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
@@ -1409,16 +1090,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       
-      // Validation: ensure userId is provided and is a valid UUID format
       const userIdSchema = z.string().uuid();
       const validatedUserId = userIdSchema.parse(userId);
 
-      // Generate a secure temporary password
       const tempPassword = randomBytes(12).toString('base64').replace(/[+/]/g, 'A').substring(0, 12);
       
       const updatedUser = await storage.resetUserPassword(validatedUserId, tempPassword);
       
-      // Return sanitized user data along with the temporary password
       const sanitizedUser = {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -1441,12 +1119,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin user approval management endpoints
   app.get('/api/admin/users/pending', requireAdmin, async (req: any, res) => {
     try {
       const pendingUsers = await storage.getPendingUsers();
       
-      // Remove sensitive information from response
       const sanitizedUsers = pendingUsers.map(user => ({
         id: user.id,
         email: user.email,
@@ -1477,13 +1153,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       
-      // Validation: ensure userId is provided and is a valid UUID format
       const userIdSchema = z.string().uuid();
       const validatedUserId = userIdSchema.parse(userId);
 
       const approvedUser = await storage.approveUser(validatedUserId, req.userId);
       
-      // Return sanitized user data
       const sanitizedUser = {
         id: approvedUser.id,
         email: approvedUser.email,
@@ -1512,13 +1186,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       
-      // Validation: ensure userId is provided and is a valid UUID format
       const userIdSchema = z.string().uuid();
       const validatedUserId = userIdSchema.parse(userId);
 
       const rejectedUser = await storage.rejectUser(validatedUserId, req.userId);
       
-      // Return sanitized user data
       const sanitizedUser = {
         id: rejectedUser.id,
         email: rejectedUser.email,
@@ -1543,7 +1215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin prompt management endpoints
   app.get('/api/admin/prompts', requireAdmin, async (req: any, res) => {
     try {
       const prompts = await storage.getAllPrompts();
@@ -1575,7 +1246,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { agentId } = req.params;
       const { prompt, name, description } = req.body;
 
-      // Validate prompt content
       const promptSchema = z.object({
         prompt: z.string().min(1, "Prompt is required"),
         name: z.string().optional(),
@@ -1631,8 +1301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Catch-all for unmatched API routes - return 404 instead of HTML
-  app.use('/api/*', (req, res) => {
+  app.use('/api/*', (_req, res) => {
     res.status(404).json({ message: "API endpoint not found" });
   });
 
