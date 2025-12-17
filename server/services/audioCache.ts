@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { config } from '../config';
+import { Buffer } from 'buffer';
 
 export interface CachedAudio {
   buffer: Buffer;
