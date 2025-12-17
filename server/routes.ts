@@ -9,7 +9,7 @@ import { z } from "zod";
 import multer from "multer";
 import { config } from "./config";
 import { requireAuth, requireAdmin, requireCSRFHeader, getEffectiveApproval, authLimiter, publicApiLimiter, aiApiLimiter } from "./middleware";
-import { audioCache } from "./services";
+import { getCachedAudio, setCachedAudio, getAudioETag } from "./services";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -723,21 +723,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Text too long (max 4096 characters)" });
       }
 
-      const etag = audioCache.getETag(text, language, voice);
+      const etag = getAudioETag(text, language, voice);
       
       const clientETag = req.headers['if-none-match'];
       if (clientETag === etag) {
         return res.status(304).end();
       }
 
-      let cached = audioCache.get(text, language, voice);
+      let cached = getCachedAudio(text, language, voice);
       let audioBuffer: Buffer;
 
       if (cached) {
         audioBuffer = cached.buffer;
       } else {
         audioBuffer = await generateSpeech(text, language, voice);
-        cached = audioCache.set(text, language, audioBuffer, voice);
+        cached = setCachedAudio(text, language, audioBuffer, voice);
         await storage.incrementUserApiUsage(req.userId);
       }
       
@@ -812,21 +812,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Text too long (max 1024 characters for public API)" });
       }
 
-      const etag = audioCache.getETag(text, language, voice);
+      const etag = getAudioETag(text, language, voice);
       
       const clientETag = req.headers['if-none-match'];
       if (clientETag === etag) {
         return res.status(304).end();
       }
 
-      let cached = audioCache.get(text, language, voice);
+      let cached = getCachedAudio(text, language, voice);
       let audioBuffer: Buffer;
 
       if (cached) {
         audioBuffer = cached.buffer;
       } else {
         audioBuffer = await generateSpeech(text, language, voice);
-        cached = audioCache.set(text, language, audioBuffer, voice);
+        cached = setCachedAudio(text, language, audioBuffer, voice);
       }
       
       res.set({

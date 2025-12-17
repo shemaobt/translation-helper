@@ -1,2 +1,6 @@
-export { AudioCache, audioCache, type CachedAudio } from './audioCache';
-
+export {
+  getCachedAudio,
+  setCachedAudio,
+  getAudioETag,
+  type CachedAudio,
+} from './audioCache';
