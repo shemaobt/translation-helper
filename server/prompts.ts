@@ -1,10 +1,3 @@
-/**
- * Agent System Prompts
- * 
- * Centralized prompt management for all AI assistants.
- * These prompts serve as defaults and are stored in the database for editing.
- */
-
 export const AGENT_PROMPTS = {
   backTranslationChecker: `Instructions for the Back Translation Checker
 
@@ -425,16 +418,10 @@ Avoidance of Unauthorized Changes:
 
 export type AgentPromptId = keyof typeof AGENT_PROMPTS;
 
-/**
- * Get default prompt for an agent
- */
 export function getDefaultPrompt(agentId: AgentPromptId): string {
   return AGENT_PROMPTS[agentId];
 }
 
-/**
- * Get all default prompts with metadata
- */
 export function getAllDefaultPrompts(): Array<{
   agentId: AgentPromptId;
   name: string;
