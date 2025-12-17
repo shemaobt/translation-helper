@@ -1,6 +1,5 @@
 import { User, Volume2, VolumeX, Pause, Loader2 } from "lucide-react";
 
-// Use logo from public directory
 const logoImage = "/logo.png";
 import type { Message } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export default function MessageComponent({ message, speechSynthesis, selectedLan
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Sync with speech synthesis state
   useEffect(() => {
     if (speechSynthesis) {
       setIsSpeaking(speechSynthesis.isSpeaking);

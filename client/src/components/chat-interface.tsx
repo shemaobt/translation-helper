@@ -10,7 +10,6 @@ import MessageComponent from "./message";
 import FeedbackForm from "./feedback-form";
 import { Trash2, Send, Menu, ChevronDown, Mic, MicOff, Square, Languages, Volume2, Loader2, MessageSquare } from "lucide-react";
 
-// Use logo from public directory
 const logoImage = "/logo.png";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
@@ -40,7 +39,6 @@ interface ChatInterfaceProps {
 
 const ASSISTANT_CONFIG = ASSISTANTS;
 
-// Language options for speech recognition and synthesis
 const LANGUAGE_OPTIONS = [
   { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
   { code: 'es-ES', name: 'Spanish (Spain)', flag: '🇪🇸' },
@@ -75,7 +73,6 @@ export default function ChatInterface({
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   
-  // Speech recognition hook with language support
   const {
     transcript,
     interimTranscript,
@@ -88,12 +85,9 @@ export default function ChatInterface({
     permissionDenied
   } = useSpeechRecognition({ lang: selectedLanguage });
   
-  
-  // Speech synthesis hook - expose for message components to use
   const speechSynthesis = useSpeechSynthesis({ lang: selectedLanguage });
   
 
-  // Show toast for speech recognition errors
   useEffect(() => {
     if (lastError) {
       let errorMessage = 'Speech recognition error occurred';
@@ -116,7 +110,6 @@ export default function ChatInterface({
     }
   }, [lastError, toast]);
 
-  // Show toast for permission denied
   useEffect(() => {
     if (permissionDenied) {
       toast({
@@ -133,14 +126,12 @@ export default function ChatInterface({
     retry: false,
   });
 
-  // Get current chat details to know which assistant is being used
   const { data: chat } = useQuery<Chat>({
     queryKey: ["/api/chats", chatId],
     enabled: !!chatId,
     retry: false,
   });
 
-  // Derive current assistant: use chat's assistant if available, otherwise default
   const currentAssistant: AssistantId = (chatId ? (chat?.assistantId as AssistantId | undefined) : defaultAssistant) ?? defaultAssistant;
 
   const switchAssistantMutation = useMutation({
@@ -207,14 +198,12 @@ export default function ChatInterface({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
-      // Remove cached data for the deleted chat instead of trying to refetch it
       queryClient.removeQueries({ queryKey: ["/api/chats", chatId] });
       queryClient.removeQueries({ queryKey: ["/api/chats", chatId, "messages"] });
       toast({
         title: "Success",
         description: "Chat deleted successfully",
       });
-      // Navigate to home after deleting current chat
       setLocation('/');
     },
     onError: (error) => {
@@ -239,7 +228,6 @@ export default function ChatInterface({
 
   const handleAssistantSwitch = (assistantId: AssistantId) => {
     if (!chatId) {
-      // For new chats, update the default assistant
       onDefaultAssistantChange?.(assistantId);
       toast({
         title: "Assistant switched",
@@ -248,18 +236,15 @@ export default function ChatInterface({
       return;
     }
     
-    // For existing chats, update on the server
     switchAssistantMutation.mutate(assistantId);
   };
 
-  // Streaming message state
   const [streamingMessage, setStreamingMessage] = useState<{
     id: string;
     content: string;
     isComplete: boolean;
   } | null>(null);
 
-  // Regular message mutation (fallback)
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       const response = await apiRequest("POST", `/api/chats/${chatId}/messages`, {
@@ -297,7 +282,6 @@ export default function ChatInterface({
     },
   });
 
-  // Streaming message function
   const sendStreamingMessage = async (content: string) => {
     if (!chatId) return;
     
@@ -305,12 +289,6 @@ export default function ChatInterface({
     setStreamingMessage(null);
     
     try {
-      const eventSource = new EventSource(`/api/chats/${chatId}/messages/stream`, {
-        // Note: EventSource doesn't support custom headers or POST body directly
-        // We'll need to modify this approach
-      });
-
-      // For now, let's use fetch with streaming
       const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
         method: 'POST',
         headers: {
@@ -350,14 +328,12 @@ export default function ChatInterface({
               
               switch (data.type) {
                 case 'user_message':
-                  // User message created - refresh queries
                   queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
                   break;
                   
                 case 'assistant_message_start':
-                  // Start of assistant message
-                  setIsTyping(false); // Stop typing indicator when streaming starts
+                  setIsTyping(false);
                   setStreamingMessage({
                     id: data.data.id,
                     content: '',
@@ -366,7 +342,6 @@ export default function ChatInterface({
                   break;
                   
                 case 'content':
-                  // Streaming content chunk
                   setStreamingMessage(prev => prev ? {
                     ...prev,
                     content: prev.content + data.data,
@@ -374,14 +349,12 @@ export default function ChatInterface({
                   break;
                   
                 case 'done':
-                  // Stream complete
-                  setIsTyping(false); // Ensure typing indicator is off
+                  setIsTyping(false);
                   setStreamingMessage(prev => prev ? {
                     ...prev,
                     isComplete: true,
                   } : null);
                   
-                  // Refresh to get final persisted message
                   setTimeout(() => {
                     queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
                     setStreamingMessage(null);
@@ -406,7 +379,6 @@ export default function ChatInterface({
       setIsTyping(false);
       setStreamingMessage(null);
       
-      // Fallback to regular message sending
       toast({
         title: "Streaming failed",
         description: "Falling back to regular messaging",
@@ -421,7 +393,6 @@ export default function ChatInterface({
     e.preventDefault();
     if (!message.trim() || !chatId || isTyping) return;
     
-    // Use streaming by default, fallback to regular on error
     sendStreamingMessage(message.trim());
   };
 
@@ -444,18 +415,15 @@ export default function ChatInterface({
     autoResizeTextarea();
   }, [message]);
   
-  // Update message when speech recognition provides text
   useEffect(() => {
     if (transcript || interimTranscript) {
       setMessage(transcript + interimTranscript);
     }
   }, [transcript, interimTranscript]);
   
-  // Toggle speech recognition
   const toggleSpeechRecognition = () => {
     if (isListening) {
       stopListening();
-      // Don't auto-send - let user edit the transcription
     } else {
       resetTranscript();
       setMessage("");
@@ -463,15 +431,9 @@ export default function ChatInterface({
     }
   };
 
-  // Auto-scroll disabled per user request
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [messages, isTyping]);
-
   if (!chatId) {
     return (
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* Welcome Header with Menu Button */}
         {isMobile && onOpenSidebar && (
           <div className="p-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between">
             <Button
@@ -485,7 +447,6 @@ export default function ChatInterface({
               <Menu className="h-4 w-4" />
             </Button>
             
-            {/* Feedback Button for Welcome Screen */}
             <FeedbackForm
               trigger={
                 <Button 
@@ -543,7 +504,6 @@ export default function ChatInterface({
               </DropdownMenu>
             </div>
 
-            {/* Start a New Chat Button */}
             <div className="mt-4 space-y-3">
               <Button 
                 onClick={() => createChatMutation.mutate()}
@@ -554,7 +514,6 @@ export default function ChatInterface({
                 {createChatMutation.isPending ? "Starting..." : "Start a New Chat"}
               </Button>
               
-              {/* Feedback Button for Welcome Screen (Desktop and Mobile) */}
               <FeedbackForm
                 trigger={
                   <Button 
@@ -577,7 +536,6 @@ export default function ChatInterface({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Chat Header - Fixed at top */}
       <div className={`bg-card border-b border-border ${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pt-[max(0.75rem,env(safe-area-inset-top))]' : 'p-4'} flex items-center justify-between sticky top-0 z-40`}>
         <div className="flex items-center space-x-3 phone-xs:space-x-2 phone-sm:space-x-3 flex-1 min-w-0 h-10">
           {isMobile && onOpenSidebar && (
@@ -597,7 +555,6 @@ export default function ChatInterface({
         </div>
 
         <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
-          {/* Voice Selector */}
           {speechSynthesis.isSupported && (
             <div className="flex items-center space-x-2">
               <Select 
@@ -625,7 +582,6 @@ export default function ChatInterface({
             </div>
           )}
           
-          {/* Feedback Button */}
           <FeedbackForm
             trigger={
               <Button 
@@ -644,7 +600,6 @@ export default function ChatInterface({
           
         </div>
       </div>
-      {/* Chat Messages */}
       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3 pb-28 space-y-4' : 'p-4 pb-32 space-y-6'}`} data-testid="chat-messages">
         {messages.length === 0 && !streamingMessage && (
           <div className="flex justify-center">
@@ -673,7 +628,6 @@ export default function ChatInterface({
           />
         ))}
 
-        {/* Streaming Message */}
         {streamingMessage && (
           <div className="flex justify-start" data-testid="streaming-message">
             <div className="max-w-2xl">
@@ -702,7 +656,6 @@ export default function ChatInterface({
           </div>
         )}
 
-        {/* Typing Indicator */}
         {isTyping && !streamingMessage && (
           <div className="flex justify-start" data-testid="typing-indicator">
             <div className="max-w-2xl">
@@ -729,7 +682,6 @@ export default function ChatInterface({
 
         <div ref={messagesEndRef} />
       </div>
-      {/* Message Input - Fixed at bottom */}
       <div className={`border-t border-border bg-card sticky bottom-0 z-40 shadow-up ${isMobile ? 'p-3 phone-xs:p-2 phone-sm:p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'p-4'}`}>
         <form onSubmit={handleSubmit} className={`flex ${isMobile ? 'space-x-2 phone-xs:space-x-1 phone-sm:space-x-2' : 'space-x-3'}`} data-testid="form-message">
           <div className="flex-1 min-w-0">
@@ -751,7 +703,6 @@ export default function ChatInterface({
               data-testid="textarea-message"
             />
           </div>
-          {/* Voice Input Button - Always show when supported */}
           {isSpeechRecognitionSupported && (
             <Button
               type="button"

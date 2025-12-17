@@ -35,7 +35,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { MessageSquare, Send } from "lucide-react";
 
-// Validation schema based on the server-side validation
 const feedbackSchema = z.object({
   message: z.string().min(1, "Feedback message is required").max(5000, "Message is too long (max 5000 characters)"),
   category: z.enum(["bug", "feature", "general", "other"]).optional(),
@@ -74,7 +73,6 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      // Invalidate admin feedback queries to update the unread count
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback/unread-count"] });
       
