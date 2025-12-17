@@ -13,7 +13,6 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Assistant configurations
 export const ASSISTANTS = {
   storyteller: {
     id: 'storyteller',
@@ -103,7 +102,6 @@ Act like a consultant or facilitator who helps ensure translations faithfully co
 
 export type AssistantId = keyof typeof ASSISTANTS;
 
-// Session storage table for user authentication.
 export const sessions = pgTable(
   "sessions",
   {
@@ -114,7 +112,6 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique().notNull(),
@@ -123,11 +120,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
-  // Approval system fields
   approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   approvedAt: timestamp("approved_at"),
-  approvedBy: varchar("approved_by"), // Admin user ID who approved this user
-  // Usage tracking fields
+  approvedBy: varchar("approved_by"),
   chatCount: integer("chat_count").notNull().default(0),
   messageCount: integer("message_count").notNull().default(0),
   apiUsageCount: integer("api_usage_count").notNull().default(0),
@@ -141,7 +136,7 @@ export const chats = pgTable("chats", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   assistantId: varchar("assistant_id").notNull().default('storyteller'),
   title: varchar("title").notNull(),
-  threadId: varchar("thread_id"), // Thread ID for conversation context
+  threadId: varchar("thread_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -159,7 +154,7 @@ export const apiKeys = pgTable("api_keys", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   keyHash: varchar("key_hash").notNull().unique(),
-  prefix: varchar("prefix").notNull(), // First 8 chars for display
+  prefix: varchar("prefix").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   lastUsedAt: timestamp("last_used_at"),
@@ -185,7 +180,6 @@ export const feedback = pgTable("feedback", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Agent prompts table for database-backed prompt management
 export const agentPrompts = pgTable("agent_prompts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agentId: varchar("agent_id").notNull().unique(),
@@ -199,7 +193,6 @@ export const agentPrompts = pgTable("agent_prompts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
   apiKeys: many(apiKeys),
@@ -254,7 +247,6 @@ export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
   }),
 }));
 
-// Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   approvalStatus: true,
@@ -311,7 +303,6 @@ export const updateAgentPromptSchema = z.object({
   description: z.string().optional(),
 });
 
-// Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
