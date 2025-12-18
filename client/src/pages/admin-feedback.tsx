@@ -33,11 +33,9 @@ export default function AdminFeedback() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  // Sidebar is always visible, no toggle state needed
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -174,7 +172,6 @@ export default function AdminFeedback() {
     return date.toLocaleString();
   };
 
-  // Filter feedbacks based on selected filters
   const filteredFeedbacks = feedbacks.filter(feedback => {
     const statusMatch = statusFilter === "all" || feedback.status === statusFilter;
     const categoryMatch = categoryFilter === "all" || feedback.category === categoryFilter;
@@ -195,7 +192,6 @@ export default function AdminFeedback() {
 
   return (
     <div className="h-screen bg-background flex relative overflow-hidden" data-testid="page-admin-feedback">
-      {/* Sidebar - Always visible */}
       <div className="relative h-full w-64 flex-shrink-0">
         <Sidebar 
           isMobile={isMobile}
@@ -205,7 +201,6 @@ export default function AdminFeedback() {
       
       <div className={`flex-1 ${isMobile ? 'p-4' : 'p-8'} overflow-auto`}>
         <div className={`${isMobile ? 'max-w-full' : 'max-w-7xl'} mx-auto`}>
-          {/* Header */}
           <div className={`${isMobile ? 'mb-6' : 'mb-8'}`}>
             <div className="flex items-center justify-between">
               <div>
@@ -219,7 +214,6 @@ export default function AdminFeedback() {
             </div>
           </div>
 
-          {/* Filters */}
           <Card className="mb-6">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center space-x-2">
@@ -275,7 +269,6 @@ export default function AdminFeedback() {
             </CardContent>
           </Card>
 
-          {/* Feedback List */}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -302,7 +295,6 @@ export default function AdminFeedback() {
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-3">
-                            {/* Header with status and category */}
                             <div className="flex items-center gap-3 flex-wrap">
                               <Badge 
                                 className={`flex items-center gap-1 ${getStatusColor(feedback.status)}`}
@@ -323,14 +315,12 @@ export default function AdminFeedback() {
                               </span>
                             </div>
 
-                            {/* Message */}
                             <div className="space-y-2">
                               <p className="text-sm text-foreground whitespace-pre-wrap" data-testid={`text-message-${feedback.id}`}>
                                 {feedback.message}
                               </p>
                             </div>
 
-                            {/* User info */}
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               {feedback.userName && (
                                 <span className="flex items-center gap-1" data-testid={`text-user-name-${feedback.id}`}>
@@ -347,9 +337,7 @@ export default function AdminFeedback() {
                             </div>
                           </div>
 
-                          {/* Actions */}
                           <div className="flex items-center gap-2">
-                            {/* Status Update Dropdown */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button 
@@ -388,7 +376,6 @@ export default function AdminFeedback() {
                               </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {/* Delete Button */}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button 

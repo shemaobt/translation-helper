@@ -5,18 +5,16 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     screens: {
-      // Custom phone breakpoints for specific mobile sizes
-      'phone-xs': '320px',   // Extra small phones (≤ 320px)
-      'phone-sm': '360px',   // Small phones (360px – 400px)
-      'phone-md': '414px',   // Medium phones (414px – 430px)
-      'phone-lg': '480px',   // Large phones (480px – 540px)
-      'phone-xl': '600px',   // Phablets (600px – 640px)
-      // Standard Tailwind breakpoints (restored for compatibility)
-      'sm': '640px',         // Standard small
-      'md': '768px',         // Standard medium (tablets)
-      'lg': '1024px',        // Standard large
-      'xl': '1280px',        // Standard extra large
-      '2xl': '1536px',       // Standard 2xl
+      'phone-xs': '320px',
+      'phone-sm': '360px',
+      'phone-md': '414px',
+      'phone-lg': '480px',
+      'phone-xl': '600px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
     },
     extend: {
       borderRadius: {

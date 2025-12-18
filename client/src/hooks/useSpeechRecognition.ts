@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import { config } from "@/config";
 
 interface SpeechRecognitionOptions {
   lang?: string;
@@ -31,7 +32,6 @@ export function useSpeechRecognition(
   const chunksRef = useRef<Blob[]>([]);
   const isProcessingRef = useRef(false);
 
-  // Check if browser supports MediaRecorder (universal support)
   const isSupported = typeof window !== 'undefined' && 
     'MediaRecorder' in window && 
     'navigator' in window && 
@@ -42,13 +42,11 @@ export function useSpeechRecognition(
     isProcessingRef.current = true;
 
     try {
-      // Determine correct file extension based on MIME type for Whisper
       let extension = 'webm';
       if (mimeType.includes('wav')) extension = 'wav';
       else if (mimeType.includes('mp4')) extension = 'mp4';
       else if (mimeType.includes('ogg')) extension = 'ogg';  
       else if (mimeType.includes('webm')) extension = 'webm';
-
 
       const formData = new FormData();
       formData.append('audio', audioBlob, `audio.${extension}`);
@@ -91,7 +89,6 @@ export function useSpeechRecognition(
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Determine the best audio format for Whisper compatibility
       const mimeTypes = [
         'audio/wav',
         'audio/mp4', 
@@ -110,12 +107,10 @@ export function useSpeechRecognition(
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: selectedMimeType || undefined,
-        audioBitsPerSecond: 64000, // Good quality for speech
+        audioBitsPerSecond: config.audio.bitRate,
       });
 
       mediaRecorderRef.current = mediaRecorder;
-
-      // Store audio data for processing when recording ends
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -132,7 +127,6 @@ export function useSpeechRecognition(
         setIsListening(false);
         setInterimTranscript("");
         
-        // Process the complete recording
         if (chunksRef.current.length > 0) {
           const audioBlob = new Blob(chunksRef.current, { type: selectedMimeType });
           if (audioBlob.size > 1000) {
@@ -140,7 +134,6 @@ export function useSpeechRecognition(
           }
         }
 
-        // Cleanup
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -153,8 +146,7 @@ export function useSpeechRecognition(
         setIsListening(false);
       };
 
-      // Start recording
-      mediaRecorder.start(); // Collect data when stopped
+      mediaRecorder.start();
 
     } catch (error: any) {
       console.error('Error starting recording:', error);

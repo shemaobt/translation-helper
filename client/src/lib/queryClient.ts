@@ -1,6 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Generate or get anonymous user ID from localStorage
 function getAnonymousUserId() {
   let userId = localStorage.getItem('anonymous_user_id');
   if (!userId) {
@@ -31,10 +30,8 @@ export async function apiRequest(
   let body: string | FormData | undefined;
   
   if (data instanceof FormData) {
-    // For FormData, don't set Content-Type - let browser set it with boundary
     body = data;
   } else if (data) {
-    // For regular JSON data
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(data);
   }
@@ -77,17 +74,16 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 30 * 1000, // 30 seconds - fast updates for real-time chat
-      gcTime: 10 * 60 * 1000, // 10 minutes - keep data in memory longer for better UX
+      staleTime: 30 * 1000,
+      gcTime: 10 * 60 * 1000,
       retry: (failureCount, error: any) => {
-        // Smarter retry logic - don't retry auth errors or not found
         if (error?.message?.includes('401') || error?.message?.includes('404')) return false;
         return failureCount < 2;
       },
-      refetchOnReconnect: true, // Refetch when internet connection restored
+      refetchOnReconnect: true,
     },
     mutations: {
-      retry: 1, // Retry mutations once for network issues
+      retry: 1,
     },
   },
 });

@@ -1,38 +1,31 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { neon } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { config } from "./config";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Trust proxy for proper secure cookie and IP handling
-// Cloud Run runs applications behind a proxy
 app.set('trust proxy', 1);
 
-// Session configuration
 const PostgreSQLStore = connectPgSimple(session);
 
-// Ensure SESSION_SECRET is available (use a default for deployment if not set)
-const sessionSecret = process.env.SESSION_SECRET || 'translation-helper-secret-key-2025';
+const sessionSecret = process.env.SESSION_SECRET || config.session.secret;
 if (!process.env.SESSION_SECRET) {
   log('Warning: SESSION_SECRET not set, using default (please set in production)');
 }
 
-// Configure session store to use existing Drizzle sessions table with error handling
 let sessionStore: any;
 
-// Validate DATABASE_URL exists
 if (!process.env.DATABASE_URL) {
   const errorMsg = 'DATABASE_URL environment variable is required';
   log(`Session store error: ${errorMsg}`);
   if (process.env.NODE_ENV === 'production') {
     throw new Error(errorMsg);
   }
-  // Use memory store in development if DATABASE_URL missing
   const MemoryStore = session.MemoryStore;
   sessionStore = new MemoryStore();
   log('Using memory-based session store (degraded mode)');
@@ -42,14 +35,12 @@ if (!process.env.DATABASE_URL) {
       conObject: {
         connectionString: process.env.DATABASE_URL,
       },
-      tableName: 'sessions', // Use existing Drizzle table name
-      createTableIfMissing: true, // Auto-create table if missing (fixes production)
+      tableName: 'sessions',
+      createTableIfMissing: true,
     });
     
-    // Test database connection with error handling
     sessionStore.on('error', (error: any) => {
       log(`Session store database error: ${error.message}`);
-      // In production, this is critical but we'll let it continue
       if (process.env.NODE_ENV === 'production') {
         log('Session store error in production - sessions may not persist');
       }
@@ -63,24 +54,19 @@ if (!process.env.DATABASE_URL) {
     
   } catch (error) {
     log(`Failed to initialize PostgreSQL session store: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    // Fallback to memory store
     const MemoryStore = session.MemoryStore;
     sessionStore = new MemoryStore();
     log('Falling back to memory-based session store (degraded mode)');
   }
 }
 
-// Add session middleware with error handling
 try {
-  // Check if we're in production environment
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // Determine cookie settings based on environment
   const cookieSettings: any = {
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: config.session.ttl,
     sameSite: 'lax' as const,
-    // Set secure to true only in production with HTTPS
     secure: isProduction ? 'auto' : false,
   };
 
@@ -89,13 +75,12 @@ try {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    name: 'translation.sid', // Custom session cookie name
+    name: config.session.cookieName,
     cookie: cookieSettings,
-    proxy: true, // Trust the reverse proxy (important for Cloud Run deployments)
+    proxy: true,
   }));
 } catch (error) {
   log(`Failed to configure session middleware: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  // Continue without session middleware as fallback
 }
 
 app.use((req, res, next) => {
@@ -114,7 +99,6 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       
-      // Only log response body for non-sensitive routes
       const isSensitiveRoute = path.startsWith('/api/auth') || path.startsWith('/api/api-keys');
       if (capturedJsonResponse && !isSensitiveRoute) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
@@ -131,8 +115,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add health check endpoint for deployment readiness
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -150,22 +133,14 @@ app.get('/health', (req: Request, res: Response) => {
 
       res.status(status).json({ message });
       log(`Request error: ${err.message || err}`);
-      // Don't rethrow - log and continue to prevent crashes
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 5000 if not specified.
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
     server.listen({
       port,

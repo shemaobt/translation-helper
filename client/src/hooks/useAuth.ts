@@ -32,7 +32,7 @@ export function useAuthQuery() {
   return useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -45,11 +45,9 @@ export function useLogoutMutation() {
       return response.json();
     },
     onSuccess: () => {
-      // Clear all queries on logout
       queryClient.clear();
     },
     onError: () => {
-      // Even if logout fails on server, clear local cache
       queryClient.clear();
     },
   });

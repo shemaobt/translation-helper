@@ -28,26 +28,21 @@ import { eq, desc, and, sql, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 
-// Interface for storage operations
 export interface IStorage {
-  // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
-  // Profile operations
   updateUserProfileImage(userId: string, imageUrl: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   
-  // Activity tracking operations
   incrementUserChatCount(userId: string): Promise<void>;
   incrementUserMessageCount(userId: string): Promise<void>;
   incrementUserApiUsage(userId: string): Promise<void>;
   updateUserLastLogin(userId: string): Promise<void>;
   
-  // Chat operations
   getUserChats(userId: string): Promise<Chat[]>;
   getChat(chatId: string, userId: string): Promise<Chat | undefined>;
   createChat(chat: InsertChat): Promise<Chat>;
@@ -57,12 +52,10 @@ export interface IStorage {
   getChatThreadId(chatId: string, userId: string): Promise<string | null>;
   deleteChat(chatId: string, userId: string): Promise<void>;
   
-  // Message operations
   getChatMessages(chatId: string, userId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(messageId: string, updates: Partial<Pick<InsertMessage, 'content'>>): Promise<Message>;
   
-  // API Key operations
   getUserApiKeys(userId: string): Promise<ApiKey[]>;
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
   getApiKeysByPrefix(prefix: string): Promise<ApiKey[]>;
@@ -70,7 +63,6 @@ export interface IStorage {
   deleteApiKey(keyId: string, userId: string): Promise<void>;
   updateApiKeyLastUsed(keyId: string): Promise<void>;
   
-  // Usage operations
   recordApiUsage(usage: InsertApiUsage): Promise<void>;
   getUserStats(userId: string): Promise<{
     totalMessages: number;
@@ -78,7 +70,6 @@ export interface IStorage {
     activeApiKeys: number;
   }>;
   
-  // Feedback operations
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   getAllFeedback(): Promise<Feedback[]>;
   getFeedback(feedbackId: string): Promise<Feedback | undefined>;
@@ -86,7 +77,6 @@ export interface IStorage {
   deleteFeedback(feedbackId: string): Promise<boolean>;
   getUnreadFeedbackCount(): Promise<number>;
   
-  // Admin user management operations
   getAllUsersWithStats(): Promise<(User & {
     stats: {
       totalChats: number;
@@ -99,13 +89,11 @@ export interface IStorage {
   deleteUser(userId: string): Promise<boolean>;
   resetUserPassword(userId: string, newPassword: string): Promise<User>;
   
-  // User approval management operations
   getPendingUsers(): Promise<User[]>;
   getPendingUsersCount(): Promise<number>;
   approveUser(userId: string, approvedById: string): Promise<User>;
   rejectUser(userId: string, approvedById: string): Promise<User>;
   
-  // Agent prompt operations
   getAllPrompts(): Promise<AgentPrompt[]>;
   getPrompt(agentId: string): Promise<AgentPrompt | undefined>;
   updatePrompt(agentId: string, prompt: string, userId: string, name?: string, description?: string): Promise<AgentPrompt>;
@@ -114,7 +102,6 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations
 
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -151,7 +138,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Profile operations
   async updateUserProfileImage(userId: string, imageUrl: string): Promise<void> {
     await db
       .update(users)
@@ -172,7 +158,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  // Activity tracking operations
   async incrementUserChatCount(userId: string): Promise<void> {
     await db
       .update(users)
@@ -213,7 +198,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  // Chat operations
   async getUserChats(userId: string): Promise<Chat[]> {
     return await db
       .select()
@@ -272,9 +256,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(chats.id, chatId), eq(chats.userId, userId)));
   }
 
-  // Message operations
   async getChatMessages(chatId: string, userId: string): Promise<Message[]> {
-    // Verify chat belongs to user first
     const chat = await this.getChat(chatId, userId);
     if (!chat) return [];
 
@@ -299,7 +281,6 @@ export class DatabaseStorage implements IStorage {
     return updatedMessage;
   }
 
-  // API Key operations
   async getUserApiKeys(userId: string): Promise<ApiKey[]> {
     return await db
       .select()
@@ -351,7 +332,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(apiKeys.id, keyId));
   }
 
-  // Usage operations
   async recordApiUsage(usage: InsertApiUsage): Promise<void> {
     await db.insert(apiUsage).values(usage);
   }
@@ -361,21 +341,18 @@ export class DatabaseStorage implements IStorage {
     totalApiCalls: number;
     activeApiKeys: number;
   }> {
-    // Get total messages from user's chats
     const [messageCount] = await db
       .select({ count: count() })
       .from(messages)
       .innerJoin(chats, eq(messages.chatId, chats.id))
       .where(eq(chats.userId, userId));
 
-    // Get total API calls from user's API keys
     const [apiCallCount] = await db
       .select({ count: count() })
       .from(apiUsage)
       .innerJoin(apiKeys, eq(apiUsage.apiKeyId, apiKeys.id))
       .where(eq(apiKeys.userId, userId));
 
-    // Get active API keys count
     const [activeKeyCount] = await db
       .select({ count: count() })
       .from(apiKeys)
@@ -388,7 +365,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Feedback operations
   async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
     const [newFeedback] = await db
       .insert(feedback)
@@ -436,7 +412,6 @@ export class DatabaseStorage implements IStorage {
     return result.count || 0;
   }
 
-  // Admin user management operations
   async getAllUsersWithStats(): Promise<(User & {
     stats: {
       totalChats: number;
@@ -449,26 +424,22 @@ export class DatabaseStorage implements IStorage {
     
     const usersWithStats = await Promise.all(
       allUsers.map(async (user) => {
-        // Get total chats for user
         const [chatCount] = await db
           .select({ count: count() })
           .from(chats)
           .where(eq(chats.userId, user.id));
 
-        // Get total messages from user's chats
         const [messageCount] = await db
           .select({ count: count() })
           .from(messages)
           .innerJoin(chats, eq(messages.chatId, chats.id))
           .where(eq(chats.userId, user.id));
 
-        // Get total API keys for user
         const [apiKeyCount] = await db
           .select({ count: count() })
           .from(apiKeys)
           .where(eq(apiKeys.userId, user.id));
 
-        // Get total API calls from user's API keys
         const [apiCallCount] = await db
           .select({ count: count() })
           .from(apiUsage)
@@ -491,13 +462,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async toggleUserAdminStatus(userId: string): Promise<User> {
-    // First get the current user to know their current admin status
     const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
     if (!currentUser) {
       throw new Error('User not found');
     }
 
-    // Toggle the admin status
     const [updatedUser] = await db
       .update(users)
       .set({ 
@@ -516,28 +485,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(userId: string): Promise<boolean> {
     try {
-      // Delete in the correct order to handle foreign key constraints
-      
-      // 1. Delete API usage records for user's API keys
       await db
         .delete(apiUsage)
         .where(sql`api_key_id IN (SELECT id FROM ${apiKeys} WHERE user_id = ${userId})`);
       
-      // 2. Delete user's API keys
       await db.delete(apiKeys).where(eq(apiKeys.userId, userId));
       
-      // 3. Delete messages from user's chats
       await db
         .delete(messages)
         .where(sql`chat_id IN (SELECT id FROM ${chats} WHERE user_id = ${userId})`);
       
-      // 4. Delete user's chats
       await db.delete(chats).where(eq(chats.userId, userId));
       
-      // 5. Delete user's feedback submissions (if userId is linked to feedback)
       await db.delete(feedback).where(eq(feedback.userId, userId));
       
-      // 6. Finally delete the user
       const result = await db.delete(users).where(eq(users.id, userId));
       
       return (result.rowCount ?? 0) > 0;
@@ -548,10 +509,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetUserPassword(userId: string, newPassword: string): Promise<User> {
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     
-    // Update user's password
     const [updatedUser] = await db
       .update(users)
       .set({ 
@@ -568,7 +527,6 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  // User approval management operations
   async getPendingUsers(): Promise<User[]> {
     const pendingUsers = await db
       .select()
@@ -625,7 +583,6 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  // Agent prompt operations
   async getAllPrompts(): Promise<AgentPrompt[]> {
     return await db
       .select()
@@ -643,7 +600,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePrompt(agentId: string, prompt: string, userId: string, name?: string, description?: string): Promise<AgentPrompt> {
-    // First check if prompt exists
     const existing = await this.getPrompt(agentId);
     
     if (!existing) {
@@ -694,11 +650,9 @@ export class DatabaseStorage implements IStorage {
     const defaults = getAllDefaultPrompts();
     
     for (const defaultPrompt of defaults) {
-      // Check if prompt already exists
       const existing = await this.getPrompt(defaultPrompt.agentId);
       
       if (!existing) {
-        // Insert new prompt
         await db.insert(agentPrompts).values({
           agentId: defaultPrompt.agentId,
           name: defaultPrompt.name,

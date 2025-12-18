@@ -35,7 +35,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       },
       onError: () => {
-        // Even if logout fails on server, clear local state
         setUser(null);
         toast({
           title: "Logged out",

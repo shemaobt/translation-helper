@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { Eye, EyeOff, CheckCircle, Clock, XCircle, UserPlus, LogIn } from "lucide-react";
 
-// Use logo from public directory
 const logoImage = "/logo.png";
 
 const loginSchema = z.object({
@@ -30,7 +29,6 @@ function Login() {
   const { toast } = useToast();
   const { login } = useAuth();
 
-  // Get URL search parameters to check for messages
   const urlParams = new URLSearchParams(window.location.search);
   const messageType = urlParams.get('message');
 
@@ -49,13 +47,11 @@ function Login() {
         const response = await apiRequest("POST", "/api/auth/login", data);
         return response.json();
       } catch (error: any) {
-        // Parse JSON error response to get approval status
         if (error.message && error.message.includes('{')) {
           try {
             const errorJson = JSON.parse(error.message.split(': ')[1]);
             throw { ...errorJson, originalMessage: error.message };
           } catch {
-            // If JSON parsing fails, throw original error
             throw error;
           }
         }
@@ -71,7 +67,6 @@ function Login() {
       setLocation("/");
     },
     onError: (error: any) => {
-      // Handle specific approval-related errors
       if (error.approvalStatus === 'pending') {
         toast({
           title: "Account pending approval",
@@ -101,7 +96,6 @@ function Login() {
   return (
     <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-6">
-        {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center">
             <img 
@@ -117,10 +111,8 @@ function Login() {
           </div>
         </div>
 
-        {/* Login Form Card */}
         <Card>
           <CardContent className="pt-6">
-          {/* Show appropriate message based on URL parameters */}
           {messageType === 'pending' && (
             <Alert className="mb-4" data-testid="alert-pending">
               <Clock className="h-4 w-4" />
@@ -224,7 +216,6 @@ function Login() {
         </CardContent>
       </Card>
 
-      {/* Create Account Section */}
       <Card>
         <CardContent className="py-6">
           <div className="text-center space-y-4">
