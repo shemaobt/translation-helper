@@ -9,6 +9,7 @@ interface FeedbackData {
   userName?: string;
   pageUrl?: string;
   browserInfo?: string;
+  screenshotUrl?: string;
 }
 
 // Category emoji mapping
@@ -57,51 +58,64 @@ export async function sendFeedbackToSlack(feedback: FeedbackData): Promise<boole
     // Current timestamp
     const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC";
 
-    // Build Slack message with Block Kit
-    const slackMessage = {
-      blocks: [
-        {
-          type: "header",
-          text: {
-            type: "plain_text",
-            text: `${emoji} New Feedback from Translation Helper`,
-            emoji: true,
-          },
+    // Build Slack message blocks
+    const blocks: any[] = [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: `${emoji} New Feedback from Translation Helper`,
+          emoji: true,
         },
-        {
-          type: "section",
-          fields: [
-            {
-              type: "mrkdwn",
-              text: `*Category:*\n${categoryLabel}`,
-            },
-            {
-              type: "mrkdwn",
-              text: `*User:*\n${userInfo}`,
-            },
-          ],
-        },
-        {
-          type: "section",
-          text: {
+      },
+      {
+        type: "section",
+        fields: [
+          {
             type: "mrkdwn",
-            text: `*Message:*\n> ${feedback.message.replace(/\n/g, "\n> ")}`,
+            text: `*Category:*\n${categoryLabel}`,
           },
+          {
+            type: "mrkdwn",
+            text: `*User:*\n${userInfo}`,
+          },
+        ],
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Message:*\n> ${feedback.message.replace(/\n/g, "\n> ")}`,
         },
-        {
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: `*Time:* ${timestamp}${feedback.pageUrl ? ` | *Page:* ${feedback.pageUrl}` : ""}${feedback.browserInfo ? ` | *Browser:* ${feedback.browserInfo.substring(0, 100)}` : ""}`,
-            },
-          ],
-        },
-        {
-          type: "divider",
-        },
-      ],
-    };
+      },
+    ];
+
+    // Add screenshot image if provided
+    if (feedback.screenshotUrl) {
+      blocks.push({
+        type: "image",
+        image_url: feedback.screenshotUrl,
+        alt_text: "Feedback screenshot",
+      });
+    }
+
+    // Add context and divider
+    blocks.push(
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `*Time:* ${timestamp}${feedback.pageUrl ? ` | *Page:* ${feedback.pageUrl}` : ""}${feedback.browserInfo ? ` | *Browser:* ${feedback.browserInfo.substring(0, 100)}` : ""}`,
+          },
+        ],
+      },
+      {
+        type: "divider",
+      }
+    );
+
+    const slackMessage = { blocks };
 
     const response = await fetch(webhookUrl, {
       method: "POST",

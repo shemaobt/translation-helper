@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, ImagePlus, X } from "lucide-react";
 
 const feedbackSchema = z.object({
   message: z.string().min(1, "Feedback message is required").max(5000, "Message is too long (max 5000 characters)"),
@@ -51,6 +51,9 @@ interface FeedbackFormProps {
 
 export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [screenshotName, setScreenshotName] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,9 +70,42 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
     },
   });
 
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Screenshot must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshot(reader.result as string);
+        setScreenshotName(file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeScreenshot = () => {
+    setScreenshot(null);
+    setScreenshotName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: FeedbackFormData) => {
-      const response = await apiRequest("POST", "/api/feedback", data);
+      const response = await apiRequest("POST", "/api/feedback", {
+        ...data,
+        screenshotBase64: screenshot,
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -81,6 +117,7 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
         description: "Thank you for your feedback. We appreciate your input and will review it soon.",
       });
       form.reset();
+      removeScreenshot();
       setIsOpen(false);
     },
     onError: (error: any) => {
@@ -107,6 +144,7 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
     setIsOpen(open);
     if (!open) {
       form.reset();
+      removeScreenshot();
     }
   };
 
@@ -215,6 +253,52 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Screenshot Upload */}
+            <div className="space-y-2">
+              <FormLabel>Screenshot (optional)</FormLabel>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleScreenshotChange}
+                className="hidden"
+                data-testid="input-feedback-screenshot"
+              />
+              {!screenshot ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-dashed"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  Add Screenshot
+                </Button>
+              ) : (
+                <div className="relative border rounded-lg p-2">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={screenshot}
+                      alt="Screenshot preview"
+                      className="h-16 w-auto rounded object-cover"
+                    />
+                    <span className="text-sm text-muted-foreground truncate flex-1">
+                      {screenshotName}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeScreenshot}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="gap-2">
