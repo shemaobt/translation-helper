@@ -98,7 +98,7 @@ jobs:
             --image "${{ steps.vars.outputs.backend_image_uri }}" \
             --region "${CLOUD_RUN_REGION}" \
             --project "${PROJECT_ID}" \
-            --set-env-vars="DATABASE_URL=${DATABASE_URL},GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_API_KEY},SESSION_SECRET=${SESSION_SECRET},NODE_ENV=production" \
+            --set-env-vars="DATABASE_URL=${DATABASE_URL},GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_API_KEY},SESSION_SECRET=${SESSION_SECRET},NODE_ENV=production,SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" \
             --quiet \
             --format="value(status.url)" > backend_url.txt
           echo "backend_url=$(cat backend_url.txt)" >> $GITHUB_OUTPUT

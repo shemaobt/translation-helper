@@ -10,6 +10,7 @@ import multer from "multer";
 import { config } from "./config";
 import { requireAuth, requireAdmin, requireCSRFHeader, getEffectiveApproval, authLimiter, publicApiLimiter, aiApiLimiter } from "./middleware";
 import { getCachedAudio, setCachedAudio, getAudioETag } from "./services";
+import { sendFeedbackToSlack } from "./slack-service";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -907,6 +908,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userName: feedbackData.userName || undefined,
         status: 'new',
       });
+
+      // Send notification to Slack (fire-and-forget, don't block response)
+      sendFeedbackToSlack({
+        message: feedbackData.message,
+        category: feedbackData.category,
+        userEmail: feedbackData.userEmail || undefined,
+        userName: feedbackData.userName || undefined,
+      }).catch((err) => console.error("[Slack] Failed to send notification:", err));
 
       res.json({
         id: feedback.id,
