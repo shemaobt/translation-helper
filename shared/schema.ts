@@ -176,6 +176,7 @@ export const feedback = pgTable("feedback", {
   userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
   status: varchar("status", { enum: ["new", "read", "resolved"] }).notNull().default("new"),
   category: varchar("category", { enum: ["bug", "feature", "general", "other"] }),
+  screenshotData: text("screenshot_data"), // Base64 encoded screenshot
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

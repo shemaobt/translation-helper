@@ -11,7 +11,6 @@ import { config } from "./config";
 import { requireAuth, requireAdmin, requireCSRFHeader, getEffectiveApproval, authLimiter, publicApiLimiter, aiApiLimiter } from "./middleware";
 import { getCachedAudio, setCachedAudio, getAudioETag } from "./services";
 import { sendFeedbackToSlack } from "./slack-service";
-import { uploadToGCS, isGCSConfigured } from "./gcs-storage";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -903,32 +902,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const feedbackData = feedbackSchema.parse(req.body);
       const userId = req.session?.userId || null;
 
-      // Upload screenshot to GCS if provided
-      let screenshotUrl: string | undefined;
-      if (feedbackData.screenshotBase64) {
-        try {
-          // Extract base64 data (remove data:image/...;base64, prefix)
-          const matches = feedbackData.screenshotBase64.match(/^data:image\/(\w+);base64,(.+)$/);
-          if (matches) {
-            const extension = matches[1];
-            const base64Data = matches[2];
-            const buffer = Buffer.from(base64Data, 'base64');
-            screenshotUrl = await uploadToGCS(buffer, `screenshot.${extension}`, 'feedback-screenshots', `image/${extension}`);
-            console.log(`[Feedback] Uploaded screenshot to GCS: ${screenshotUrl}`);
-          }
-        } catch (uploadError) {
-          console.error("[Feedback] Failed to upload screenshot:", uploadError);
-          // Continue without screenshot - don't fail the whole request
-        }
-      }
-
+      // Store feedback with screenshot data
       const feedback = await storage.createFeedback({
         ...feedbackData,
         userId,
         userEmail: feedbackData.userEmail || undefined,
         userName: feedbackData.userName || undefined,
+        screenshotData: feedbackData.screenshotBase64 || undefined,
         status: 'new',
       });
+
+      // Build screenshot URL if screenshot was provided
+      let screenshotUrl: string | undefined;
+      if (feedbackData.screenshotBase64) {
+        // Use the request host to build the URL
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        screenshotUrl = `${protocol}://${host}/api/feedback/${feedback.id}/screenshot`;
+        console.log(`[Feedback] Screenshot URL: ${screenshotUrl}`);
+      }
 
       // Send notification to Slack (fire-and-forget, don't block response)
       sendFeedbackToSlack({
@@ -950,6 +942,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid feedback data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to submit feedback" });
+    }
+  });
+
+  // Public endpoint to serve feedback screenshots (for Slack display)
+  app.get('/api/feedback/:id/screenshot', async (req: any, res) => {
+    try {
+      const feedbackId = req.params.id;
+      const feedback = await storage.getFeedback(feedbackId);
+      
+      if (!feedback || !feedback.screenshotData) {
+        return res.status(404).json({ message: "Screenshot not found" });
+      }
+
+      // Parse the base64 data URL
+      const matches = feedback.screenshotData.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ message: "Invalid screenshot data" });
+      }
+
+      const mimeType = `image/${matches[1]}`;
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Set cache headers for better performance
+      res.set({
+        'Content-Type': mimeType,
+        'Content-Length': buffer.length,
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      });
+
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error serving screenshot:", error);
+      res.status(500).json({ message: "Failed to serve screenshot" });
     }
   });
 
