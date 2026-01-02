@@ -1,5 +1,5 @@
 /**
- * Slack webhook service for sending feedback notifications
+ * Slack webhook service for sending notifications
  */
 
 interface FeedbackData {
@@ -134,6 +134,98 @@ export async function sendFeedbackToSlack(feedback: FeedbackData): Promise<boole
     }
   } catch (error) {
     console.error("[Slack] Error sending feedback notification:", error);
+    return false;
+  }
+}
+
+interface NewUserData {
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+/**
+ * Send notification to Slack when a new user registers and is awaiting approval
+ * This is a fire-and-forget function - errors are logged but don't throw
+ */
+export async function sendNewUserNotificationToSlack(user: NewUserData): Promise<boolean> {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.log("[Slack] Webhook URL not configured, skipping new user notification");
+    return false;
+  }
+
+  try {
+    // Build user name
+    let userName = "Not provided";
+    if (user.firstName && user.lastName) {
+      userName = `${user.firstName} ${user.lastName}`;
+    } else if (user.firstName) {
+      userName = user.firstName;
+    } else if (user.lastName) {
+      userName = user.lastName;
+    }
+
+    // Current timestamp
+    const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC";
+
+    // Build Slack message blocks
+    const blocks: any[] = [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":wave: New User Awaiting Approval - Translation Helper",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        fields: [
+          {
+            type: "mrkdwn",
+            text: `*Name:*\n${userName}`,
+          },
+          {
+            type: "mrkdwn",
+            text: `*Email:*\n${user.email}`,
+          },
+        ],
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `*Registered:* ${timestamp}`,
+          },
+        ],
+      },
+      {
+        type: "divider",
+      },
+    ];
+
+    const slackMessage = { blocks };
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(slackMessage),
+    });
+
+    if (response.ok) {
+      console.log("[Slack] New user notification sent successfully");
+      return true;
+    } else {
+      console.error(`[Slack] Failed to send new user notification: ${response.status} ${response.statusText}`);
+      return false;
+    }
+  } catch (error) {
+    console.error("[Slack] Error sending new user notification:", error);
     return false;
   }
 }

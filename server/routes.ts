@@ -10,7 +10,7 @@ import multer from "multer";
 import { config } from "./config";
 import { requireAuth, requireAdmin, requireCSRFHeader, getEffectiveApproval, authLimiter, publicApiLimiter, aiApiLimiter } from "./middleware";
 import { getCachedAudio, setCachedAudio, getAudioETag } from "./services";
-import { sendFeedbackToSlack } from "./slack-service";
+import { sendFeedbackToSlack, sendNewUserNotificationToSlack } from "./slack-service";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -59,6 +59,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const approvalStatus = user.approvalStatus ?? 'pending';
       
       if (approvalStatus === 'pending') {
+        // Send Slack notification for new user awaiting approval (fire-and-forget)
+        sendNewUserNotificationToSlack({
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        }).catch(err => console.error("[Slack] Failed to send new user notification:", err));
+        
         return res.status(201).json({
           message: "Account created successfully. Your account is awaiting admin approval.",
           approvalStatus: "pending",
