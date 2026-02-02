@@ -25,8 +25,11 @@ import {
   EyeOff,
   Loader2,
   Mail,
-  Calendar
+  Calendar,
+  Building2,
+  FolderKanban
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(6, "Password must be at least 6 characters"),
@@ -37,7 +40,13 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const profileSchema = z.object({
+  organization: z.string().optional(),
+  projectType: z.enum(["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"]).optional(),
+});
+
 type PasswordFormData = z.infer<typeof passwordSchema>;
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -72,6 +81,25 @@ export default function Profile() {
       confirmPassword: "",
     },
   });
+
+  const profileForm = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      organization: "",
+      projectType: undefined,
+    },
+  });
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        organization: (user as any)?.organization || "",
+        projectType: (user as any)?.projectType || undefined,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -153,6 +181,40 @@ export default function Profile() {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { organization?: string; projectType?: string }) => {
+      const response = await apiRequest("PATCH", "/api/user/update-profile", data, {
+        "X-Requested-With": "XMLHttpRequest",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -188,6 +250,13 @@ export default function Profile() {
     changePasswordMutation.mutate({
       currentPassword: data.currentPassword,
       newPassword: data.newPassword,
+    });
+  };
+
+  const onProfileSubmit = (data: ProfileFormData) => {
+    updateProfileMutation.mutate({
+      organization: data.organization || undefined,
+      projectType: data.projectType || undefined,
     });
   };
 
@@ -331,6 +400,87 @@ export default function Profile() {
                   <p className="font-medium">{formatDate((user as any)?.createdAt)}</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Organization & Project Type
+              </CardTitle>
+              <CardDescription>
+                Update your organization and project type information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <FormField
+                    control={profileForm.control}
+                    name="organization"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter your organization"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={profileForm.control}
+                    name="projectType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project Type</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value || undefined)} 
+                          value={field.value || undefined}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your project type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="mother tongue translator">Mother Tongue Translator</SelectItem>
+                            <SelectItem value="facilitator">Facilitator</SelectItem>
+                            <SelectItem value="translation advisor">Translation Advisor</SelectItem>
+                            <SelectItem value="consultant/mentor">Consultant/Mentor</SelectItem>
+                            <SelectItem value="administrator">Administrator</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    {updateProfileMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
           </Card>
 
