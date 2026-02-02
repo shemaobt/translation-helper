@@ -96,23 +96,22 @@ function Login() {
   return (
     <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center">
-            <img 
-              src={logoImage} 
-              alt="Translation Helper Logo" 
-              className="w-16 h-16 object-contain"
-              data-testid="img-login-logo"
-            />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-            <p className="text-muted-foreground mt-1 text-sm">Sign in to your Translation Helper account</p>
-          </div>
-        </div>
-
         <Card>
           <CardContent className="pt-6">
+            <div className="text-center space-y-4 mb-6">
+              <div className="flex items-center justify-center">
+                <img 
+                  src={logoImage} 
+                  alt="Translation Helper Logo" 
+                  className="w-16 h-16 object-contain"
+                  data-testid="img-login-logo"
+                />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+                <p className="text-muted-foreground mt-1 text-sm">Sign in to your Translation Helper account</p>
+              </div>
+            </div>
           {messageType === 'pending' && (
             <Alert className="mb-4" data-testid="alert-pending">
               <Clock className="h-4 w-4" />

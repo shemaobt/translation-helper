@@ -119,6 +119,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  organization: varchar("organization"),
+  projectType: varchar("project_type"),
   isAdmin: boolean("is_admin").notNull().default(false),
   approvalStatus: varchar("approval_status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   approvedAt: timestamp("approved_at"),

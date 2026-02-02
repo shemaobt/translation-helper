@@ -32,6 +32,8 @@ const signupValidationSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   profileImageUrl: z.string().optional(),
+  organization: z.string().optional(),
+  projectType: z.enum(["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"]).optional(),
 });
 
 const loginValidationSchema = z.object({
@@ -205,6 +207,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         isAdmin: user.isAdmin,
         profileImageUrl: user.profileImageUrl,
+        organization: user.organization,
+        projectType: user.projectType,
         createdAt: user.createdAt,
       });
     } catch (error) {
@@ -276,6 +280,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  app.patch('/api/user/update-profile', requireAuth, requireCSRFHeader, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const { organization, projectType } = req.body;
+      
+      const updates: { organization?: string; projectType?: string } = {};
+      
+      if (organization !== undefined) {
+        updates.organization = organization || null;
+      }
+      if (projectType !== undefined) {
+        // Validate projectType if provided
+        const validProjectTypes = ["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"];
+        if (projectType && !validProjectTypes.includes(projectType)) {
+          return res.status(400).json({ message: "Invalid project type" });
+        }
+        updates.projectType = projectType || null;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+      
+      await storage.updateUserProfile(userId, updates);
+      
+      res.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 
@@ -1072,6 +1108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName,
         lastName: user.lastName,
         isAdmin: user.isAdmin,
+        organization: user.organization,
+        projectType: user.projectType,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         lastLoginAt: user.lastLoginAt,
