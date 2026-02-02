@@ -42,7 +42,9 @@ import {
   CheckCircle,
   XCircle,
   UserCheck,
-  UserX
+  UserX,
+  Building2,
+  FolderKanban
 } from "lucide-react";
 
 interface UserWithStats {
@@ -51,6 +53,8 @@ interface UserWithStats {
   firstName?: string | null;
   lastName?: string | null;
   isAdmin: boolean;
+  organization?: string | null;
+  projectType?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
   lastLoginAt: string | Date | null;
@@ -320,6 +324,15 @@ export default function AdminUsers() {
   const formatName = (user: UserWithStats) => {
     const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
     return name || "No name set";
+  };
+
+  const formatProjectType = (projectType: string | null | undefined) => {
+    if (!projectType) return "Not set";
+    const formatted = projectType
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+    return formatted;
   };
 
   const copyToClipboard = async (text: string) => {
@@ -604,7 +617,7 @@ export default function AdminUsers() {
                               </div>
                             </div>
 
-                            <div className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-2 lg:grid-cols-3 gap-4'}`}>
+                            <div className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-2 lg:grid-cols-4 gap-4'}`}>
                               <div className="flex items-center gap-2 text-sm">
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
                                 <div>
@@ -621,6 +634,26 @@ export default function AdminUsers() {
                                   <span className="text-muted-foreground">Last Login: </span>
                                   <span className="text-foreground" data-testid={`text-user-last-login-${user.id}`}>
                                     {formatTimestamp(user.lastLoginAt)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-sm">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <span className="text-muted-foreground">Organization: </span>
+                                  <span className="text-foreground" data-testid={`text-user-organization-${user.id}`}>
+                                    {user.organization || "Not set"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-sm">
+                                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <span className="text-muted-foreground">Project Type: </span>
+                                  <span className="text-foreground" data-testid={`text-user-project-type-${user.id}`}>
+                                    {formatProjectType(user.projectType)}
                                   </span>
                                 </div>
                               </div>
