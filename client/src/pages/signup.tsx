@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,8 @@ const signupSchema = z.object({
   confirmPassword: z.string(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  organization: z.string().optional(),
+  projectType: z.enum(["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"]).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -76,6 +79,8 @@ function Signup() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      organization: "",
+      projectType: undefined,
     },
   });
 
@@ -104,6 +109,8 @@ function Signup() {
     const { confirmPassword, ...signupData } = data;
     signupMutation.mutate({
       ...signupData,
+      organization: signupData.organization || undefined,
+      projectType: signupData.projectType || undefined,
       profileImageUrl: profileImage || undefined,
     });
   };
@@ -278,6 +285,50 @@ function Signup() {
                         </Button>
                       </div>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="organization"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter your organization"
+                        data-testid="input-organization"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="projectType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-project-type">
+                          <SelectValue placeholder="Select your project type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="mother tongue translator">Mother Tongue Translator</SelectItem>
+                        <SelectItem value="facilitator">Facilitator</SelectItem>
+                        <SelectItem value="translation advisor">Translation Advisor</SelectItem>
+                        <SelectItem value="consultant/mentor">Consultant/Mentor</SelectItem>
+                        <SelectItem value="administrator">Administrator</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
