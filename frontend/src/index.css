@@ -135,30 +135,36 @@
 
 .typing-indicator {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  min-height: 10px;
   border-radius: 50%;
-  background-color: hsl(var(--muted-foreground));
-  animation: typing 1.4s infinite ease-in-out;
+  background-color: #333333;
+  animation: typing-bounce 1.4s infinite ease-in-out;
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% { 
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% { 
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 
 .typing-indicator:nth-child(1) { 
-  animation-delay: -0.32s; 
+  animation-delay: 0s; 
 }
 
 .typing-indicator:nth-child(2) { 
-  animation-delay: -0.16s; 
+  animation-delay: 0.2s; 
 }
 
-@keyframes typing {
-  0%, 80%, 100% { 
-    transform: scale(0.8); 
-    opacity: 0.5; 
-  }
-  40% { 
-    transform: scale(1); 
-    opacity: 1; 
-  }
+.typing-indicator:nth-child(3) { 
+  animation-delay: 0.4s; 
 }
 
 @keyframes pulse-recording {

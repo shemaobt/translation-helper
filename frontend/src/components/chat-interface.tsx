@@ -100,12 +100,16 @@ export default function ChatInterface({
     queryKey: ["/api/chats", chatId, "messages"],
     enabled: !!chatId,
     retry: false,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: chat } = useQuery<Chat>({
     queryKey: ["/api/chats", chatId],
     enabled: !!chatId,
     retry: false,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   const currentAssistant: AssistantId = (chatId ? (chat?.assistantId as AssistantId | undefined) : defaultAssistant) ?? defaultAssistant;
@@ -251,8 +255,6 @@ export default function ChatInterface({
               switch (data.type) {
                 case 'user_message':
                   setPendingUserMessage(null);
-                  queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
-                  queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
                   break;
                 case 'assistant_message_start':
                   setIsTyping(false);
@@ -264,10 +266,11 @@ export default function ChatInterface({
                 case 'done':
                   setIsTyping(false);
                   setStreamingMessage(prev => prev ? { ...prev, isComplete: true } : null);
-                  setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                  setTimeout(async () => {
+                    await queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                    await queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
                     setStreamingMessage(null);
-                  }, 100);
+                  }, 500);
                   break;
                 case 'error':
                   throw new Error(data.data.message);

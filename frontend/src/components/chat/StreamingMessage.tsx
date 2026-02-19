@@ -92,9 +92,19 @@ export default function StreamingMessage({ streamingMessage }: StreamingMessageP
           </div>
           <div className="bg-card border border-border rounded-lg rounded-bl-sm p-4">
             <div className="text-foreground leading-relaxed whitespace-pre-wrap" data-testid="text-streaming-content">
-              {displayedContent}
-              {showCursor && (
-                <span className="animate-pulse">▋</span>
+              {displayedContent.length === 0 && !streamingMessage.isComplete ? (
+                <div className="flex space-x-1">
+                  <div className="typing-indicator"></div>
+                  <div className="typing-indicator"></div>
+                  <div className="typing-indicator"></div>
+                </div>
+              ) : (
+                <>
+                  {displayedContent}
+                  {showCursor && (
+                    <span className="animate-pulse">▋</span>
+                  )}
+                </>
               )}
             </div>
           </div>

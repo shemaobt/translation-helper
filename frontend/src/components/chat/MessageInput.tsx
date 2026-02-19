@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mic, MicOff, Square, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, Square } from "lucide-react";
 import { ASSISTANTS } from "@shared/schema";
 import type { AssistantId } from "@shared/schema";
 
@@ -107,11 +107,7 @@ export default function MessageInput({
               : "Send message"
           }
         >
-          {isTyping || isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          <Send className={`h-4 w-4 ${isTyping || isSending ? 'opacity-50' : ''}`} />
         </Button>
       </form>
       <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mt-2 text-center`}>
