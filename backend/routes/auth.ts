@@ -11,7 +11,6 @@ import {
   createSession,
   sanitizeUserForResponse,
 } from "../services/authService";
-import { sendNewUserNotificationToSlack } from "../slack-service";
 
 const router = Router();
 
@@ -47,12 +46,6 @@ router.post('/signup', authLimiter, async (req, res) => {
     const approvalStatus = user.approvalStatus ?? 'pending';
     
     if (approvalStatus === 'pending') {
-      sendNewUserNotificationToSlack({
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      }).catch(err => console.error("[Slack] Failed to send new user notification:", err));
-      
       return res.status(201).json({
         message: "Account created successfully. Your account is awaiting admin approval.",
         approvalStatus: "pending",

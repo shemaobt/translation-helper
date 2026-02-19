@@ -9,7 +9,6 @@ import type { ApiKeyAuthenticatedRequest } from "../middleware";
 import { transcribeAudio, translateText, generateSpeech, generateChatCompletion } from "../gemini";
 import { getCachedAudio, setCachedAudio, getAudioETag } from "../services";
 import { insertFeedbackSchema } from "@shared/schema";
-import { sendFeedbackToSlack } from "../slack-service";
 
 const router = Router();
 
@@ -182,13 +181,6 @@ router.post('/feedback', publicApiLimiter, async (req, res) => {
       userName: feedbackData.userName || undefined,
       status: 'new',
     });
-
-    sendFeedbackToSlack({
-      message: feedbackData.message,
-      category: feedbackData.category,
-      userEmail: feedbackData.userEmail || undefined,
-      userName: feedbackData.userName || undefined,
-    }).catch(err => console.error("[Slack] Failed to send feedback notification:", err));
 
     res.json({
       id: feedback.id,
