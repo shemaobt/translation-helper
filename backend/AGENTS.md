@@ -16,7 +16,7 @@ This file defines **backend-specific** conventions for LLM agents working in `ba
 - **Validation / schemas**: Zod (shared with frontend in `shared/schema.ts`)
 - **Auth**: Passport.js (local strategy), bcryptjs for passwords
 - **Session**: PostgreSQL-backed sessions (connect-pg-simple) with MemoryStore fallback
-- **AI/LLM**: Google Gemini API (gemini-2.0-flash) for translation, transcription, and agent prompts
+- **AI/LLM**: Google Gemini API (gemini-2.5-pro) for translation, transcription, and agent prompts
 - **Other**: Multer for file uploads, express-rate-limit for rate limiting, ws for WebSocket (Neon)
 
 Use only these stack choices. Do not introduce a different ORM, web framework, or auth library.

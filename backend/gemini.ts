@@ -76,7 +76,7 @@ export async function generateAssistantResponse(
     const systemInstruction = await getSystemInstruction(request.assistantId);
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-pro",
       systemInstruction,
     });
 
@@ -131,7 +131,7 @@ export async function* generateAssistantResponseStream(
     const systemInstruction = await getSystemInstruction(request.assistantId);
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-pro",
       systemInstruction,
     });
 
@@ -201,7 +201,7 @@ export async function generateChatCompletion(
     }));
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-pro",
       systemInstruction,
     });
 
@@ -246,7 +246,7 @@ export async function getChatThreadId(chatId: string, userId: string): Promise<s
 
 export async function transcribeAudio(audioBuffer: Buffer, filename: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
     const base64Audio = audioBuffer.toString('base64');
     
@@ -331,7 +331,7 @@ export async function translateText(
 ): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-pro",
       systemInstruction: "You are a professional translator. Provide only the translated text without explanations."
     });
 
