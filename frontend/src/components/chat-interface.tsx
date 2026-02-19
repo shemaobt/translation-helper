@@ -43,6 +43,12 @@ export default function ChatInterface({
     content: string;
     isComplete: boolean;
   } | null>(null);
+  const [pendingUserMessage, setPendingUserMessage] = useState<{
+    id: string;
+    content: string;
+    role: "user";
+    createdAt: string;
+  } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -202,9 +208,15 @@ export default function ChatInterface({
   const sendStreamingMessage = async (content: string) => {
     if (!chatId) return;
     
+    setMessage("");
+    setPendingUserMessage({
+      id: `pending-${Date.now()}`,
+      content,
+      role: "user",
+      createdAt: new Date().toISOString(),
+    });
     setIsTyping(true);
     setStreamingMessage(null);
-    setMessage("");
     
     try {
       const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
@@ -238,6 +250,7 @@ export default function ChatInterface({
               
               switch (data.type) {
                 case 'user_message':
+                  setPendingUserMessage(null);
                   queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
                   break;
@@ -272,6 +285,7 @@ export default function ChatInterface({
       console.error('Streaming error:', error);
       setIsTyping(false);
       setStreamingMessage(null);
+      setPendingUserMessage(null);
       toast({ title: "Streaming failed", description: "Falling back to regular messaging", variant: "default" });
       sendMessageMutation.mutate(content);
     }
@@ -342,6 +356,15 @@ export default function ChatInterface({
             selectedLanguage={selectedLanguage}
           />
         ))}
+
+        {pendingUserMessage && (
+          <MessageComponent 
+            key={pendingUserMessage.id} 
+            message={pendingUserMessage as Message} 
+            speechSynthesis={speechSynthesis}
+            selectedLanguage={selectedLanguage}
+          />
+        )}
 
         {streamingMessage && <StreamingMessage streamingMessage={streamingMessage} />}
         {isTyping && !streamingMessage && <TypingIndicator />}
