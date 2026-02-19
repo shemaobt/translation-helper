@@ -204,6 +204,7 @@ export default function ChatInterface({
     
     setIsTyping(true);
     setStreamingMessage(null);
+    setMessage("");
     
     try {
       const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
@@ -265,7 +266,6 @@ export default function ChatInterface({
         }
       }
       
-      setMessage("");
       setIsTyping(false);
       
     } catch (error) {
