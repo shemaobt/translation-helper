@@ -17,7 +17,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/public', publicRoutes);
   app.use('/api/v1', publicRoutes);
   app.use('/api/admin', adminRoutes);
-  app.use('/api/feedback', publicRoutes);
   app.use('/api/stats', userRoutes);
 
   app.use('/api/*', (_req, res) => {

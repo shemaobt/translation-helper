@@ -102,7 +102,7 @@ export default function FeedbackForm({ children, trigger }: FeedbackFormProps) {
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: FeedbackFormData) => {
-      const response = await apiRequest("POST", "/api/feedback", {
+      const response = await apiRequest("POST", "/api/public/feedback", {
         ...data,
         screenshotBase64: screenshot,
       });
