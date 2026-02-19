@@ -25,27 +25,26 @@ function Router() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
+        <Route component={Login} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/login" component={Login} />
-          <Route path="/signup" component={Signup} />
-          <Route path="/" component={Login} />
-          <Route path="*" component={Login} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/chat/:chatId" component={Home} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/settings" component={Profile} />
-          <Route path="/admin/feedback" component={AdminFeedback} />
-          <Route path="/admin/users" component={AdminUsers} />
-          <Route path="/admin/prompts" component={AdminPrompts} />
-          <Route path="*" component={NotFound} />
-        </>
-      )}
+      <Route path="/" component={Home} />
+      <Route path="/chat/:chatId" component={Home} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={Profile} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/prompts" component={AdminPrompts} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
