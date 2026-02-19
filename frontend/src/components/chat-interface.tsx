@@ -43,6 +43,12 @@ export default function ChatInterface({
     content: string;
     isComplete: boolean;
   } | null>(null);
+  const [pendingUserMessage, setPendingUserMessage] = useState<{
+    id: string;
+    content: string;
+    role: "user";
+    createdAt: string;
+  } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -94,12 +100,16 @@ export default function ChatInterface({
     queryKey: ["/api/chats", chatId, "messages"],
     enabled: !!chatId,
     retry: false,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: chat } = useQuery<Chat>({
     queryKey: ["/api/chats", chatId],
     enabled: !!chatId,
     retry: false,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   const currentAssistant: AssistantId = (chatId ? (chat?.assistantId as AssistantId | undefined) : defaultAssistant) ?? defaultAssistant;
@@ -202,9 +212,15 @@ export default function ChatInterface({
   const sendStreamingMessage = async (content: string) => {
     if (!chatId) return;
     
+    setMessage("");
+    setPendingUserMessage({
+      id: `pending-${Date.now()}`,
+      content,
+      role: "user",
+      createdAt: new Date().toISOString(),
+    });
     setIsTyping(true);
     setStreamingMessage(null);
-    setMessage("");
     
     try {
       const response = await fetch(`/api/chats/${chatId}/messages/stream`, {
@@ -238,8 +254,7 @@ export default function ChatInterface({
               
               switch (data.type) {
                 case 'user_message':
-                  queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
-                  queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
+                  setPendingUserMessage(null);
                   break;
                 case 'assistant_message_start':
                   setIsTyping(false);
@@ -251,10 +266,11 @@ export default function ChatInterface({
                 case 'done':
                   setIsTyping(false);
                   setStreamingMessage(prev => prev ? { ...prev, isComplete: true } : null);
-                  setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                  setTimeout(async () => {
+                    await queryClient.invalidateQueries({ queryKey: ["/api/chats", chatId, "messages"] });
+                    await queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
                     setStreamingMessage(null);
-                  }, 100);
+                  }, 500);
                   break;
                 case 'error':
                   throw new Error(data.data.message);
@@ -272,6 +288,7 @@ export default function ChatInterface({
       console.error('Streaming error:', error);
       setIsTyping(false);
       setStreamingMessage(null);
+      setPendingUserMessage(null);
       toast({ title: "Streaming failed", description: "Falling back to regular messaging", variant: "default" });
       sendMessageMutation.mutate(content);
     }
@@ -342,6 +359,15 @@ export default function ChatInterface({
             selectedLanguage={selectedLanguage}
           />
         ))}
+
+        {pendingUserMessage && (
+          <MessageComponent 
+            key={pendingUserMessage.id} 
+            message={pendingUserMessage as Message} 
+            speechSynthesis={speechSynthesis}
+            selectedLanguage={selectedLanguage}
+          />
+        )}
 
         {streamingMessage && <StreamingMessage streamingMessage={streamingMessage} />}
         {isTyping && !streamingMessage && <TypingIndicator />}
