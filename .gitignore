@@ -84,10 +84,6 @@ temp/
 vite.config.ts.*
 
 
-# User-generated content (security: don't commit user data)
-attached_assets/
-!attached_assets/.gitkeep
-
 # Python testing
 venv/
 __pycache__/
