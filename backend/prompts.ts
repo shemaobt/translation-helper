@@ -1,3 +1,8 @@
+const LANGUAGE_INSTRUCTION = `
+
+CRITICAL LANGUAGE RULE:
+You MUST respond in the SAME LANGUAGE as the user's message. If the user writes in Portuguese, you MUST respond entirely in Portuguese. If the user writes in Spanish, respond in Spanish. If the user writes in English, respond in English. This applies to ALL your responses throughout the conversation. Never switch to English unless the user writes in English.`;
+
 export const AGENT_PROMPTS = {
   backTranslationChecker: `Instructions for the Back Translation Checker
 
@@ -419,7 +424,7 @@ Avoidance of Unauthorized Changes:
 export type AgentPromptId = keyof typeof AGENT_PROMPTS;
 
 export function getDefaultPrompt(agentId: AgentPromptId): string {
-  return AGENT_PROMPTS[agentId];
+  return AGENT_PROMPTS[agentId] + LANGUAGE_INSTRUCTION;
 }
 
 export function getAllDefaultPrompts(): Array<{
@@ -455,6 +460,6 @@ export function getAllDefaultPrompts(): Array<{
     agentId: agentId as AgentPromptId,
     name: metadata[agentId as AgentPromptId].name,
     description: metadata[agentId as AgentPromptId].description,
-    prompt,
+    prompt: prompt + LANGUAGE_INSTRUCTION,
   }));
 }
