@@ -31,9 +31,8 @@ ENV NODE_ENV=production
 # Copy built files from builder (includes both server dist and client public assets)
 COPY --from=builder /app/dist ./dist
 
-# Create necessary directories for user uploads
-RUN mkdir -p attached_assets && \
-    chown -R node:node /app
+# Set correct ownership
+RUN chown -R node:node /app
 
 USER node
 

@@ -20,8 +20,6 @@ services:
       - "5000:5000"
     networks:
       - translation-network
-    volumes:
-      - ./attached_assets:/app/attached_assets
     restart: unless-stopped
 
   frontend:
