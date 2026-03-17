@@ -7,12 +7,17 @@ services:
       SECRETS_PROJECT_ID: ${SECRETS_PROJECT_ID:-shemaobt-secrets}
     volumes:
       - gcp_secrets_env:/secrets
-      - ${HOME}/.config/gcloud:/root/.config/gcloud
+      - ${HOME}/.config/gcloud:/host-gcloud:ro
       - ../tf/scripts:/tf/scripts:ro
-    command: >
-      sh -c "/tf/scripts/gcp_secrets_to_env.sh > /secrets/.env &&
-             cp /root/.config/gcloud/application_default_credentials.json /secrets/gcloud_adc.json &&
-             chmod 644 /secrets/gcloud_adc.json"
+    command:
+      - sh
+      - -c
+      - |
+        cp -r /host-gcloud /tmp/gcloud
+        export CLOUDSDK_CONFIG=/tmp/gcloud
+        /tf/scripts/gcp_secrets_to_env.sh > /secrets/.env
+        cp /tmp/gcloud/application_default_credentials.json /secrets/gcloud_adc.json
+        chmod 644 /secrets/gcloud_adc.json
     restart: "no"
 
   backend:
@@ -35,7 +40,7 @@ services:
       - translation-network
     restart: unless-stopped
     command: >
-      sh -c "set -a && . /run/secrets/.env && 
+      sh -c "set -a && . /run/secrets/.env &&
              export DATABASE_URL=\"$$NEON_DATABASE_URL\" &&
              export GOOGLE_GENERATIVE_AI_API_KEY=\"$$GOOGLE_API_KEY\" &&
              set +a && node dist/index.js"
