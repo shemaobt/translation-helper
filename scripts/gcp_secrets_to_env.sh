@@ -70,20 +70,21 @@ while IFS= read -r full_name; do
   [[ "$secret_id" != "$prefix_lower"* ]] && continue
   env_key="${secret_id#"$REPO_PREFIX"_}"
   env_key=$(echo "$env_key" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-  access_err=$(gcloud secrets versions access latest --project="$SECRETS_PROJECT_ID" --secret="$secret_id" 2>&1) && value="$access_err" || {
-    echo "Error: Cannot access secret '$secret_id': $access_err" >&2
+  value=$(gcloud secrets versions access latest --project="$SECRETS_PROJECT_ID" --secret="$secret_id" 2>&1) || {
+    echo "Warning: Cannot access secret '$secret_id': $value" >&2
     skipped=$((skipped + 1))
     continue
   }
+  value=$(printf '%s' "$value" | tr -d '\n')
   if [[ -z "${value:-}" ]]; then
     echo "Warning: secret '$secret_id' is empty, skipping." >&2
     skipped=$((skipped + 1))
     continue
   fi
   if [[ "$OUTPUT_FORMAT" == "exports" ]]; then
-    printf "export %s=%q\n" "$env_key" "$value"
+    printf "export %s='%s'\n" "$env_key" "$value"
   else
-    printf "%s=%q\n" "$env_key" "$value"
+    printf "%s='%s'\n" "$env_key" "$value"
   fi
   fetched=$((fetched + 1))
 done <<< "$secret_names"
