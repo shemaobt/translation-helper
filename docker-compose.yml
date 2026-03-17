@@ -8,14 +8,14 @@ services:
     volumes:
       - gcp_secrets_env:/secrets
       - ${HOME}/.config/gcloud:/host-gcloud:ro
-      - ../tf/scripts:/tf/scripts:ro
+      - ./scripts:/scripts:ro
     command:
       - sh
       - -c
       - |
         cp -r /host-gcloud /tmp/gcloud
         export CLOUDSDK_CONFIG=/tmp/gcloud
-        /tf/scripts/gcp_secrets_to_env.sh > /secrets/.env
+        /scripts/gcp_secrets_to_env.sh > /secrets/.env
         cp /tmp/gcloud/application_default_credentials.json /secrets/gcloud_adc.json
         chmod 644 /secrets/gcloud_adc.json
     restart: "no"
