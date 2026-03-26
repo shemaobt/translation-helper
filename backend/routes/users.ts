@@ -62,6 +62,37 @@ router.post('/change-password', requireAuth, requireCSRFHeader, async (req, res)
   }
 });
 
+const VALID_PROJECT_TYPES = ["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"] as const;
+
+router.patch('/update-profile', requireAuth, requireCSRFHeader, async (req, res) => {
+  try {
+    const userId = (req as { userId: string }).userId;
+    const { organization, projectType } = req.body;
+
+    const updates: { organization?: string | null; projectType?: string | null } = {};
+
+    if (organization !== undefined) {
+      updates.organization = organization || null;
+    }
+    if (projectType !== undefined) {
+      if (projectType && !VALID_PROJECT_TYPES.includes(projectType)) {
+        return res.status(400).json({ message: "Invalid project type" });
+      }
+      updates.projectType = projectType || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    await storage.updateUserProfile(userId, updates);
+    res.json({ message: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const userId = (req as { userId: string }).userId;

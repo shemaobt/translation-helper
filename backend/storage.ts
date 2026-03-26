@@ -37,6 +37,7 @@ export interface IStorage {
   
   updateUserProfileImage(userId: string, imageUrl: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  updateUserProfile(userId: string, updates: { organization?: string | null; projectType?: string | null }): Promise<void>;
   
   incrementUserChatCount(userId: string): Promise<void>;
   incrementUserMessageCount(userId: string): Promise<void>;
@@ -151,8 +152,18 @@ export class DatabaseStorage implements IStorage {
   async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
     await db
       .update(users)
-      .set({ 
+      .set({
         password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserProfile(userId: string, updates: { organization?: string | null; projectType?: string | null }): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        ...updates,
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));

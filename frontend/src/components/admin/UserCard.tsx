@@ -8,6 +8,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Building2,
+  FolderKanban,
 } from "lucide-react";
 import { UserStatsPanel } from "./UserStatsPanel";
 import { UserActionsMenu } from "./UserActionsMenu";
@@ -104,6 +106,26 @@ export function UserCard({
                   <span className="text-muted-foreground">Last Login: </span>
                   <span className="text-foreground" data-testid={`text-user-last-login-${user.id}`}>
                     {formatTimestamp(user.lastLoginAt)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <span className="text-muted-foreground">Organization: </span>
+                  <span className="text-foreground" data-testid={`text-user-organization-${user.id}`}>
+                    {(user as any).organization || "Not set"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <span className="text-muted-foreground">Project Type: </span>
+                  <span className="text-foreground" data-testid={`text-user-project-type-${user.id}`}>
+                    {(user as any).projectType || "Not set"}
                   </span>
                 </div>
               </div>
