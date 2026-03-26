@@ -20,6 +20,8 @@ const signupValidationSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   profileImageUrl: z.string().optional(),
+  organization: z.string().optional(),
+  projectType: z.enum(["mother tongue translator", "facilitator", "translation advisor", "consultant/mentor", "administrator", "other"]).optional(),
 });
 
 const loginValidationSchema = z.object({

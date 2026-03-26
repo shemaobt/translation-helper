@@ -91,6 +91,8 @@ export function sanitizeUserForResponse(user: User): Record<string, unknown> {
     lastName: user.lastName,
     isAdmin: user.isAdmin,
     profileImageUrl: user.profileImageUrl,
+    organization: user.organization,
+    projectType: user.projectType,
     createdAt: user.createdAt,
   };
 }

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Sidebar from "@/components/sidebar";
-import { ProfilePictureCard, AccountInfoCard, ChangePasswordCard } from "@/components/profile";
+import { ProfilePictureCard, AccountInfoCard, ChangePasswordCard, OrganizationCard } from "@/components/profile";
 import { User, Loader2 } from "lucide-react";
 
 export default function Profile() {
@@ -56,6 +56,7 @@ export default function Profile() {
 
           <ProfilePictureCard user={user} />
           <AccountInfoCard user={user} />
+          <OrganizationCard user={user} />
           <ChangePasswordCard />
         </div>
       </div>
