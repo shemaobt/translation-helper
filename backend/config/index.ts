@@ -41,7 +41,7 @@ export const config = {
     ttlMs: 24 * 60 * 60 * 1000,
   },
   email: {
-    resendApiKey: process.env.RESEND_API_KEY || '',
+    smtpPassword: process.env.SMTP_PASSWORD || '',
     fromAddress: 'support@shemaywam.com',
     fromName: 'Translation Helper',
   },

@@ -1,22 +1,32 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { config } from '../config';
 
-const resend = config.email.resendApiKey ? new Resend(config.email.resendApiKey) : null;
+const transporter = config.email.smtpPassword
+  ? nodemailer.createTransport({
+      host: 'smtp.office365.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: config.email.fromAddress,
+        pass: config.email.smtpPassword,
+      },
+    })
+  : null;
 
 export async function sendPasswordResetEmail(
   toEmail: string,
   resetToken: string,
   firstName: string | null
 ): Promise<void> {
-  if (!resend) {
-    console.warn('RESEND_API_KEY not configured — password reset email not sent to', toEmail);
+  if (!transporter) {
+    console.warn('SMTP_PASSWORD not configured — password reset email not sent to', toEmail);
     return;
   }
 
   const resetUrl = `${config.app.url}/reset-password?token=${resetToken}`;
   const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
-  await resend.emails.send({
+  await transporter.sendMail({
     from: `${config.email.fromName} <${config.email.fromAddress}>`,
     to: toEmail,
     subject: 'Reset your password — Translation Helper',
