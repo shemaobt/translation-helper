@@ -1,21 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff, CheckCircle, Clock, XCircle, UserPlus, LogIn } from "lucide-react";
-
-
-const logoImage = "/logo.png";
+import { Eye, EyeOff, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
+import { AuthLayout } from "@/components/AuthLayout";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -33,13 +30,9 @@ function Login() {
   const urlParams = new URLSearchParams(window.location.search);
   const messageType = urlParams.get('message');
 
-
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const loginMutation = useMutation({
@@ -48,186 +41,146 @@ function Login() {
       return response.json();
     },
     onSuccess: (user) => {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
+      toast({ title: "Welcome back!", description: "You have successfully logged in." });
       login(user);
       setLocation("/");
     },
     onError: (error: Error & { data?: { approvalStatus?: string } }) => {
       const approvalStatus = error.data?.approvalStatus;
       if (approvalStatus === 'pending') {
-        toast({
-          title: "Account pending approval",
-          description: "Your account is awaiting admin approval. Please wait for approval before logging in.",
-          variant: "destructive",
-        });
+        toast({ title: "Account pending approval", description: "Your account is awaiting admin approval.", variant: "destructive" });
       } else if (approvalStatus === 'rejected') {
-        toast({
-          title: "Account access denied",
-          description: "Your account has been rejected. Please contact support for assistance.",
-          variant: "destructive",
-        });
+        toast({ title: "Account access denied", description: "Your account has been rejected. Please contact support.", variant: "destructive" });
       } else {
-        toast({
-          title: "Login failed",
-          description: error.message || "Please check your credentials and try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Login failed", description: error.message || "Please check your credentials and try again.", variant: "destructive" });
       }
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data);
-  };
-
   return (
-    <div className="min-h-screen overflow-y-auto px-4 flex items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center">
-            <img 
-              src={logoImage} 
-              alt="Translation Helper Logo" 
-              className="w-16 h-16 object-contain"
-              data-testid="img-login-logo"
-            />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-            <p className="text-muted-foreground mt-1 text-sm">Sign in to your Translation Helper account</p>
-          </div>
-        </div>
+    <AuthLayout>
+      {/* Heading */}
+      <div className="mb-8 lg:mb-10 space-y-3">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight leading-[0.95]">
+          Welcome back
+        </h1>
+        <p className="text-base text-muted-foreground leading-relaxed max-w-sm">
+          Sign in to your Translation Helper account
+        </p>
+      </div>
 
-        <Card>
-          <CardContent className="pt-6">
-          {messageType === 'pending' && (
-            <Alert className="mb-4" data-testid="alert-pending">
-              <Clock className="h-4 w-4" />
-              <AlertDescription>
-                Your account has been created and is awaiting admin approval. You'll be able to log in once approved.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {messageType === 'rejected' && (
-            <Alert className="mb-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950" data-testid="alert-rejected">
-              <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <AlertDescription className="text-red-800 dark:text-red-200">
-                Your account has been rejected. Please contact support for assistance.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {messageType === 'approved' && (
-            <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950" data-testid="alert-approved">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                Your account has been approved! You can now log in.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="Enter your email"
-                        data-testid="input-email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          data-testid="input-password"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                          data-testid="button-toggle-password"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      {/* Status alerts */}
+      {messageType === 'pending' && (
+        <Alert className="mb-6" data-testid="alert-pending">
+          <Clock className="h-4 w-4" />
+          <AlertDescription>Your account is awaiting admin approval. You'll be able to log in once approved.</AlertDescription>
+        </Alert>
+      )}
+      {messageType === 'rejected' && (
+        <Alert className="mb-6 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950" data-testid="alert-rejected">
+          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-200">Your account has been rejected. Please contact support.</AlertDescription>
+        </Alert>
+      )}
+      {messageType === 'approved' && (
+        <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950" data-testid="alert-approved">
+          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertDescription className="text-green-800 dark:text-green-200">Your account has been approved! You can now log in.</AlertDescription>
+        </Alert>
+      )}
+      {messageType === 'password-reset' && (
+        <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertDescription className="text-green-800 dark:text-green-200">Your password has been reset. You can now log in with your new password.</AlertDescription>
+        </Alert>
+      )}
 
-              <Button
-                type="submit"
-                className="w-full h-11 font-semibold"
-                disabled={loginMutation.isPending}
-                data-testid="button-login"
-              >
-                {loginMutation.isPending ? (
-                  "Signing in..."
-                ) : (
-                  <>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign in
-                  </>
-                )}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      {/* Form */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-5">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium">Email address</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    autoFocus
+                    className="h-12 rounded-xl text-base"
+                    data-testid="input-email"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      <Card>
-        <CardContent className="py-6">
-          <div className="text-center space-y-4">
-            <UserPlus className="h-8 w-8 text-primary mx-auto" />
-            <h3 className="text-xl font-bold text-foreground">New to Translation Helper?</h3>
-            <p className="text-muted-foreground text-sm">
-              Create a free account to start using our AI-powered translation assistants
-            </p>
-            <Link href="/signup">
-              <Button 
-                className="w-full h-11 font-semibold"
-                data-testid="link-signup"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Create Free Account
-              </Button>
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium">Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      className="h-12 rounded-xl text-base pr-12"
+                      data-testid="input-password"
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      data-testid="button-toggle-password"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+              Forgot password?
             </Link>
           </div>
-        </CardContent>
-      </Card>
+
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl text-base font-semibold active:scale-[0.98] transition-all duration-200"
+            disabled={loginMutation.isPending}
+            data-testid="button-login"
+          >
+            {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loginMutation.isPending ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+      </Form>
+
+      {/* Footer */}
+      <div className="mt-10 pt-6 border-t border-border/40">
+        <p className="text-sm text-muted-foreground text-center">
+          New to Translation Helper?{" "}
+          <Link href="/signup" className="text-primary font-medium hover:underline" data-testid="link-signup">
+            Create an account
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
 
