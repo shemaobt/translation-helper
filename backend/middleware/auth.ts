@@ -1,12 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import type { AuthenticatedRequest, SessionRequest } from '../types';
-import type { User } from '@shared/schema';
-
-export function getEffectiveApproval(user: User): string {
-  const approvalStatus = user.approvalStatus ?? 'approved';
-  return (approvalStatus === 'pending' && user.lastLoginAt) ? 'approved' : approvalStatus;
-}
+import { getEffectiveApprovalStatus } from '../services/authService';
 
 function handleApprovalStatus(effectiveApproval: string, res: Response): boolean {
   if (effectiveApproval === 'pending') {
@@ -50,7 +45,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       return;
     }
     
-    const effectiveApproval = getEffectiveApproval(user);
+    const effectiveApproval = getEffectiveApprovalStatus(user);
     if (!handleApprovalStatus(effectiveApproval, res)) {
       return;
     }
@@ -78,7 +73,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
       return;
     }
     
-    const effectiveApproval = getEffectiveApproval(user);
+    const effectiveApproval = getEffectiveApprovalStatus(user);
     if (!handleApprovalStatus(effectiveApproval, res)) {
       return;
     }
