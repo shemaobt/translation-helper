@@ -85,11 +85,20 @@ function Signup() {
       return response.json();
     },
     onSuccess: (result) => {
-      toast({
-        title: "Account created!",
-        description: "Your account has been created and is awaiting admin approval. You'll be able to log in once approved.",
-      });
-      setLocation("/login?message=pending");
+      if (result.approvalStatus === 'pending') {
+        toast({
+          title: "Account created!",
+          description: "Your account has been created and is awaiting admin approval. You'll be able to log in once approved.",
+        });
+        setLocation("/login?message=pending");
+      } else if (result.id) {
+        toast({
+          title: "Welcome!",
+          description: "Your account has been created and you're now logged in.",
+        });
+        login(result);
+        setLocation("/");
+      }
     },
     onError: (error: Error) => {
       toast({

@@ -13,7 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { Eye, EyeOff, CheckCircle, Clock, XCircle, UserPlus, LogIn } from "lucide-react";
-import type { LoginError } from "@/types";
+
 
 const logoImage = "/logo.png";
 
@@ -44,21 +44,8 @@ function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      try {
-        const response = await apiRequest("POST", "/api/auth/login", data);
-        return response.json();
-      } catch (error: unknown) {
-        const errorObj = error as Error;
-        if (errorObj.message && errorObj.message.includes('{')) {
-          try {
-            const errorJson = JSON.parse(errorObj.message.split(': ')[1]) as LoginError;
-            throw { ...errorJson, originalMessage: errorObj.message };
-          } catch {
-            throw error;
-          }
-        }
-        throw error;
-      }
+      const response = await apiRequest("POST", "/api/auth/login", data);
+      return response.json();
     },
     onSuccess: (user) => {
       toast({
@@ -68,15 +55,15 @@ function Login() {
       login(user);
       setLocation("/");
     },
-    onError: (error: Error | LoginError) => {
-      const loginError = error as LoginError;
-      if (loginError.approvalStatus === 'pending') {
+    onError: (error: Error & { data?: { approvalStatus?: string } }) => {
+      const approvalStatus = error.data?.approvalStatus;
+      if (approvalStatus === 'pending') {
         toast({
           title: "Account pending approval",
           description: "Your account is awaiting admin approval. Please wait for approval before logging in.",
           variant: "destructive",
         });
-      } else if (loginError.approvalStatus === 'rejected') {
+      } else if (approvalStatus === 'rejected') {
         toast({
           title: "Account access denied",
           description: "Your account has been rejected. Please contact support for assistance.",

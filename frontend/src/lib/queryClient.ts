@@ -12,7 +12,19 @@ function getAnonymousUserId() {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let parsed: Record<string, unknown> | null = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // response body is not JSON
+    }
+
+    const error = new Error(
+      (parsed?.message as string) || text
+    ) as Error & { status: number; data: Record<string, unknown> | null };
+    error.status = res.status;
+    error.data = parsed;
+    throw error;
   }
 }
 
@@ -83,7 +95,7 @@ export const queryClient = new QueryClient({
       refetchOnReconnect: true,
     },
     mutations: {
-      retry: 1,
+      retry: false,
     },
   },
 });
