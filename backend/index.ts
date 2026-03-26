@@ -48,7 +48,7 @@ const cookieSettings: session.CookieOptions = {
   httpOnly: true,
   maxAge: config.session.ttl,
   sameSite: 'lax',
-  secure: isProduction ? 'auto' : false,
+  secure: isProduction,
 };
 
 app.use(session({
