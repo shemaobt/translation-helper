@@ -9,6 +9,14 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const passwordResetLimiter = rateLimit({
+  windowMs: config.rateLimits.windowMs,
+  max: config.passwordReset.rateLimitMax,
+  message: { message: "Too many password reset requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export const publicApiLimiter = rateLimit({
   windowMs: config.rateLimits.windowMs,
   max: config.rateLimits.publicApi,

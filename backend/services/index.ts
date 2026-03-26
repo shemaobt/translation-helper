@@ -32,3 +32,12 @@ export {
   changePassword,
   getUserProfile,
 } from './userService';
+
+export {
+  sendPasswordResetEmail,
+} from './emailService';
+
+export {
+  requestPasswordReset,
+  resetPassword,
+} from './passwordResetService';

@@ -1,4 +1,4 @@
 export { requireAuth, requireAdmin, requireCSRFHeader } from './auth';
-export { authLimiter, publicApiLimiter, aiApiLimiter } from './rateLimiter';
+export { authLimiter, passwordResetLimiter, publicApiLimiter, aiApiLimiter } from './rateLimiter';
 export { authenticateApiKey, type ApiKeyAuthenticatedRequest } from './apiKeyAuth';
 

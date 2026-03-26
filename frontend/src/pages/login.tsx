@@ -129,6 +129,15 @@ function Login() {
               </AlertDescription>
             </Alert>
           )}
+
+          {messageType === 'password-reset' && (
+            <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                Your password has been reset successfully. You can now log in with your new password.
+              </AlertDescription>
+            </Alert>
+          )}
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -185,6 +194,12 @@ function Login() {
                   </FormItem>
                 )}
               />
+
+              <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
 
               <Button
                 type="submit"

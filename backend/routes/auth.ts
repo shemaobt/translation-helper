@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { config } from "../config";
-import { requireAuth, authLimiter } from "../middleware";
+import { requireAuth, authLimiter, passwordResetLimiter } from "../middleware";
 import {
   hashPassword,
   comparePassword,
@@ -11,6 +11,7 @@ import {
   createSession,
   sanitizeUserForResponse,
 } from "../services/authService";
+import { requestPasswordReset, resetPassword } from "../services/passwordResetService";
 
 const router = Router();
 
@@ -132,6 +133,39 @@ router.get('/user', requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Get user error:", error);
     res.status(500).json({ message: "Failed to get user" });
+  }
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email().toLowerCase(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    await requestPasswordReset(email);
+  } catch (error) {
+    console.error("Forgot password error:", error);
+  }
+  res.json({ message: "If an account with that email exists, we've sent a password reset link." });
+});
+
+router.post('/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    const result = await resetPassword(token, password);
+    if (!result.success) {
+      return res.status(400).json({ message: result.message });
+    }
+    res.json({ message: result.message });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Failed to reset password" });
   }
 });
 
