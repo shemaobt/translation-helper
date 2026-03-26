@@ -24,7 +24,7 @@ export const config = {
   },
   rateLimits: {
     windowMs: 15 * 60 * 1000,
-    auth: 5,
+    auth: 15,
     publicApi: 100,
     aiApi: 50,
   },
