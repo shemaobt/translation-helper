@@ -41,7 +41,9 @@ export const config = {
     ttlMs: 24 * 60 * 60 * 1000,
   },
   email: {
-    smtpPassword: process.env.SMTP_PASSWORD || '',
+    azureTenantId: process.env.AZURE_TENANT_ID || '',
+    azureClientId: process.env.AZURE_CLIENT_ID || '',
+    azureClientSecret: process.env.AZURE_CLIENT_SECRET || '',
     fromAddress: 'support@shemaywam.com',
     fromName: 'Translation Helper',
   },
