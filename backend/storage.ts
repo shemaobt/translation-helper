@@ -6,6 +6,7 @@ import {
   apiUsage,
   feedback,
   agentPrompts,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -21,10 +22,11 @@ import {
   type InsertFeedback,
   type AgentPrompt,
   type InsertAgentPrompt,
+  type PasswordResetToken,
 } from "@shared/schema";
 import { getAllDefaultPrompts, type AgentPromptId } from "./prompts";
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, isNull, gt } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -38,7 +40,11 @@ export interface IStorage {
   updateUserProfileImage(userId: string, imageUrl: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   updateUserProfile(userId: string, updates: { organization?: string | null; projectType?: string | null }): Promise<void>;
-  
+
+  createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getValidPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(tokenId: string): Promise<void>;
+
   incrementUserChatCount(userId: string): Promise<void>;
   incrementUserMessageCount(userId: string): Promise<void>;
   incrementUserApiUsage(userId: string): Promise<void>;
@@ -167,6 +173,35 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));
+  }
+
+  async createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const [token] = await db
+      .insert(passwordResetTokens)
+      .values({ userId, tokenHash, expiresAt })
+      .returning();
+    return token;
+  }
+
+  async getValidPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | undefined> {
+    const [token] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.tokenHash, tokenHash),
+          isNull(passwordResetTokens.usedAt),
+          gt(passwordResetTokens.expiresAt, new Date())
+        )
+      );
+    return token;
+  }
+
+  async markPasswordResetTokenUsed(tokenId: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.id, tokenId));
   }
 
   async incrementUserChatCount(userId: string): Promise<void> {

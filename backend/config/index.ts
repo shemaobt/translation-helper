@@ -40,6 +40,18 @@ export const config = {
     maxSize: 100,
     ttlMs: 24 * 60 * 60 * 1000,
   },
+  email: {
+    smtpPassword: process.env.SMTP_PASSWORD || '',
+    fromAddress: 'support@shemaywam.com',
+    fromName: 'Translation Helper',
+  },
+  passwordReset: {
+    tokenExpiryMs: 60 * 60 * 1000,
+    rateLimitMax: 5,
+  },
+  app: {
+    url: getOptionalEnv('APP_URL', 'https://translationhelper.shemaywam.com'),
+  },
   server: {
     port: parseInt(getOptionalEnv('PORT', '5000'), 10),
     nodeEnv: getOptionalEnv('NODE_ENV', 'development'),
