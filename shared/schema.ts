@@ -183,6 +183,15 @@ export const feedback = pgTable("feedback", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const agentPrompts = pgTable("agent_prompts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agentId: varchar("agent_id").notNull().unique(),
@@ -322,3 +331,4 @@ export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type AgentPrompt = typeof agentPrompts.$inferSelect;
 export type InsertAgentPrompt = z.infer<typeof insertAgentPromptSchema>;
 export type UpdateAgentPrompt = z.infer<typeof updateAgentPromptSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
