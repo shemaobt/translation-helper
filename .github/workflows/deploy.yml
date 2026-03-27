@@ -82,6 +82,13 @@ jobs:
       - name: Push frontend image
         run: docker push "${{ steps.vars.outputs.frontend_image_uri }}"
 
+      - name: Push database schema
+        run: |
+          npm ci --legacy-peer-deps
+          DATABASE_URL="${{ secrets.NEON_DATABASE_URL }}" npx drizzle-kit push
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
       - name: Deploy backend to Cloud Run
         id: deploy-backend
         run: |
